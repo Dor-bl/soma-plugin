@@ -15,7 +15,7 @@ Ask for whatever is missing, in one message: the error/stack trace, the failing 
 - **Flaky**: passes and fails without code or build change. Needs repeated runs to confirm.
 
 ## Verify before concluding
-- If a device or emulator is available, reproduce once and compare to the reported failure.
+- If a device or emulator is available, reproduce once and compare to the reported failure. On Android, create the session with `appium:autoGrantPermissions` set to `false` unless the tester approves auto-granting; appium-mcp otherwise grants every runtime permission silently.
 - To call something flaky, run it at least 3 times and report the pass/fail count. Do not label flaky from a single run.
 - Distinguish what was observed from what is suspected.
 

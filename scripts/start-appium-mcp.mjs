@@ -52,6 +52,12 @@ child.on('error', (err) => {
   process.exit(1);
 });
 child.on('exit', (code, signal) => {
-  if (signal) process.kill(process.pid, signal);
-  else process.exit(code ?? 1);
+  if (signal) {
+    // Drop the forwarding handler so re-raising terminates this process
+    // with the same signal instead of being caught and exiting 0.
+    process.removeAllListeners(signal);
+    process.kill(process.pid, signal);
+  } else {
+    process.exit(code ?? 1);
+  }
 });
