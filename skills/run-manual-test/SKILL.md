@@ -13,7 +13,8 @@ description: Execute a manual test case (steps written in plain language) on a m
 ## Session setup
 - Remote Appium server URL configured for this plugin: `${user_config.remote_server_url}`
 - If that value is empty, create the session in local mode (do not pass `remoteServerUrl`). Local mode needs the platform toolchain installed (Android SDK/ADB, or Xcode on macOS).
-- If it is set, pass it as `remoteServerUrl` when creating the session.
+- If it is set, pass it as `remoteServerUrl` when creating the session. Never add credentials to it and never ask the tester to paste an access key or password into the chat. Device-cloud credentials belong in the plugin's capabilities file, which appium-mcp reads from disk.
+- The server only accepts `https://` URLs (plain `http://` only for localhost) without embedded credentials. If it rejects the URL, report that and point the tester to the plugin settings. Do not try to work around it.
 - If session creation fails, stop and report the exact error. Do not retry with different capabilities unless the tester asks.
 
 ## Execution

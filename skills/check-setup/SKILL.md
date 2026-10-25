@@ -7,6 +7,11 @@ description: Check whether the tester's machine is ready to run mobile tests thr
 
 Remote Appium server URL configured: `${user_config.remote_server_url}`. If set, only a reachable server is needed: skip the local checks and just confirm the URL responds. Still run the test client checks below, since generated scripts run on the tester's machine even when the server is remote.
 
+Remote URL checks (report each as OK / MISSING):
+- Uses `https://`, or `http://` only for `localhost` / `127.0.0.1` / `[::1]`. appium-mcp rejects anything else.
+- Contains no `user:key@` credentials. If the tester needs device-cloud credentials, tell them to put them in a capabilities file (e.g. `bstack:options`, `sauce:options`, `lt:options`) and set the plugin's capabilities file setting to its path. Never ask them to paste keys into the chat.
+- A self-hosted Appium server must not be reachable unauthenticated from a shared network: anyone who can reach it controls its devices and host. Recommend putting it behind an authenticating reverse proxy or VPN.
+
 ## Local checks (run what applies, report each as OK / MISSING / UNKNOWN)
 - Node.js 22 or newer (`node --version`). `appium-mcp` requires `>=22`; older versions crash on startup and the server shows as disconnected. Fix: install Node 22 LTS (e.g. `winget install OpenJS.NodeJS.LTS` on Windows, or via nvm), then restart Claude.
 - Android: `adb` on PATH, `ANDROID_HOME`/`ANDROID_SDK_ROOT` set, at least one emulator or device listed by `adb devices`. If an emulator crashes on start (e.g. exit code 139), suggest relaunching it with `-gpu swiftshader_indirect`. Hardware GPU rendering often fails on older graphics cards.
