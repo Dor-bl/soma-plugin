@@ -12,7 +12,8 @@ const REQUIRED_TOOLS = [
   'appium_get_page_source',
   'appium_screenshot',
 ];
-const TIMEOUT_MS = Number(process.env.SMOKE_TIMEOUT_MS ?? 180_000);
+// Includes the npx download of appium-mcp, which is slow on a cold cache.
+const TIMEOUT_MS = Number(process.env.SMOKE_TIMEOUT_MS ?? 480_000);
 
 const config = JSON.parse(readFileSync(new URL('../.mcp.json', import.meta.url), 'utf8'));
 const { command, args = [] } = config.mcpServers['appium-mcp'];

@@ -60,4 +60,7 @@ jobs:
           node-version: ${{ matrix.node }}
       - name: Handshake and check required tools
         run: node scripts/mcp-smoke.mjs
-        timeout-minutes: 5
+        env:
+          # A cold npx install of appium-mcp takes ~4 min on Windows runners
+          SMOKE_TIMEOUT_MS: "480000"
+        timeout-minutes: 10
