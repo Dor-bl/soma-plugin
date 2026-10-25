@@ -9,7 +9,12 @@ Remote Appium server URL configured: `${user_config.remote_server_url}`. If set,
 
 ## Local checks (run what applies, report each as OK / MISSING / UNKNOWN)
 - Node.js 22 or newer (`node --version`). `appium-mcp` requires `>=22`; older versions crash on startup and the server shows as disconnected. Fix: install Node 22 LTS (e.g. `winget install OpenJS.NodeJS.LTS` on Windows, or via nvm), then restart Claude.
-- Android: `adb` on PATH, `ANDROID_HOME`/`ANDROID_SDK_ROOT` set, at least one emulator or device listed by `adb devices`
+- Android: `adb` on PATH, `ANDROID_HOME`/`ANDROID_SDK_ROOT` set, at least one emulator or device listed by `adb devices`. If an emulator crashes on start (e.g. exit code 139), suggest relaunching it with `-gpu swiftshader_indirect`. Hardware GPU rendering often fails on older graphics cards.
+- Test client for generated scripts (only if the tester runs or plans to run `generate-test` scripts locally): check that the client actually loads, not just that it is listed as installed. A package can show as installed with its files missing.
+  - Python: `python -c "import appium"`. Fix: `pip install --force-reinstall Appium-Python-Client`, or use a virtualenv.
+  - Node: `node -e "require('webdriverio')"`, run from the test project.
+  - Java: the `io.appium:java-client` dependency resolves in the project build.
+  - Also check a local Appium 2 server is available (`appium --version`) with the needed driver (`appium driver list --installed`, e.g. uiautomator2 or xcuitest).
 - iOS (macOS only): Xcode installed, command line tools selected, at least one simulator available
 - appium-mcp server visible and connected in the Claude tool list. If it is not, offer a manual startup diagnostic:
   - Ask the tester first. `npx -y appium-mcp@latest` downloads and installs the package and its dependencies if they are not cached.
