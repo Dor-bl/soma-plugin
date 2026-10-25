@@ -1,0 +1,6 @@
+node_modules/
+.mcpb-cache/
+*.zip
+.DS_Store
+Thumbs.db
+setup-soma.ps1

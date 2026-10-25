@@ -1,0 +1,19 @@
+{
+  "name": "soma",
+  "displayName": "SOMA",
+  "version": "0.1.0",
+  "description": "SOMA: mobile QA workflows on top of the official appium-mcp server: run manual test cases on a device, triage failures, write bug reports.",
+  "author": {
+    "name": "Dor"
+  },
+  "license": "Apache-2.0",
+  "keywords": ["appium", "qa", "mobile", "testing", "android", "ios"],
+  "userConfig": {
+    "remote_server_url": {
+      "type": "string",
+      "title": "Remote Appium server URL (optional)",
+      "description": "Leave empty to use local emulators, simulators and devices. Set to a remote Appium/WebDriver endpoint (self-hosted or a device cloud) to run there instead.",
+      "default": ""
+    }
+  }
+}
