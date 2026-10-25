@@ -1,8 +1,6 @@
 <div align="center">
 
-# 🔱 SOMA
-
-### Spear of Mobile Automation
+<img src="assets/logo-wordmark.svg" alt="SOMA - Spear of Mobile Automation" width="480">
 
 *A Claude plugin for mobile QA testers: run manual test cases on real devices, triage failures, and write bug reports.*
 
