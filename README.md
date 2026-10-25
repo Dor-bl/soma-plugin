@@ -75,7 +75,7 @@ Then try:
 > SOMA is an early scaffold. Expect rough edges.
 
 - 🧪 Skills are untested against real devices.
-- 📌 `appium-mcp` is pulled with `@latest`; pin a version once you have a known-good one.
+- 📌 `appium-mcp` is pinned to an exact version (`1.97.1`). Bump it deliberately after testing; its transitive dependencies are still resolved by npm at install time.
 - 🌐 The remote URL is read by the skills and passed to the session tool; it isn't enforced at the server level.
 - 🔓 No authentication is applied to a shared remote server.
 

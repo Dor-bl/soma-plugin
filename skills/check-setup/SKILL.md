@@ -13,7 +13,7 @@ Remote Appium server URL configured: `${user_config.remote_server_url}`. If set,
 - Local Appium 2 server for running generated scripts (only if the tester runs `generate-test` scripts): `appium --version`, with the needed driver installed (`appium driver list --installed`, e.g. uiautomator2 or xcuitest)
 - iOS (macOS only): Xcode installed, command line tools selected, at least one simulator available
 - appium-mcp server visible and connected in the Claude tool list. If it is not, offer a manual startup diagnostic:
-  - Ask the tester first. `npx -y appium-mcp@latest` downloads and installs the package and its dependencies if they are not cached.
+  - Ask the tester first. `npx -y appium-mcp@1.97.1` downloads and installs the package and its dependencies if they are not cached.
   - Run it with a time limit (about 60 seconds), capture stderr, and stop the process when the limit is reached.
   - Exited with an error before the limit: MISSING. Quote the key error line.
   - Still running at the limit with no error: the server starts (a healthy stdio server waits for input and never exits on its own). The problem is likely Claude's MCP config or a needed restart.
