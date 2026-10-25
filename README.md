@@ -14,7 +14,7 @@
 
 ![Android](https://img.shields.io/badge/Android-3DDC84?logo=android&logoColor=white)
 ![iOS](https://img.shields.io/badge/iOS-000000?logo=apple&logoColor=white)
-![Node.js](https://img.shields.io/badge/Node.js-339933?logo=nodedotjs&logoColor=white)
+![Node.js](https://img.shields.io/badge/Node.js-22%2B-339933?logo=nodedotjs&logoColor=white)
 
 </div>
 
@@ -44,7 +44,7 @@ SOMA wraps the official [`appium-mcp`](https://github.com/appium/appium-mcp) ser
 
 | Platform | Needs |
 |----------|-------|
-| All | [Node.js](https://nodejs.org/) |
+| All | [Node.js](https://nodejs.org/) 22 or newer (required by `appium-mcp`) |
 | 🤖 Android | Android SDK, `adb`, an emulator or physical device |
 | 🍎 iOS | macOS with Xcode and a simulator *(iOS isn't available locally on Windows/Linux)* |
 
