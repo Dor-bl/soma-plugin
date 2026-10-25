@@ -8,8 +8,9 @@ description: Check whether the tester's machine is ready to run mobile tests thr
 Remote Appium server URL configured: `${user_config.remote_server_url}`. If set, only a reachable server is needed: skip the local checks and just confirm the URL responds. Still run the test client checks below, since generated scripts run on the tester's machine even when the server is remote.
 
 Remote URL checks (report each as OK / MISSING):
-- Uses `https://`, or `http://` only for `localhost` / `127.0.0.1` / `[::1]`. appium-mcp rejects anything else.
+- Uses `https://`, or `http://` only for `localhost` / `127.0.0.1` / `[::1]`, with no query or fragment. If it breaks these rules, SOMA blocks all remote servers at startup and only the exact configured URL is ever allowed.
 - Contains no `user:key@` credentials. If the tester needs device-cloud credentials, tell them to put them in a capabilities file (e.g. `bstack:options`, `sauce:options`, `lt:options`) and set the plugin's capabilities file setting to its path. Never ask them to paste keys into the chat.
+- Capabilities file setting: `${user_config.capabilities_file}`. If set, check that it exists and is valid JSON without showing its contents. Run `node -e "try{JSON.parse(require('fs').readFileSync(process.argv[1],'utf8'));console.log('OK')}catch(e){console.log(e.code==='ENOENT'?'MISSING: file not found':'INVALID: unreadable or not valid JSON')}" "<path>"` and report only its one-line result. Never open, read or print the file: it can contain credentials. appium-mcp silently ignores a missing or invalid file, which shows up later as a cloud authentication error.
 - A self-hosted Appium server must not be reachable unauthenticated from a shared network: anyone who can reach it controls its devices and host. Recommend putting it behind an authenticating reverse proxy or VPN.
 
 ## Local checks (run what applies, report each as OK / MISSING / UNKNOWN)

@@ -12,7 +12,7 @@
     "remote_server_url": {
       "type": "string",
       "title": "Remote Appium server URL (optional)",
-      "description": "Leave empty to use local emulators, simulators and devices. Set to a remote Appium/WebDriver endpoint (self-hosted or a device cloud) to run there instead. Must be https:// (plain http:// is allowed only for localhost) and must not contain credentials; put device-cloud keys in the capabilities file instead.",
+      "description": "Leave empty to use local emulators, simulators and devices. Set to a remote Appium/WebDriver endpoint (self-hosted or a device cloud) to run there instead. Only this exact URL is allowed. Must be https:// (plain http:// is allowed only for localhost) and must not contain credentials; put device-cloud keys in the capabilities file instead.",
       "default": ""
     },
     "capabilities_file": {
