@@ -1,0 +1,15 @@
+{
+  // Skills and commands are prompts, so cosmetic rules are off.
+  // What stays on catches real breakage: bad links, unclosed code fences, broken tables.
+  "config": {
+    "default": true,
+    "MD013": false, // line length
+    "MD022": false, // blank lines around headings
+    "MD032": false, // blank lines around lists
+    "MD033": false, // inline HTML (README header)
+    "MD036": false, // emphasis used as a heading
+    "MD041": false, // first line must be a heading (frontmatter, centered README header)
+    "MD060": false  // table pipe spacing
+  },
+  "ignores": ["node_modules/**", ".claude/**"]
+}
