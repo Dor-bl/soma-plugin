@@ -11,7 +11,12 @@ Remote Appium server URL configured: `${user_config.remote_server_url}`. If set,
 - Node.js 22 or newer (`node --version`). `appium-mcp` requires `>=22`; older versions crash on startup and the server shows as disconnected. Fix: install Node 22 LTS (e.g. `winget install OpenJS.NodeJS.LTS` on Windows, or via nvm), then restart Claude.
 - Android: `adb` on PATH, `ANDROID_HOME`/`ANDROID_SDK_ROOT` set, at least one emulator or device listed by `adb devices`
 - iOS (macOS only): Xcode installed, command line tools selected, at least one simulator available
-- appium-mcp server visible and connected in the Claude tool list. If it is not, run `npx -y appium-mcp@latest` in a terminal and report the startup error.
+- appium-mcp server visible and connected in the Claude tool list. If it is not, offer a manual startup diagnostic:
+  - Ask the tester first. `npx -y appium-mcp@latest` downloads and installs the package and its dependencies if they are not cached.
+  - Run it with a time limit (about 60 seconds), capture stderr, and stop the process when the limit is reached.
+  - Exited with an error before the limit: MISSING. Quote the key error line.
+  - Still running at the limit with no error: the server starts (a healthy stdio server waits for input and never exits on its own). The problem is likely Claude's MCP config or a needed restart.
+  - Still running but stderr shows it is still downloading: UNKNOWN. Run it again once the install has finished.
 
 ## Output
 A short checklist with the exact command to fix each MISSING item. Do not install anything or change system settings without the tester's explicit confirmation. If the tester is on Windows or Linux and wants iOS, say plainly that local iOS testing needs a Mac and suggest a remote server.
