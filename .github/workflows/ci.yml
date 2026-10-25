@@ -5,8 +5,10 @@ on:
     branches: [main]
   pull_request:
   schedule:
-    # Nightly: catch upstream appium-mcp changes and dead links without a commit
-    - cron: "17 3 * * *"
+    # Nightly (Linux only): catch upstream appium-mcp changes and dead links without a commit
+    - cron: "17 3 * * 0,2-6"
+    # Weekly (Mondays): also run macOS and Windows, which bill at 10x and 2x minutes
+    - cron: "17 3 * * 1"
   workflow_dispatch:
 
 permissions:
@@ -51,8 +53,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, macos-latest, windows-latest]
-        node: [22, 24]
+        # Linux only by default; the full OS matrix runs on the weekly schedule and manual runs.
+        include: ${{ fromJSON((github.event.schedule == '17 3 * * 1' || github.event_name == 'workflow_dispatch') && '[{"os":"ubuntu-latest","node":22},{"os":"ubuntu-latest","node":24},{"os":"macos-latest","node":22},{"os":"windows-latest","node":22}]' || '[{"os":"ubuntu-latest","node":22},{"os":"ubuntu-latest","node":24}]') }}
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
