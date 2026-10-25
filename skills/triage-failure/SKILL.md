@@ -1,6 +1,6 @@
 ---
 name: triage-failure
-description: Triage a failed Appium test run or UI test: classify as product bug, test/script issue, environment problem or flaky, and suggest next steps. Use when a tester shares a failure log, stack trace, screenshot or says a test failed.
+description: "Triage a failed Appium test run or UI test: classify as product bug, test/script issue, environment problem or flaky, and suggest next steps. Use when a tester shares a failure log, stack trace, screenshot or says a test failed."
 ---
 
 # Triage a failed test

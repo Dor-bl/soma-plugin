@@ -30,8 +30,10 @@ SOMA wraps the official [`appium-mcp`](https://github.com/appium/appium-mcp) ser
 | 🧠 Skill | `run-manual-test` | Execute a manual test case step by step on a device |
 | 🧠 Skill | `triage-failure` | Investigate a failed step and pinpoint the likely cause |
 | 🧠 Skill | `bug-report` | Draft a structured bug report from a failure or observation |
+| 🧠 Skill | `generate-test` | Turn a manual test case into an automated Appium test script |
 | ⚡ Command | `/soma:run-test [platform] [steps or path]` | Run a manual test case through Appium |
 | ⚡ Command | `/soma:bug [what you saw]` | Draft a bug report |
+| ⚡ Command | `/soma:gen-test [framework] [steps or path]` | Generate an automated test from a manual test case |
 
 **Under the hood**
 
