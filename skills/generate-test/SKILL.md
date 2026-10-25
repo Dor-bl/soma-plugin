@@ -17,7 +17,8 @@ description: Turn a manual test case into an automated Appium test script (e.g. 
 - If a session from `run-manual-test` is still active, reuse it (list sessions first) instead of creating a new one.
 - Capability defaults to start from:
   - System or preinstalled apps (Settings, Contacts, launcher), or any app whose data must survive: pass `appium:noReset: true`. Without it, Appium clears app data first, which can hang or wipe state.
-  - Emulators: pass `appium:adbExecTimeout: 60000` and `appium:uiautomator2ServerInstallTimeout: 90000`. The 20 s defaults often time out on a freshly booted emulator. If it just booted, wait until it settles first (`adb shell cat /proc/loadavg` below about 6).
+  - Emulators: pass `appium:adbExecTimeout: 60000` and `appium:uiautomator2ServerInstallTimeout: 90000`. The 20 s defaults often time out on a freshly booted emulator. This applies to local and remote emulators.
+  - Local emulators only (no `remoteServerUrl`): if the emulator just booted, wait until it settles before creating the session. Target it explicitly with `adb -s <udid> shell cat /proc/loadavg` and wait for the first value to drop below about 6. Skip this for remote sessions: the device may be on another host, and local `adb` would fail or check an unrelated device.
 - If session creation fails, stop and report the exact error. Do not retry with different capabilities unless the tester asks.
 
 ## Generation
