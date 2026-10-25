@@ -1,0 +1,49 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 200" width="640" height="200" role="img" aria-label="SOMA - Spear of Mobile Automation">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#7C3AED"/>
+      <stop offset="1" stop-color="#2563EB"/>
+    </linearGradient>
+    <linearGradient id="text" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#7C3AED"/>
+      <stop offset="1" stop-color="#2563EB"/>
+    </linearGradient>
+    <linearGradient id="screen" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#1E1B4B" stop-opacity="0.55"/>
+      <stop offset="1" stop-color="#1E3A8A" stop-opacity="0.35"/>
+    </linearGradient>
+    <clipPath id="screenClip">
+      <rect x="84" y="42" width="88" height="172" rx="17"/>
+    </clipPath>
+  </defs>
+
+  <!-- Icon (256 grid, scaled to 160px) -->
+  <g transform="translate(20 20) scale(0.625)">
+    <rect width="256" height="256" rx="56" fill="url(#bg)"/>
+
+    <!-- Side buttons -->
+    <rect x="70" y="78" width="8" height="18" rx="3" fill="#FFFFFF"/>
+    <rect x="70" y="104" width="8" height="30" rx="3" fill="#FFFFFF"/>
+    <rect x="178" y="92" width="8" height="36" rx="3" fill="#FFFFFF"/>
+
+    <!-- Phone frame and glass screen -->
+    <rect x="76" y="34" width="104" height="188" rx="25" fill="#FFFFFF"/>
+    <rect x="84" y="42" width="88" height="172" rx="17" fill="#3B2FA8"/>
+    <rect x="84" y="42" width="88" height="172" rx="17" fill="url(#screen)"/>
+    <path d="M84 42 L172 42 L172 70 L84 150 Z" fill="#FFFFFF" opacity="0.07" clip-path="url(#screenClip)"/>
+
+    <!-- Camera pill and home indicator -->
+    <rect x="113" y="50" width="30" height="9" rx="4.5" fill="#0F0B2E"/>
+    <rect x="108" y="203" width="40" height="4" rx="2" fill="#FFFFFF" opacity="0.6"/>
+
+    <!-- Spear: faceted blade, binding, shaft -->
+    <path d="M128 70 L149 122 L128 140 Z" fill="#FFFFFF"/>
+    <path d="M128 70 L107 122 L128 140 Z" fill="#C7D2FE"/>
+    <rect x="113" y="144" width="30" height="8" rx="4" fill="#FFFFFF"/>
+    <rect x="123.5" y="156" width="9" height="38" rx="4.5" fill="#FFFFFF"/>
+  </g>
+
+  <!-- Wordmark -->
+  <text x="210" y="122" font-family="'Segoe UI', 'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="104" font-weight="800" letter-spacing="8" fill="url(#text)">SOMA</text>
+  <text x="214" y="160" font-family="'Segoe UI', 'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="19" font-weight="600" letter-spacing="4.2" fill="#8B93A7">SPEAR OF MOBILE AUTOMATION</text>
+</svg>
