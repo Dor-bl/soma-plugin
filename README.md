@@ -1,6 +1,8 @@
 <div align="center">
 
-# 🔱 SOMA
+<img src="assets/logo.svg" alt="SOMA logo" width="120" height="120">
+
+# SOMA
 
 ### Spear of Mobile Automation
 
