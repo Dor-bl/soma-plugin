@@ -9,7 +9,7 @@ A Claude plugin for mobile QA testers. It wraps the official [`appium-mcp`](http
 - Setting `remote_server_url`: leave empty for local; set it to use a remote Appium/WebDriver server
 
 ## Local mode requirements
-- Node.js
+- Node.js 22 or newer (required by `appium-mcp`)
 - Android: Android SDK, `adb`, an emulator or device
 - iOS: macOS with Xcode and a simulator (no iOS locally on Windows/Linux)
 
