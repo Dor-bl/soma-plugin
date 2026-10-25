@@ -32,6 +32,6 @@ Save the file (do not overwrite an existing one without asking), then report: th
 
 ## Rules
 - Never guess an element. If a locator is ambiguous, say which candidates matched and ask.
-- Copy text and content-desc values exactly as the device reports them, never retype them. Labels can contain look-alike Unicode: Android renders "Wi‑Fi" with U+2011 (non-breaking hyphen), and `Wi-Fi` with a normal hyphen does not match. In code, write such characters as escapes (`"Wi‑Fi"`) with a short comment.
+- Copy text and content-desc values exactly as the device reports them, never retype them. Labels can contain look-alike Unicode: Android renders "Wi‑Fi" with U+2011 (non-breaking hyphen), and `Wi-Fi` with a normal hyphen does not match. In code, write such characters as escapes (`"Wi\u2011Fi"`) with a short comment.
 - Do not hardcode real credentials or personal data. Read test accounts from config or environment variables.
 - Do not add new dependencies or change build files without the tester's confirmation.
