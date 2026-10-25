@@ -32,14 +32,26 @@ SOMA wraps the official [`appium-mcp`](https://github.com/appium/appium-mcp) ser
 | 🧠 Skill | `triage-failure` | Investigate a failed step and pinpoint the likely cause |
 | 🧠 Skill | `bug-report` | Draft a structured bug report from a failure or observation |
 | 🧠 Skill | `generate-test` | Turn a manual test case into an automated Appium test script |
+| 🧠 Skill | `explore-app` | Exploratory testing of an app area; reports suspected issues with evidence |
 | ⚡ Command | `/soma:run-test [platform] [steps or path]` | Run a manual test case through Appium |
 | ⚡ Command | `/soma:bug [what you saw]` | Draft a bug report |
 | ⚡ Command | `/soma:gen-test [framework] [steps or path]` | Generate an automated test from a manual test case |
+| ⚡ Command | `/soma:explore [platform] [area]` | Explore an app area and report suspected issues |
 
 **Under the hood**
 
 - 🔌 `.mcp.json` launches `appium-mcp` via `npx` (local embedded drivers by default)
 - ⚙️ `remote_server_url` setting: leave empty for local, or point it at a remote Appium/WebDriver server or device cloud
+- 🧩 Engines: skills describe *what* to do; [`backends/`](backends/README.md) describes *how* each engine does it
+
+## 🧩 Engines
+
+| Engine | Platforms | Setup | Used for |
+|--------|-----------|-------|----------|
+| [Appium](backends/appium.md) *(default)* | Android, iOS | Bundled | Everything |
+| [Google Artemis](backends/artemis.md) *(optional)* | Android | Install separately with [Artemis's installer](https://github.com/google/artemis) (`uv run artemis mcp --install claude`); needs its own LLM API key | `explore-app` by default when installed; `run-manual-test` and `triage-failure` when you ask for it |
+
+Without Artemis installed, SOMA behaves exactly as before. Artemis is an autonomous agent: SOMA runs it one test step at a time and checks its trace, so it can't route around a bug and report a pass.
 
 ## 🛠️ Requirements (local mode)
 
@@ -67,6 +79,7 @@ Then try:
 ```text
 /soma:run-test android "Open the app, log in with test user, verify the home screen"
 /soma:bug "Checkout button does nothing after adding a coupon"
+/soma:explore android "checkout with a coupon code"
 ```
 
 ## ⚠️ Known limitations (v0.1)
