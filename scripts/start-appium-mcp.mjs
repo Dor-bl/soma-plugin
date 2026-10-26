@@ -1,34 +1,9 @@
 // Starts appium-mcp with a remote-server allowlist pinned to the exact URL
-// configured in the plugin settings. The model passes remoteServerUrl as a
-// tool argument, so without this any https host could receive the
-// device-cloud credentials from the capabilities file.
+// configured in the plugin settings (see allowlist.mjs).
 import { spawn } from 'node:child_process';
+import { allowRegexFor } from './allowlist.mjs';
 
 const APPIUM_MCP = 'appium-mcp@1.97.1';
-const DENY_ALL = '^(?!)$';
-const LOOPBACK = new Set(['localhost', '127.0.0.1', '[::1]']);
-
-function escapeRegex(s) {
-  return s.replace(/[.*+?^${}()|[\]\\/]/g, (c) => `\\${c}`);
-}
-
-function allowRegexFor(configured) {
-  const value = (configured || '').trim();
-  if (!value || value.startsWith('${')) return DENY_ALL;
-  let url;
-  try {
-    url = new URL(value);
-  } catch {
-    console.error(`[soma] remote_server_url is not a valid URL; remote sessions are disabled.`);
-    return DENY_ALL;
-  }
-  const secure = url.protocol === 'https:' || (url.protocol === 'http:' && LOOPBACK.has(url.hostname));
-  if (!secure || url.username || url.password || url.search || url.hash) {
-    console.error('[soma] remote_server_url must be https:// (http:// only for localhost) with no credentials, query or fragment; remote sessions are disabled.');
-    return DENY_ALL;
-  }
-  return `^${escapeRegex(value.replace(/\/+$/, ''))}\\/?$`;
-}
 
 const env = {
   ...process.env,
