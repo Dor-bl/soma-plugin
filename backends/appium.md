@@ -14,6 +14,7 @@ Server: `appium-mcp`, bundled in `.mcp.json`. Platforms: Android and iOS. Claude
 | Read the screen | `appium_get_page_source` (assertions), `appium_get_text` |
 | Screenshot | `appium_screenshot` |
 | App install / launch / stop | `appium_app_lifecycle` |
+| Prepare an iOS simulator (macOS only) | `prepare_ios_simulator` |
 
 ## Session setup
 The calling skill's session setup is authoritative; in short:

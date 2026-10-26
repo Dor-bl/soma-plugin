@@ -28,11 +28,13 @@ SOMA wraps the official [`appium-mcp`](https://github.com/appium/appium-mcp) ser
 | Type | Name | Description |
 |------|------|-------------|
 | 🧠 Skill | `check-setup` | Verify your local environment (Node, SDKs, devices) is ready |
+| 🧠 Skill | `start-device` | Start an Android emulator, wait for a full boot, and diagnose crashes |
 | 🧠 Skill | `run-manual-test` | Execute a manual test case step by step on a device |
 | 🧠 Skill | `triage-failure` | Investigate a failed step and pinpoint the likely cause |
 | 🧠 Skill | `bug-report` | Draft a structured bug report from a failure or observation |
 | 🧠 Skill | `generate-test` | Turn a manual test case into an automated Appium test script |
 | 🧠 Skill | `explore-app` | Exploratory testing of an app area; reports suspected issues with evidence |
+| ⚡ Command | `/soma:device [avd name]` | Start an emulator and wait until it is ready |
 | ⚡ Command | `/soma:run-test [platform] [steps or path]` | Run a manual test case through Appium |
 | ⚡ Command | `/soma:bug [what you saw]` | Draft a bug report |
 | ⚡ Command | `/soma:gen-test [framework] [steps or path]` | Generate an automated test from a manual test case |
@@ -41,6 +43,7 @@ SOMA wraps the official [`appium-mcp`](https://github.com/appium/appium-mcp) ser
 **Under the hood**
 
 - 🔌 `.mcp.json` launches `appium-mcp` through `scripts/start-appium-mcp.mjs`, which runs a pinned version via `npx` (local embedded drivers by default)
+- 📱 `scripts/start-emulator.mjs`: used by `start-device` to start an emulator detached and watch it boot
 - ⚙️ `remote_server_url` setting: leave empty for local, or point it at a remote Appium/WebDriver server or device cloud. Only that exact URL is allowed, and only if it's `https://` (plain `http://` for localhost only) with no embedded credentials. When it's empty, all remote servers are blocked
 - 🔑 `capabilities_file` setting (optional): a `capabilities.json` read from disk by `appium-mcp`. Put device-cloud credentials here so they never enter the conversation, and keep it out of version control
 - 🧩 Engines: skills describe *what* to do; [`backends/`](backends/README.md) describes *how* each engine does it
