@@ -1,6 +1,6 @@
 ---
 name: explore-app
-description: Exploratory testing of a mobile app area without written steps (e.g. "poke around checkout and tell me what looks wrong"). Reports suspected issues with evidence. Uses Google Artemis on Android when it is installed, otherwise Appium. Use when a tester asks to explore, smoke-check or look for problems in a flow.
+description: Exploratory testing of a mobile app area without written steps (e.g. "poke around checkout and tell me what looks wrong"). Reports suspected issues with evidence. Uses Google Artemis on Android when it is installed and no remote server is set, otherwise Appium. Use when a tester asks to explore, smoke-check or look for problems in a flow.
 ---
 
 # Explore an app area
@@ -11,9 +11,10 @@ description: Exploratory testing of a mobile app area without written steps (e.g
 - Test account to use, if login is needed
 
 ## Engine
-- Android with Artemis's `mobile_*` tools available: use Artemis (`${CLAUDE_PLUGIN_ROOT}/backends/artemis.md`). Give it the goal in small chunks (one screen or sub-flow per `mobile_run_task`) so findings can be traced to a step.
-- Otherwise use Appium (`${CLAUDE_PLUGIN_ROOT}/backends/appium.md`) and drive the exploration yourself.
-- Remote Appium server URL configured for this plugin: `${user_config.remote_server_url}` (Appium only; empty means local mode).
+- Remote Appium server URL configured for this plugin: `${user_config.remote_server_url}`
+- If that value is set, use Appium and pass it as `remoteServerUrl` when creating the session. Artemis cannot reach a remote server and would test a local device instead. Switch to Artemis only if the tester explicitly asks to explore a local device.
+- If it is empty, on Android with Artemis's `mobile_*` tools available: use Artemis (`${CLAUDE_PLUGIN_ROOT}/backends/artemis.md`). Give it the goal in small chunks (one screen or sub-flow per `mobile_run_task`) so findings can be traced to a step.
+- Otherwise use Appium (`${CLAUDE_PLUGIN_ROOT}/backends/appium.md`) in local mode (do not pass `remoteServerUrl`) and drive the exploration yourself.
 
 ## Exploration
 1. Start the session. If it fails, stop and report the exact error.

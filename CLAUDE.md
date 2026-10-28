@@ -8,6 +8,7 @@ SOMA is a Claude Code plugin for mobile QA, built on the official [`appium-mcp`]
 - `.mcp.json`: starts `appium-mcp` via `npx`
 - `skills/<name>/SKILL.md`: one skill per folder
 - `commands/*.md`: slash commands (`/soma:<file>`), each a one-line hand-off to a skill
+- `backends/`: one file per device engine (Appium default, optional Google Artemis). Skills say *what* to do; these files say *which tools* do it. Selection rules are in `backends/README.md`
 - `scripts/`: CI checks (`check-plugin.mjs`, `mcp-smoke.mjs`)
 
 ## Checks (same as CI)

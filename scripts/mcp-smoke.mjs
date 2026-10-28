@@ -14,6 +14,10 @@ const REQUIRED_TOOLS = [
   // generate-test
   'appium_generate_tests',
   'generate_locators',
+  // backends/appium.md
+  'appium_set_value',
+  'appium_get_text',
+  'appium_app_lifecycle',
 ];
 // Includes the npx download of appium-mcp, which is slow on a cold cache.
 const TIMEOUT_MS = Number(process.env.SMOKE_TIMEOUT_MS ?? 480_000);
