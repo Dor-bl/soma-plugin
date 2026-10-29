@@ -8,7 +8,7 @@ Platforms: **Android only**. Artemis runs its own agent: it receives a goal in p
 Every step changes the tester's machine: describe it and wait for their yes before running it.
 1. Clone it outside the project under test: `git clone https://github.com/google/artemis.git`.
 2. In that folder: `uv sync --python 3.12`. Without the pin, `uv` may pick a newer Python with no prebuilt wheels and fail to build dependencies.
-3. Register the MCP server for this project only: print the config with `uv run artemis mcp --generate-config claude`, then add it with `claude mcp add-json --scope local artemis '<the "artemis" server JSON>'`.
+3. Register the MCP server for the tester's project only. In the Artemis folder, print the config with `uv run artemis mcp --generate-config claude`. Then **change to the folder where the tester runs Claude Code with SOMA** and run `claude mcp add-json --scope local artemis '<the "artemis" server JSON>'` there: local scope binds the server to the current folder, so running it in the Artemis clone registers it for the wrong project. Confirm with `claude mcp get artemis` from that same folder.
 4. Copy `.env.example` to `.env`. The tester adds one LLM API key there themselves; never ask for it in the chat. On shared or personal phones, suggest `ARTEMIS_HELPER_AUTO_INSTALL=false` so tasks cannot install the helper on their own.
 5. Restart Claude Code so the `mobile_*` tools load, then run `check-setup`.
 
