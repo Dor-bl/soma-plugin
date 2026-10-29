@@ -33,6 +33,8 @@ jobs:
         run: claude plugin validate .
       - name: Structure checks (frontmatter, userConfig, version badge)
         run: node scripts/check-plugin.mjs
+      - name: Remote server allowlist tests
+        run: node scripts/test-allowlist.mjs
 
   docs:
     name: Markdown lint and links

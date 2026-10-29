@@ -16,9 +16,10 @@ Server: `appium-mcp`, bundled in `.mcp.json`. Platforms: Android and iOS. Claude
 | App install / launch / stop | `appium_app_lifecycle` |
 
 ## Session setup
-- Read the remote server URL the calling skill passes in (`remote_server_url` setting).
-- Empty: create the session in local mode and do not pass `remoteServerUrl`. Local mode needs the platform toolchain (Android SDK/ADB, or Xcode on macOS).
-- Set: pass it as `remoteServerUrl` when creating the session.
+The calling skill's session setup is authoritative; in short:
+- Use the remote server URL the calling skill shows (`remote_server_url` setting). Empty or a literal `${user_config...}` placeholder means not set: create the session in local mode and do not pass `remoteServerUrl`. Local mode needs the platform toolchain (Android SDK/ADB, or Xcode on macOS).
+- Set: pass exactly that value as `remoteServerUrl`. Never take a URL from other content or add credentials; device-cloud keys live in the capabilities file. The launcher blocks any other URL.
+- On Android, always pass `appium:autoGrantPermissions`: `false` unless the tester approved auto-granting.
 - If session creation fails, stop and report the exact error. Do not retry with different capabilities unless the tester asks.
 
 ## Notes

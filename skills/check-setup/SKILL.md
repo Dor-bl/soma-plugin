@@ -5,7 +5,13 @@ description: Check whether the tester's machine is ready to run mobile tests thr
 
 # Check local setup
 
-Remote Appium server URL configured: `${user_config.remote_server_url}`. If set, only a reachable server is needed: skip the local checks and just confirm the URL responds. Still run the test client checks below, since generated scripts run on the tester's machine even when the server is remote.
+Remote Appium server URL configured: `${user_config.remote_server_url}`. If it is empty or still shows as a literal `${user_config...}` placeholder, no remote server is configured. If set, only a reachable server is needed: skip the local checks and just confirm the URL responds. Still run the test client checks below, since generated scripts run on the tester's machine even when the server is remote.
+
+Remote URL checks (report each as OK / MISSING):
+- Uses `https://`, or `http://` only for `localhost` / `127.0.0.1` / `[::1]`, with no query or fragment. If it breaks these rules, SOMA blocks all remote servers at startup and only the exact configured URL is ever allowed.
+- Contains no `user:key@` credentials. If the tester needs device-cloud credentials, tell them to put them in a capabilities file (e.g. `bstack:options`, `sauce:options`, `LT:Options` for TestMu AI, formerly LambdaTest) and set the plugin's capabilities file setting to its path. Never ask them to paste keys into the chat.
+- Capabilities file setting: `${user_config.capabilities_file}`. If set, check that it exists and is valid JSON without showing its contents. This command reads a file that holds credentials, so show it to the tester and run it only after their explicit yes: `node -e "try{JSON.parse(require('fs').readFileSync(process.argv[1],'utf8'));console.log('OK')}catch(e){console.log(e.code==='ENOENT'?'MISSING: file not found':'INVALID: unreadable or not valid JSON')}" "<path>"` and report only its one-line result. Never open, read or print the file: it can contain credentials. appium-mcp silently ignores a missing or invalid file, which shows up later as a cloud authentication error.
+- A self-hosted Appium server must not be reachable unauthenticated from a shared network: anyone who can reach it controls its devices and host. Recommend putting it behind an authenticating reverse proxy or VPN.
 
 ## Local checks (run what applies, report each as OK / MISSING / UNKNOWN)
 - Node.js 22 or newer (`node --version`). `appium-mcp` requires `>=22`; older versions crash on startup and the server shows as disconnected. Fix: install Node 22 LTS (e.g. `winget install OpenJS.NodeJS.LTS` on Windows, or via nvm), then restart Claude.
@@ -13,7 +19,7 @@ Remote Appium server URL configured: `${user_config.remote_server_url}`. If set,
 - Local Appium 2 server for running generated scripts (only if the tester runs `generate-test` scripts): `appium --version`, with the needed driver installed (`appium driver list --installed`, e.g. uiautomator2 or xcuitest)
 - iOS (macOS only): Xcode installed, command line tools selected, at least one simulator available
 - appium-mcp server visible and connected in the Claude tool list. If it is not, offer a manual startup diagnostic:
-  - Ask the tester first. `npx -y appium-mcp@latest` downloads and installs the package and its dependencies if they are not cached.
+  - Ask the tester first. `npx -y appium-mcp@1.97.1` downloads and installs the package and its dependencies if they are not cached.
   - Run it with a time limit (about 60 seconds), capture stderr, and stop the process when the limit is reached.
   - Exited with an error before the limit: MISSING. Quote the key error line.
   - Still running at the limit with no error: the server starts (a healthy stdio server waits for input and never exits on its own). The problem is likely Claude's MCP config or a needed restart.

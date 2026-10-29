@@ -40,8 +40,9 @@ SOMA wraps the official [`appium-mcp`](https://github.com/appium/appium-mcp) ser
 
 **Under the hood**
 
-- 🔌 `.mcp.json` launches `appium-mcp` via `npx` (local embedded drivers by default)
-- ⚙️ `remote_server_url` setting: leave empty for local, or point it at a remote Appium/WebDriver server or device cloud
+- 🔌 `.mcp.json` launches `appium-mcp` through `scripts/start-appium-mcp.mjs`, which runs a pinned version via `npx` (local embedded drivers by default)
+- ⚙️ `remote_server_url` setting: leave empty for local, or point it at a remote Appium/WebDriver server or device cloud. Only that exact URL is allowed, and only if it's `https://` (plain `http://` for localhost only) with no embedded credentials. When it's empty, all remote servers are blocked
+- 🔑 `capabilities_file` setting (optional): a `capabilities.json` read from disk by `appium-mcp`. Put device-cloud credentials here so they never enter the conversation, and keep it out of version control
 - 🧩 Engines: skills describe *what* to do; [`backends/`](backends/README.md) describes *how* each engine does it
 
 ## 🧩 Engines
@@ -52,6 +53,9 @@ SOMA wraps the official [`appium-mcp`](https://github.com/appium/appium-mcp) ser
 | [Google Artemis](backends/artemis.md) *(optional)* | Android | Install separately with [Artemis's installer](https://github.com/google/artemis) (`uv run artemis mcp --install claude`); needs its own LLM API key | `explore-app` by default when installed; `run-manual-test` and `triage-failure` when you ask for it |
 
 Without Artemis installed, SOMA behaves exactly as before. Artemis is an autonomous agent: SOMA runs it one test step at a time and checks its trace, so it can't route around a bug and report a pass.
+
+> [!NOTE]
+> SOMA's version pin and remote-URL allowlist cover `appium-mcp` only. Artemis is installed and updated outside SOMA, and its own agent and LLM key are yours to manage.
 
 ## 🛠️ Requirements (local mode)
 
@@ -88,9 +92,9 @@ Then try:
 > SOMA is an early scaffold. Expect rough edges.
 
 - 🧪 Skills are untested against real devices.
-- 📌 `appium-mcp` is pulled with `@latest`; pin a version once you have a known-good one.
-- 🌐 The remote URL is read by the skills and passed to the session tool; it isn't enforced at the server level.
-- 🔓 No authentication is applied to a shared remote server.
+- 📌 `appium-mcp` is pinned to an exact version (`1.97.1`). Bump it deliberately after testing; its transitive dependencies are still resolved by npm at install time.
+- 🌐 The remote URL policy covers the URL you configure only. Redirects and direct-connect endpoints chosen by the server aren't re-checked, so only point SOMA at servers you trust.
+- 🔓 SOMA can't add authentication to a self-hosted Appium server. Put it behind an authenticating reverse proxy or VPN; never expose it unauthenticated on a shared network.
 
 ## 📄 License
 
