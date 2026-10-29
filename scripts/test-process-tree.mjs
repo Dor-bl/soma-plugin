@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // Tests the Windows process-tree tracking mcp-smoke.mjs uses for cleanup:
 // every server process is found, and nothing outside the tree is ever a kill target.
-import { createProcessTree, parseSnapshot, takeSnapshots } from './process-tree.mjs';
+import { createProcessTree, parseSnapshot, takeSnapshots, killCommand } from './process-tree.mjs';
 
 const T0 = 1_000_000;
 const ROOT = 100;
@@ -125,6 +125,15 @@ check(
     { takenAt: 900, rows: [row(100, 1, 10), row(300, 200, 30)] },
   ]);
   check('leaves nothing pending after a complete snapshot', second.rest, '');
+}
+
+{
+  // PowerShell flattens a one-element array of arrays, which once made the kill loop treat
+  // the creation time as a PID; each target must stay a single "pid:created" string.
+  const script = (targets) => killCommand(targets)[1][2];
+  check('kill list keeps a single target intact', script([row(17480, 1, 1793307752479)]).includes("@('17480:1793307752479')"), true);
+  check('kill list keeps each of several targets intact', script([row(1, 0, 10), row(2, 0, 20)]).includes("@('1:10','2:20')"), true);
+  check('kill only after the creation time matches', /-eq \[long\]\$created\) \{ \$p\.Kill\(\)/.test(script([row(1, 0, 10)])), true);
 }
 
 if (failed) {

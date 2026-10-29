@@ -25,6 +25,28 @@ export const watchCommand = (intervalMs) => [
   ['-NoProfile', '-Command', `while ($true) { 'T ' + [DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds(); ${SNAPSHOT}; 'END'; Start-Sleep -Milliseconds ${intervalMs} }`],
 ];
 
+// Kills each { pid, created } only if the process under that PID still has that creation
+// time. The check and the kill go through the same process handle, and Windows cannot
+// reuse a PID while a handle to it is open, so a PID reused since the snapshot is never
+// killed. (taskkill takes only a PID, so it cannot give that guarantee.) Prints one
+// "killed <pid>" line per kill.
+export function killCommand(targets) {
+  // "pid:created" strings: PowerShell flattens a one-element array of arrays, which would
+  // make the loop treat the creation time as a PID
+  const list = targets.map(({ pid, created }) => `'${Number(pid)}:${Number(created)}'`).join(',');
+  return [
+    'powershell',
+    [
+      '-NoProfile',
+      '-Command',
+      `foreach ($t in @(${list})) { $id, $created = $t.Split(':'); try { ` +
+        '$p = [Diagnostics.Process]::GetProcessById([int]$id); ' +
+        'if ([DateTimeOffset]::new($p.StartTime).ToUnixTimeMilliseconds() -eq [long]$created) { $p.Kill(); "killed $id" } ' +
+        '} catch {} }',
+    ],
+  ];
+}
+
 export function parseSnapshot(text) {
   return text.split(/\r?\n/).map((l) => l.trim().split(/\s+/).map(Number)).filter(([pid]) => pid)
     .map(([pid, ppid, created]) => ({ pid, ppid, created }));

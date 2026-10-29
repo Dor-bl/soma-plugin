@@ -8,7 +8,7 @@
 import { spawn, execFileSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
-import { createProcessTree, parseSnapshot, takeSnapshots, SNAPSHOT_COMMAND, watchCommand } from './process-tree.mjs';
+import { createProcessTree, parseSnapshot, takeSnapshots, killCommand, SNAPSHOT_COMMAND, watchCommand } from './process-tree.mjs';
 
 const REQUIRED_TOOLS = [
   'select_device',
@@ -84,12 +84,11 @@ function stopWindowsTree() {
     tree.absorb(rows, takenAt);
     const targets = tree.targets(rows);
     if (!targets.length) break;
-    for (const { pid } of targets) {
-      try {
-        execFileSync('taskkill', ['/PID', String(pid), '/F'], { stdio: 'ignore' });
-      } catch {
-        // already gone
-      }
+    const [killCmd, killArgs] = killCommand(targets);
+    try {
+      execFileSync(killCmd, killArgs, { stdio: 'ignore', windowsHide: true });
+    } catch {
+      // the next pass retries anything still running
     }
   }
 }
