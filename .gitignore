@@ -3,4 +3,7 @@ node_modules/
 *.zip
 .DS_Store
 Thumbs.db
+# Local one-off bootstrap script from the initial scaffold. Not shared and holds no
+# secrets; it is obsolete (it writes an unpinned appium-mcp@latest .mcp.json), so
+# do not commit or re-run it.
 setup-soma.ps1
