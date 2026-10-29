@@ -6,7 +6,7 @@ Server: `appium-mcp`, bundled in `.mcp.json`. Platforms: Android and iOS. Claude
 
 | Operation | Tool |
 |-----------|------|
-| Pick a device | `select_device` |
+| Pick a device | Local only: `select_device`. Remote: skip it and name the device in the session capabilities (e.g. `appium:deviceName`, `appium:platformVersion`) |
 | Start / list / close a session | `appium_session_management` (`action=create` / `list` / `delete`) |
 | Find an element | `appium_find_element`, `generate_locators` |
 | Tap, swipe, scroll | `appium_gesture` (`action=scroll_to_element` for off-screen elements) |
