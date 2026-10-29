@@ -62,9 +62,24 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version: ${{ matrix.node }}
+      # Cache npm's cache folder, including the _npx folder where npx keeps the installed
+      # appium-mcp, so later runs skip the install (close to 8 min on Windows runners).
+      # The launcher pins the appium-mcp version, so hashing it gives a fresh cold
+      # install, and a new cache, whenever the pin changes.
+      - name: Locate npm cache
+        id: npm-cache
+        shell: bash
+        run: echo "dir=$(npm config get cache)" >> "$GITHUB_OUTPUT"
+      - name: Cache appium-mcp install
+        uses: actions/cache@v6
+        with:
+          path: ${{ steps.npm-cache.outputs.dir }}
+          key: appium-mcp-${{ runner.os }}-node${{ matrix.node }}-${{ hashFiles('scripts/start-appium-mcp.mjs') }}
       - name: Handshake and check required tools
         run: node scripts/mcp-smoke.mjs
         env:
-          # A cold npx install of appium-mcp takes ~4 min on Windows runners
-          SMOKE_TIMEOUT_MS: "480000"
-        timeout-minutes: 10
+          # Room for a cold install (close to 8 min on Windows runners), which only happens
+          # when the pin changes. The cache is only saved when the job passes, so a limit
+          # too tight for a cold install would mean the cache is never filled.
+          SMOKE_TIMEOUT_MS: "720000"
+        timeout-minutes: 15
