@@ -21,7 +21,7 @@ description: Exploratory testing of a mobile app area without written steps (e.g
 
 ## Confirm before starting
 Before creating the session, show the tester one summary and wait for a single explicit yes:
-- the engine, and for Artemis the device serial it will be bound to
+- the engine, and for Artemis the device serial it will be bound to, and that Artemis installs (or updates) its accessibility-service helper app on that device and sends screenshots to its LLM provider (see `${CLAUDE_PLUGIN_ROOT}/backends/artemis.md`)
 - the app to install or launch (exact package/bundle ID or file path)
 - on Android, whether to auto-grant the app's runtime permissions (default: no)
 - with Appium, whether to keep app data (default: yes, `noReset: true`) or start from a clean app

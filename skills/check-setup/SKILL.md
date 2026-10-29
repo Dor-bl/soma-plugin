@@ -34,8 +34,8 @@ Check that the client actually loads its entry point, not just that it is listed
 ## Optional engine: Google Artemis
 Only if the tester uses or asks about Artemis (see `${CLAUDE_PLUGIN_ROOT}/backends/artemis.md`):
 - `mobile_*` tools visible in the Claude tool list. If not, report MISSING and point to Artemis's installer (`uv run artemis mcp --install claude`). Do not run it without the tester's confirmation.
-- If visible, call `mobile_diagnose` and report its verdict (`ready` / `degraded` / `blocked`) with its fix list.
-- Artemis is Android only and needs its own LLM API key.
+- If visible, call `mobile_diagnose` in check-only mode (no automatic fixes, no AVD launch) and report its verdict (`ready` / `degraded` / `blocked`) with its fix list. Apply a fix only after the tester's confirmation.
+- Artemis is Android only and needs its own LLM API key. On first use it installs an accessibility-service helper app on the device; the tester can check it with `uv run artemis helper status`.
 
 ## Output
 A short checklist with the exact command to fix each MISSING item. Do not install anything or change system settings without the tester's explicit confirmation. If the tester is on Windows or Linux and wants iOS, say plainly that local iOS testing needs a Mac and suggest a remote server.

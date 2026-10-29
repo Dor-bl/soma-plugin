@@ -14,6 +14,11 @@ Platforms: **Android only**. Artemis runs its own agent: it receives a goal in p
 | Read the screen | `mobile_get_device_state` (screenshot, or OCR plus XML hierarchy) |
 | Evidence of what it did | `mobile_inspect_trace` (actions, reasoning, device) |
 
+## What it changes on the device
+- On its first task on a device, Artemis installs an on-device **helper app that runs as an accessibility service** (it reads the screen layout). It shows a persistent notification and an entry under Settings → Accessibility, and stays installed after the run. This is an app install plus an accessibility grant, so the tester must approve it in the upfront confirmation before the first `mobile_run_task` on that device.
+- Check it with `uv run artemis helper status`; the tester removes it with `uv run artemis helper uninstall`. Run neither without the tester's confirmation.
+- Screenshots go to the LLM provider behind the tester's Artemis API key. Use test devices and test accounts only, with no real personal data on screen.
+
 ## Using it for QA
 - **Bind the run to one device.** At the start, pick the device (ask if more than one is connected) and pass its serial as `device_serial` to every `mobile_run_task` and `mobile_get_device_state` call. Without it, a task can auto-select one device while screen reads go to the default device, so a step runs on one device and is verified on another.
 - **Preserve screenshot evidence.** `mobile_get_device_state` overwrites the same screenshot file on each call. Right after each capture you will reference, copy it to a unique name (e.g. `soma-<run>-step<N>-<capture>.png`) and cite the copy in the report, never the live file.
