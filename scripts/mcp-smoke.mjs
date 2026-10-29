@@ -1,8 +1,10 @@
 #!/usr/bin/env node
 // Starts appium-mcp exactly as .mcp.json does, performs the MCP handshake over
-// stdio and checks that the tools the SOMA skills rely on are still exposed.
+// stdio and checks that the tools the SOMA skills rely on are still exposed,
+// and that remote servers are blocked when no remote URL is configured.
 import { spawn } from 'node:child_process';
 import { readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 
 const REQUIRED_TOOLS = [
   'select_device',
@@ -18,13 +20,25 @@ const REQUIRED_TOOLS = [
 // Includes the npx download of appium-mcp, which is slow on a cold cache.
 const TIMEOUT_MS = Number(process.env.SMOKE_TIMEOUT_MS ?? 480_000);
 
+// Substitute variables the way Claude Code does, with every plugin setting
+// left at its empty default.
+const pluginRoot = fileURLToPath(new URL('..', import.meta.url)).replace(/[\\/]$/, '');
+const resolve = (value) =>
+  value.replaceAll('${CLAUDE_PLUGIN_ROOT}', pluginRoot).replace(/\$\{user_config\.\w+\}/g, '');
+
 const config = JSON.parse(readFileSync(new URL('../.mcp.json', import.meta.url), 'utf8'));
-const { command, args = [] } = config.mcpServers['appium-mcp'];
+const server = config.mcpServers['appium-mcp'];
+const command = resolve(server.command);
+const args = (server.args ?? []).map(resolve);
+const env = { ...process.env };
+for (const [key, value] of Object.entries(server.env ?? {})) env[key] = resolve(value);
 console.log(`Starting: ${command} ${args.join(' ')}`);
 
 const child = spawn(command, args, {
   stdio: ['pipe', 'pipe', 'pipe'],
-  shell: process.platform === 'win32',
+  env,
+  // npx is a .cmd shim on Windows and needs a shell; node does not.
+  shell: process.platform === 'win32' && command !== 'node',
 });
 let stderr = '';
 child.stderr.on('data', (d) => (stderr += d));
@@ -86,4 +100,15 @@ console.log(`Server exposes ${tools.size} tools`);
 
 const missing = REQUIRED_TOOLS.filter((t) => !tools.has(t));
 if (missing.length) finish(1, `✘ Missing tools required by SOMA skills: ${missing.join(', ')}`);
-finish(0, `✔ All ${REQUIRED_TOOLS.length} required tools present`);
+console.log(`✔ All ${REQUIRED_TOOLS.length} required tools present`);
+
+// With no remote_server_url configured, the launcher must block every remote server.
+const blocked = await request(3, 'tools/call', {
+  name: 'appium_session_management',
+  arguments: { action: 'create', platform: 'android', remoteServerUrl: 'https://example.com/wd/hub' },
+});
+const blockedText = JSON.stringify(blocked.result ?? blocked.error ?? {});
+if (!/Invalid remoteServerUrl/.test(blockedText)) {
+  finish(1, `✘ Remote server was not blocked without a configured URL: ${blockedText.slice(0, 300)}`);
+}
+finish(0, '✔ Remote servers are blocked when no remote URL is configured');

@@ -38,8 +38,9 @@ SOMA wraps the official [`appium-mcp`](https://github.com/appium/appium-mcp) ser
 
 **Under the hood**
 
-- 🔌 `.mcp.json` launches `appium-mcp` via `npx` (local embedded drivers by default)
-- ⚙️ `remote_server_url` setting: leave empty for local, or point it at a remote Appium/WebDriver server or device cloud
+- 🔌 `.mcp.json` launches `appium-mcp` through `scripts/start-appium-mcp.mjs`, which runs a pinned version via `npx` (local embedded drivers by default)
+- ⚙️ `remote_server_url` setting: leave empty for local, or point it at a remote Appium/WebDriver server or device cloud. Only that exact URL is allowed, and only if it's `https://` (plain `http://` for localhost only) with no embedded credentials. When it's empty, all remote servers are blocked
+- 🔑 `capabilities_file` setting (optional): a `capabilities.json` read from disk by `appium-mcp`. Put device-cloud credentials here so they never enter the conversation, and keep it out of version control
 
 ## 🛠️ Requirements (local mode)
 
@@ -75,9 +76,9 @@ Then try:
 > SOMA is an early scaffold. Expect rough edges.
 
 - 🧪 Skills are untested against real devices.
-- 📌 `appium-mcp` is pulled with `@latest`; pin a version once you have a known-good one.
-- 🌐 The remote URL is read by the skills and passed to the session tool; it isn't enforced at the server level.
-- 🔓 No authentication is applied to a shared remote server.
+- 📌 `appium-mcp` is pinned to an exact version (`1.97.1`). Bump it deliberately after testing; its transitive dependencies are still resolved by npm at install time.
+- 🌐 The remote URL policy covers the URL you configure only. Redirects and direct-connect endpoints chosen by the server aren't re-checked, so only point SOMA at servers you trust.
+- 🔓 SOMA can't add authentication to a self-hosted Appium server. Put it behind an authenticating reverse proxy or VPN; never expose it unauthenticated on a shared network.
 
 ## 📄 License
 

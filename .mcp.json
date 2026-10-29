@@ -1,8 +1,12 @@
 {
   "mcpServers": {
     "appium-mcp": {
-      "command": "npx",
-      "args": ["-y", "appium-mcp@latest"]
+      "command": "node",
+      "args": ["${CLAUDE_PLUGIN_ROOT}/scripts/start-appium-mcp.mjs"],
+      "env": {
+        "SOMA_REMOTE_SERVER_URL": "${user_config.remote_server_url}",
+        "CAPABILITIES_CONFIG": "${user_config.capabilities_file}"
+      }
     }
   }
 }
