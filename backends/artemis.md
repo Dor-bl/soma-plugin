@@ -19,6 +19,9 @@ Platforms: **Android only**. Artemis runs its own agent: it receives a goal in p
 - Check it with `uv run artemis helper status`; the tester removes it with `uv run artemis helper uninstall`. Run neither without the tester's confirmation.
 - Screenshots go to the LLM provider behind the tester's Artemis API key. Use test devices and test accounts only, with no real personal data on screen.
 
+## Consent gate (every skill)
+Before the first Artemis call of a run (`mobile_run_task` or `mobile_get_device_state`), get the tester's explicit yes to: Artemis as the engine, the device serial, the helper install or update on that device, and screenshots going to their LLM provider. This applies even when the helper is already installed. Skip it only if the tester already approved Artemis on that same device earlier in this conversation. Any skill that uses Artemis must pass this gate, whether or not its own confirmation step lists these items.
+
 ## Using it for QA
 - **Bind the run to one device.** At the start, pick the device (ask if more than one is connected) and pass its serial as `device_serial` to every `mobile_run_task` and `mobile_get_device_state` call. Without it, a task can auto-select one device while screen reads go to the default device, so a step runs on one device and is verified on another.
 - **Preserve screenshot evidence.** `mobile_get_device_state` overwrites the same screenshot file on each call. Right after each capture you will reference, copy it to a unique name (e.g. `soma-<run>-step<N>-<capture>.png`) and cite the copy in the report, never the live file.
