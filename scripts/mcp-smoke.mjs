@@ -2,9 +2,13 @@
 // Starts appium-mcp exactly as .mcp.json does, performs the MCP handshake over
 // stdio and checks that the tools the SOMA skills rely on are still exposed,
 // and that remote servers are blocked when no remote URL is configured.
-import { spawn } from 'node:child_process';
+// Used by CI and by the check-setup skill.
+// Exit codes: 0 OK, 1 failed (crash, protocol error, missing tools, remote not blocked),
+// 2 timed out (inconclusive), 130 interrupted.
+import { spawn, execFile, execFileSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
+import { createProcessTree, parseSnapshot, SNAPSHOT_COMMAND } from './process-tree.mjs';
 
 const REQUIRED_TOOLS = [
   'select_device',
@@ -34,25 +38,90 @@ const env = { ...process.env };
 for (const [key, value] of Object.entries(server.env ?? {})) env[key] = resolve(value);
 console.log(`Starting: ${command} ${args.join(' ')}`);
 
+const isWindows = process.platform === 'win32';
 const child = spawn(command, args, {
   stdio: ['pipe', 'pipe', 'pipe'],
   env,
   // npx is a .cmd shim on Windows and needs a shell; node does not.
-  shell: process.platform === 'win32' && command !== 'node',
+  shell: isWindows && command !== 'node',
+  // Own process group on POSIX, so the whole launcher -> npx -> node tree can be stopped
+  detached: !isWindows,
 });
 let stderr = '';
 child.stderr.on('data', (d) => (stderr += d));
 
+// Windows has no process groups to signal, so the server tree is tracked by PID while it
+// runs and stopped process by process (see process-tree.mjs).
+const TRACK_MS = 3_000;
+const tree = createProcessTree({
+  rootPid: child.pid,
+  startedAt: Date.now() - 2_000,
+  orphanGraceMs: TRACK_MS + 2_000,
+});
+const [psCommand, psArgs] = SNAPSHOT_COMMAND;
+
+let tracking = false;
+const tracker = isWindows
+  ? setInterval(() => {
+      if (tracking) return;
+      tracking = true;
+      const takenAt = Date.now();
+      execFile(psCommand, psArgs, { windowsHide: true }, (err, out) => {
+        tracking = false;
+        if (!err) tree.absorb(parseSnapshot(out), takenAt);
+      });
+    }, TRACK_MS)
+  : null;
+
+function stopWindowsTree() {
+  // Repeat: a process spawned while we kill shows up in the next snapshot
+  for (let pass = 0; pass < 4; pass++) {
+    const takenAt = Date.now();
+    const rows = parseSnapshot(
+      execFileSync(psCommand, psArgs, { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'], windowsHide: true }),
+    );
+    tree.absorb(rows, takenAt);
+    const targets = tree.targets(rows);
+    if (!targets.length) break;
+    for (const { pid } of targets) {
+      try {
+        execFileSync('taskkill', ['/PID', String(pid), '/F'], { stdio: 'ignore' });
+      } catch {
+        // already gone
+      }
+    }
+  }
+}
+
+// child.kill() only stops the top process (the launcher here) and can leave the
+// appium-mcp node process running, so stop the whole tree.
+function stopServer() {
+  try {
+    if (isWindows) stopWindowsTree();
+    else process.kill(-child.pid, 'SIGTERM');
+  } catch {
+    child.kill();
+  }
+}
+
+let finished = false;
 function finish(code, msg) {
+  if (finished) return;
+  finished = true;
+  clearInterval(tracker);
   clearTimeout(timer);
   (code ? console.error : console.log)(msg);
   if (code && stderr) console.error(`--- server stderr (tail) ---\n${stderr.slice(-4000)}`);
-  child.kill();
+  stopServer();
   process.exit(code);
 }
 
-const timer = setTimeout(() => finish(1, `✘ No tools/list response within ${TIMEOUT_MS} ms`), TIMEOUT_MS);
+const timer = setTimeout(() => finish(2, `✘ No tools/list response within ${TIMEOUT_MS} ms`), TIMEOUT_MS);
 child.on('exit', (code) => finish(1, `✘ Server exited early with code ${code}`));
+// The server runs in its own process group on POSIX, so Ctrl+C no longer reaches it
+for (const signal of ['SIGINT', 'SIGTERM', 'SIGHUP']) {
+  process.on(signal, () => finish(130, `✘ Interrupted (${signal})`));
+}
 
 const send = (msg) => child.stdin.write(JSON.stringify({ jsonrpc: '2.0', ...msg }) + '\n');
 const pending = new Map();
