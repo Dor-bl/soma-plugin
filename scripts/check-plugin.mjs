@@ -55,6 +55,20 @@ if (plugin?.version) {
   }
 }
 
+// Every appium-mcp version mentioned in docs and skills must match the one the launcher pins
+const pinned = read('scripts/start-appium-mcp.mjs').match(/'appium-mcp@([^']+)'/)?.[1];
+if (!pinned) fail('scripts/start-appium-mcp.mjs: pinned appium-mcp version not found');
+else {
+  const docs = ['README.md', ...readdirSync(join(root, 'skills')).map((d) => `skills/${d}/SKILL.md`)];
+  for (const p of docs.filter((p) => existsSync(join(root, p)))) {
+    for (const m of read(p).matchAll(/appium-mcp@([\w.-]+)/g)) {
+      if (m[1] !== pinned) fail(`${p}: appium-mcp@${m[1]} != pinned ${pinned}`);
+    }
+  }
+  const readmePin = read('README.md').match(/pinned to an exact version \(`([^`]+)`\)/)?.[1];
+  if (readmePin && readmePin !== pinned) fail(`README.md: pinned version ${readmePin} != ${pinned}`);
+}
+
 // Skills
 const usedConfigKeys = new Set();
 for (const dir of readdirSync(join(root, 'skills'))) {
