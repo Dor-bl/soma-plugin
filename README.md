@@ -50,7 +50,7 @@ SOMA wraps the official [`appium-mcp`](https://github.com/appium/appium-mcp) ser
 | Engine | Platforms | Setup | Used for |
 |--------|-----------|-------|----------|
 | [Appium](backends/appium.md) *(default)* | Android, iOS | Bundled | Everything |
-| [Google Artemis](backends/artemis.md) *(optional)* | Android | Install separately, registered for this project only ([steps](backends/artemis.md#install)); needs its own LLM API key | `explore-app` by default when installed; `run-manual-test` and `triage-failure` when you ask for it |
+| [Google Artemis](backends/artemis.md) *(optional)* | Android | Install separately and register for this project only ([avoid the global installer](backends/artemis.md#install)); needs its own LLM API key | `explore-app` by default when installed; `run-manual-test` and `triage-failure` when you ask for it |
 
 Without Artemis installed, SOMA behaves exactly as before. Artemis is an autonomous agent: SOMA runs it one test step at a time and checks its trace, so it can't route around a bug and report a pass.
 

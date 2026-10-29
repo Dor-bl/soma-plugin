@@ -1,22 +1,11 @@
 # Engine: Google Artemis (optional)
 
-Server: [Google Artemis](https://github.com/google/artemis) MCP server. Not bundled with SOMA: the tester installs it separately (see Install below). It needs Python 3.12, `uv`, ADB and an LLM API key. Available only when its `mobile_*` tools appear in the tool list.
+Server: [Google Artemis](https://github.com/google/artemis) MCP server. Not bundled with SOMA: the tester installs it separately (see the warning under Install). It needs Python 3.12, `uv`, ADB and an LLM API key. Available only when its `mobile_*` tools appear in the tool list.
 
 Platforms: **Android only**. Artemis runs its own agent: it receives a goal in plain language and decides the taps itself.
 
 ## Install
-Every step changes the tester's machine: describe it and wait for their yes before running it.
-In the Artemis folder:
-1. Clone it outside the project under test: `git clone https://github.com/google/artemis.git`, then work inside that clone.
-2. `uv sync --python 3.12`. Without the pin, `uv` may pick a newer Python with no prebuilt wheels and fail to build dependencies.
-3. Copy `.env.example` to `.env` in the clone. The tester adds one LLM API key there themselves; never ask for it in the chat. On shared or personal phones, suggest `ARTEMIS_HELPER_AUTO_INSTALL=false` so tasks cannot install the helper on their own.
-4. Print the MCP config with `uv run artemis mcp --generate-config claude` and keep its `"artemis"` server JSON.
-
-Then in the folder where the tester runs Claude Code with SOMA:
-5. Register it for that project only: `claude mcp add-json --scope local artemis '<the "artemis" server JSON>'`. Local scope binds the server to the current folder, so running this in the Artemis clone registers it for the wrong project. Confirm with `claude mcp get artemis` from the same folder.
-6. Restart Claude Code there so the `mobile_*` tools load, then run `check-setup`.
-
-Do not use `start.bat` / `start.sh` or `artemis mcp --install`: they install system packages and write Artemis's MCP config and rules into every supported AI client, not just this project.
+Do not use `start.bat` / `start.sh` or `artemis mcp --install`: they install system packages and write Artemis's MCP config and rules into every supported AI client, not just this project. Register Artemis's MCP server for the SOMA project only, and let the tester add the API key to Artemis's `.env` themselves.
 
 ## Operations
 
