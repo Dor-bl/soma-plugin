@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // Tests the Windows process-tree tracking mcp-smoke.mjs uses for cleanup:
 // every server process is found, and nothing outside the tree is ever a kill target.
-import { createProcessTree, parseSnapshot } from './process-tree.mjs';
+import { createProcessTree, parseSnapshot, takeSnapshots } from './process-tree.mjs';
 
 const T0 = 1_000_000;
 const ROOT = 100;
@@ -72,6 +72,19 @@ check(
   parseSnapshot(' 4 0 0\r\n100 1 1761700000000\r\n\r\n'),
   [row(4, 0, 0), row(100, 1, 1761700000000)],
 );
+
+{
+  // Watch output arrives in arbitrary chunks; only complete snapshots are returned
+  const first = takeSnapshots('T 500\r\n100 1 10\r\n200 100 20\r\nEND\r\nT 900\r\n100 1 10\r\n');
+  check('splits complete snapshots from chunked watch output', first.snapshots, [
+    { takenAt: 500, rows: [row(100, 1, 10), row(200, 100, 20)] },
+  ]);
+  const second = takeSnapshots(first.rest + '300 200 30\r\nEND\r\n');
+  check('completes a snapshot from the next chunk', second.snapshots, [
+    { takenAt: 900, rows: [row(100, 1, 10), row(300, 200, 30)] },
+  ]);
+  check('leaves nothing pending after a complete snapshot', second.rest, '');
+}
 
 if (failed) {
   console.error(`✘ ${failed} process-tree test(s) failed`);

@@ -6,21 +6,39 @@
 // checked by creation time, because Windows reuses PIDs: a recorded PID now held by
 // another process is neither killed nor used to adopt that process's children.
 
-// Rows of { pid, ppid, created } from the PowerShell snapshot below
-export const SNAPSHOT_COMMAND = [
+// One "pid ppid createdMs" line per process. Only the needed properties are fetched,
+// which makes the query several times cheaper.
+const SNAPSHOT =
+  'Get-CimInstance Win32_Process -Property ProcessId,ParentProcessId,CreationDate | ForEach-Object { ' +
+  '$c = if ($_.CreationDate) { [DateTimeOffset]::new($_.CreationDate).ToUnixTimeMilliseconds() } else { 0 }; ' +
+  '"$($_.ProcessId) $($_.ParentProcessId) $c" }';
+
+// A single snapshot, for cleanup
+export const SNAPSHOT_COMMAND = ['powershell', ['-NoProfile', '-Command', SNAPSHOT]];
+
+// A long-running PowerShell that prints a snapshot every `intervalMs`: a "T <ms>" line
+// with the time it was taken, the process lines, then an END line. Starting PowerShell
+// costs far more CPU than the query, and that CPU competes with the npm install of
+// appium-mcp on small CI runners.
+export const watchCommand = (intervalMs) => [
   'powershell',
-  [
-    '-NoProfile',
-    '-Command',
-    'Get-CimInstance Win32_Process | ForEach-Object { ' +
-      '$c = if ($_.CreationDate) { [DateTimeOffset]::new($_.CreationDate).ToUnixTimeMilliseconds() } else { 0 }; ' +
-      '"$($_.ProcessId) $($_.ParentProcessId) $c" }',
-  ],
+  ['-NoProfile', '-Command', `while ($true) { 'T ' + [DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds(); ${SNAPSHOT}; 'END'; Start-Sleep -Milliseconds ${intervalMs} }`],
 ];
 
 export function parseSnapshot(text) {
   return text.split(/\r?\n/).map((l) => l.trim().split(/\s+/).map(Number)).filter(([pid]) => pid)
     .map(([pid, ppid, created]) => ({ pid, ppid, created }));
+}
+
+// Splits watch output into complete snapshots ({ takenAt, rows }) and the unfinished rest
+export function takeSnapshots(buffer) {
+  const snapshots = [];
+  let m;
+  while ((m = buffer.match(/^T (\d+)\r?\n([\s\S]*?)^END\r?$/m))) {
+    snapshots.push({ takenAt: Number(m[1]), rows: parseSnapshot(m[2]) });
+    buffer = buffer.slice(m.index + m[0].length).replace(/^\r?\n/, '');
+  }
+  return { snapshots, rest: buffer };
 }
 
 // rootPid: the process we spawned. startedAt: nothing created before this is ours.

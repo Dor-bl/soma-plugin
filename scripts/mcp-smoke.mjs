@@ -5,10 +5,10 @@
 // Used by CI and by the check-setup skill.
 // Exit codes: 0 OK, 1 failed (crash, protocol error, missing tools, remote not blocked),
 // 2 timed out (inconclusive), 130 interrupted.
-import { spawn, execFile, execFileSync } from 'node:child_process';
+import { spawn, execFileSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
-import { createProcessTree, parseSnapshot, SNAPSHOT_COMMAND } from './process-tree.mjs';
+import { createProcessTree, parseSnapshot, takeSnapshots, SNAPSHOT_COMMAND, watchCommand } from './process-tree.mjs';
 
 const REQUIRED_TOOLS = [
   'select_device',
@@ -60,18 +60,19 @@ const tree = createProcessTree({
 });
 const [psCommand, psArgs] = SNAPSHOT_COMMAND;
 
-let tracking = false;
-const tracker = isWindows
-  ? setInterval(() => {
-      if (tracking) return;
-      tracking = true;
-      const takenAt = Date.now();
-      execFile(psCommand, psArgs, { windowsHide: true }, (err, out) => {
-        tracking = false;
-        if (!err) tree.absorb(parseSnapshot(out), takenAt);
-      });
-    }, TRACK_MS)
-  : null;
+let tracker = null;
+if (isWindows) {
+  const [watchCmd, watchArgs] = watchCommand(TRACK_MS);
+  tracker = spawn(watchCmd, watchArgs, { stdio: ['ignore', 'pipe', 'ignore'], windowsHide: true });
+  let pending = '';
+  tracker.stdout.setEncoding('utf8');
+  tracker.stdout.on('data', (chunk) => {
+    const { snapshots, rest } = takeSnapshots(pending + chunk);
+    pending = rest;
+    for (const { takenAt, rows } of snapshots) tree.absorb(rows, takenAt);
+  });
+  tracker.on('error', () => {});
+}
 
 function stopWindowsTree() {
   // Repeat: a process spawned while we kill shows up in the next snapshot
@@ -108,7 +109,7 @@ let finished = false;
 function finish(code, msg) {
   if (finished) return;
   finished = true;
-  clearInterval(tracker);
+  tracker?.kill();
   clearTimeout(timer);
   (code ? console.error : console.log)(msg);
   if (code && stderr) console.error(`--- server stderr (tail) ---\n${stderr.slice(-4000)}`);
