@@ -4,11 +4,11 @@ SOMA is a Claude Code plugin for mobile QA, built on the official [`appium-mcp`]
 
 ## Layout
 
-- `.claude-plugin/plugin.json`: manifest, version and `userConfig` (`remote_server_url`)
-- `.mcp.json`: starts `appium-mcp` via `npx`
+- `.claude-plugin/plugin.json`: manifest, version and `userConfig` (`remote_server_url`, `capabilities_file`)
+- `.mcp.json`: starts `scripts/start-appium-mcp.mjs`, which runs the pinned `appium-mcp` via `npx` with a remote-URL allowlist
 - `skills/<name>/SKILL.md`: one skill per folder
 - `commands/*.md`: slash commands (`/soma:<file>`), each a one-line hand-off to a skill
-- `scripts/`: CI checks (`check-plugin.mjs`, `mcp-smoke.mjs`)
+- `scripts/`: the launcher (`start-appium-mcp.mjs`, `allowlist.mjs`) and CI checks (`check-plugin.mjs`, `mcp-smoke.mjs`, `test-allowlist.mjs`)
 
 ## Checks (same as CI)
 
@@ -32,7 +32,7 @@ CI also runs a link check (lychee) on all Markdown, so links must resolve.
 
 - Skills drive the device through `appium-mcp` tools. Do not reimplement what the server already does.
 - If a skill starts relying on a new `appium-mcp` tool, add it to `REQUIRED_TOOLS` in `scripts/mcp-smoke.mjs` so upstream removals are caught.
-- Session setup reads `${user_config.remote_server_url}`: empty means local mode (no `remoteServerUrl`), set means pass it as `remoteServerUrl`. Keep this wording consistent across skills.
+- Session setup reads `${user_config.remote_server_url}`: empty or a literal `${user_config...}` placeholder means local mode (no `remoteServerUrl`), set means pass exactly that value as `remoteServerUrl`. Every skill that creates a session (`run-manual-test`, `triage-failure`, `generate-test`) must carry the same remote-URL, `autoGrantPermissions` and `noReset` rules.
 - Anything that runs local tools (`adb`, `appium`, test clients) must say whether it applies to remote sessions too. Local `adb` can hit the wrong device when the server is remote.
 - Keep skills short and imperative. Markdownlint is relaxed for prompts (see `.markdownlint-cli2.jsonc`); structural rules like closed code fences and valid tables still apply.
 - When adding a skill or command, add it to the "What's inside" table in `README.md`.

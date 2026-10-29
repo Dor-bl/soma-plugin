@@ -40,7 +40,7 @@ SOMA wraps the official [`appium-mcp`](https://github.com/appium/appium-mcp) ser
 
 - 🔌 `.mcp.json` launches `appium-mcp` through `scripts/start-appium-mcp.mjs`, which runs a pinned version via `npx` (local embedded drivers by default)
 - ⚙️ `remote_server_url` setting: leave empty for local, or point it at a remote Appium/WebDriver server or device cloud. Only that exact URL is allowed, and only if it's `https://` (plain `http://` for localhost only) with no embedded credentials. When it's empty, all remote servers are blocked
-- 🔑 `capabilities_file` setting (optional): a `capabilities.json` read from disk by `appium-mcp`. Put device-cloud credentials here so they never enter the conversation, and keep it out of version control
+- 🔑 `capabilities_file` setting (optional): a `capabilities.json` read from disk by `appium-mcp`. Put device-cloud credentials here instead of in the URL or the chat. The skills are told never to open it, but Claude's file tools could still read it, so keep it out of the project folder and out of version control
 
 ## 🛠️ Requirements (local mode)
 
@@ -75,7 +75,8 @@ Then try:
 > [!WARNING]
 > SOMA is an early scaffold. Expect rough edges.
 
-- 🧪 Skills are untested against real devices.
+- 🧪 Skills have been run on Android emulators only; iOS and physical devices are untested.
+- 🛡️ Protection against prompt injection from app or device content (e.g. on-screen text telling Claude to run a command) relies on skill instructions, not tool restrictions. Tool-level limits are tracked in issue #8.
 - 📌 `appium-mcp` is pinned to an exact version (`1.97.1`). Bump it deliberately after testing; its transitive dependencies are still resolved by npm at install time.
 - 🌐 The remote URL policy covers the URL you configure only. Redirects and direct-connect endpoints chosen by the server aren't re-checked, so only point SOMA at servers you trust.
 - 🔓 SOMA can't add authentication to a self-hosted Appium server. Put it behind an authenticating reverse proxy or VPN; never expose it unauthenticated on a shared network.

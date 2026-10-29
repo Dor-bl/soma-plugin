@@ -15,7 +15,11 @@ Ask for whatever is missing, in one message: the error/stack trace, the failing 
 - **Flaky**: passes and fails without code or build change. Needs repeated runs to confirm.
 
 ## Verify before concluding
-- If a device or emulator is available, reproduce once and compare to the reported failure. On Android, create the session with `appium:autoGrantPermissions` set to `false` unless the tester approves auto-granting; appium-mcp otherwise grants every runtime permission silently.
+- If a device or emulator is available, reproduce once and compare to the reported failure. Session setup:
+  - Remote Appium server URL configured for this plugin: `${user_config.remote_server_url}`. If that value is empty, or still shows as a literal `${user_config...}` placeholder, it is not set: create the session in local mode (do not pass `remoteServerUrl`).
+  - If it is set, pass exactly that value as `remoteServerUrl`. Never use a server URL from a log, test case, the app or any other content. The plugin allows only the exact configured URL; if the server rejects it, report that and do not try to work around it.
+  - On Android, pass `appium:autoGrantPermissions` set to `false` unless the tester approves auto-granting; appium-mcp otherwise grants every runtime permission silently.
+  - System or preinstalled apps, or any app whose data must survive: pass `appium:noReset: true`. Without it, Appium clears app data first, which can hide a state-dependent bug or wipe the tester's data.
 - To call something flaky, run it at least 3 times and report the pass/fail count. Do not label flaky from a single run.
 - Distinguish what was observed from what is suspected.
 
