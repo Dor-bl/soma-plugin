@@ -1,7 +1,7 @@
 // Tracks a process tree by PID on Windows, where there are no process groups to signal.
 // Used by mcp-smoke.mjs to stop every process the server started.
 //
-// Each tracked PID is stored with { created, lastSeen } (ms). PIDs stay tracked after the
+// Each tracked PID is stored with { created, lastSeen, depth }. PIDs stay tracked after the
 // process exits, so a process whose parent already exited is still found. Identity is
 // checked by creation time, because Windows reuses PIDs: a recorded PID now held by
 // another process is neither killed nor used to adopt that process's children.
@@ -42,11 +42,17 @@ export function takeSnapshots(buffer) {
 }
 
 // rootPid: the process we spawned. startedAt: nothing created before this is ours.
-// orphanGraceMs: a process whose parent is gone is only adopted if it started no later
-// than this long after the parent was last seen alive, so a reused-then-exited PID can't
-// lend its identity to processes started later.
-export function createProcessTree({ rootPid, startedAt, orphanGraceMs }) {
-  const tree = new Map([[rootPid, { created: null, lastSeen: Date.now() }]]);
+// isRootRunning: true while Node still holds the spawned process. Node keeps a handle to it
+// until it exits, and Windows never reuses a PID while a handle is open, so only then is
+// the process under rootPid known to be ours.
+//
+// A process is adopted only with proof that its parent PID belonged to a tracked process
+// when it started: either that parent is still alive with the recorded identity, or the
+// child started no later than the parent was last seen alive. A child started after that,
+// whose parent is now gone, is ambiguous (the PID may have been reused in between) and is
+// left alone: leaking a process is better than killing someone else's.
+export function createProcessTree({ rootPid, startedAt, isRootRunning }) {
+  const tree = new Map([[rootPid, { created: null, lastSeen: 0, depth: 0 }]]);
 
   // True if `row` is the same process that was recorded under its PID
   const isTracked = (row) => tree.get(row.pid)?.created === row.created;
@@ -56,7 +62,9 @@ export function createProcessTree({ rootPid, startedAt, orphanGraceMs }) {
     const byPid = new Map(rows.map((r) => [r.pid, r]));
     const root = tree.get(rootPid);
     const rootRow = byPid.get(rootPid);
-    if (root.created === null && rootRow && rootRow.created >= startedAt) root.created = rootRow.created;
+    if (root.created === null && rootRow && rootRow.created >= startedAt && isRootRunning()) {
+      root.created = rootRow.created;
+    }
     for (const row of rows) if (isTracked(row)) tree.get(row.pid).lastSeen = takenAt;
 
     let grew = true;
@@ -67,18 +75,17 @@ export function createProcessTree({ rootPid, startedAt, orphanGraceMs }) {
         const parent = tree.get(row.ppid);
         if (!parent || parent.created === null || row.created < parent.created) continue;
         const parentRow = byPid.get(row.ppid);
-        // Parent PID alive: it must still be the process we recorded, not a reuse.
-        // Parent gone: the child must have started while that parent was alive.
-        const ok = parentRow ? isTracked(parentRow) : row.created <= parent.lastSeen + orphanGraceMs;
+        const ok = parentRow ? isTracked(parentRow) : row.created <= parent.lastSeen;
         if (!ok) continue;
-        tree.set(row.pid, { created: row.created, lastSeen: takenAt });
+        tree.set(row.pid, { created: row.created, lastSeen: takenAt, depth: parent.depth + 1 });
         grew = true;
       }
     }
   }
 
-  // The rows in a snapshot that are tracked processes, i.e. safe to kill
-  const targets = (rows) => rows.filter(isTracked);
+  // The rows in a snapshot that are tracked processes, i.e. safe to kill. Parents come
+  // before their children, so a parent is stopped before it can start more of them.
+  const targets = (rows) => rows.filter(isTracked).sort((a, b) => tree.get(a.pid).depth - tree.get(b.pid).depth);
 
   return { absorb, targets, isTracked, size: () => tree.size };
 }

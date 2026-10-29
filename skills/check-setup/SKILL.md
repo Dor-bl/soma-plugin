@@ -15,7 +15,9 @@ Remote URL checks (report each as OK / MISSING):
 
 ## Local checks (run what applies, report each as OK / MISSING / UNKNOWN)
 - Node.js 22 or newer (`node --version`). `appium-mcp` requires `>=22`; older versions crash on startup and the server shows as disconnected. Fix: install Node 22 LTS (e.g. `winget install OpenJS.NodeJS.LTS` on Windows, or via nvm), then restart Claude.
-- npm 10 or newer (`npm --version`). Node 22 ships npm 10, so an older number means a leftover global npm is shadowing it (on Windows, `npm.cmd` prefers a global npm in `%APPDATA%\npm` when one exists). Fix: `npm uninstall -g npm`, then check `npm --version` again.
+- npm 10 or newer (`npm --version`). Node 22 ships npm 10, so an older number means an old npm is in the way. Find out which case it is before suggesting a fix:
+  - Windows, and `%APPDATA%\npm\node_modules\npm` exists: a leftover global npm is shadowing Node's own (`npm.cmd` prefers it). Fix: `npm uninstall -g npm`, then check `npm --version` again.
+  - Otherwise (macOS/Linux, nvm, or Windows without that folder): the old npm replaced Node's own copy, so uninstalling it would leave no npm at all. Never suggest `npm uninstall -g npm` here. Fix: `npm install -g npm@10`, or reinstall Node 22.
 - Android: `adb` on PATH, `ANDROID_HOME`/`ANDROID_SDK_ROOT` set, at least one emulator or device listed by `adb devices`. If an emulator crashes on start (e.g. exit code 139), suggest relaunching it with `-gpu swiftshader_indirect`. Hardware GPU rendering often fails on older graphics cards.
 - Local Appium 2 server for running generated scripts (only if the tester runs `generate-test` scripts): `appium --version`, with the needed driver installed (`appium driver list --installed`, e.g. uiautomator2 or xcuitest)
 - iOS (macOS only): Xcode installed, command line tools selected, at least one simulator available

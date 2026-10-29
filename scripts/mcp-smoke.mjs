@@ -56,7 +56,7 @@ const TRACK_MS = 3_000;
 const tree = createProcessTree({
   rootPid: child.pid,
   startedAt: Date.now() - 2_000,
-  orphanGraceMs: TRACK_MS + 2_000,
+  isRootRunning: () => child.exitCode === null && child.signalCode === null,
 });
 const [psCommand, psArgs] = SNAPSHOT_COMMAND;
 

@@ -5,7 +5,11 @@ import { createProcessTree, parseSnapshot, takeSnapshots } from './process-tree.
 
 const T0 = 1_000_000;
 const ROOT = 100;
-const make = () => createProcessTree({ rootPid: ROOT, startedAt: T0, orphanGraceMs: 5_000 });
+let rootRunning = true;
+const make = () => {
+  rootRunning = true;
+  return createProcessTree({ rootPid: ROOT, startedAt: T0, isRootRunning: () => rootRunning });
+};
 const row = (pid, ppid, created) => ({ pid, ppid, created });
 const pids = (tree, rows) => tree.targets(rows).map((r) => r.pid).sort((a, b) => a - b);
 
@@ -24,12 +28,32 @@ function check(name, actual, expected) {
 }
 
 {
-  // The intermediate parent (200) is killed between snapshots; its child (300) survives.
+  // 300 starts while its parent 200 is alive and is seen; then 200 exits.
   const tree = make();
   tree.absorb([row(ROOT, 1, T0 + 10), row(200, ROOT, T0 + 20)], T0 + 100);
+  tree.absorb([row(ROOT, 1, T0 + 10), row(200, ROOT, T0 + 20), row(300, 200, T0 + 1_500)], T0 + 3_000);
   const later = [row(ROOT, 1, T0 + 10), row(300, 200, T0 + 1_500)];
-  tree.absorb(later, T0 + 3_000);
-  check('adopts an orphan whose parent exited after being seen', pids(tree, later), [ROOT, 300]);
+  tree.absorb(later, T0 + 6_000);
+  check('keeps a child after its parent exits', pids(tree, later), [ROOT, 300]);
+}
+
+{
+  // 300 started before its parent was last seen alive, but was first seen after the parent exited
+  const tree = make();
+  tree.absorb([row(ROOT, 1, T0 + 10), row(200, ROOT, T0 + 20)], T0 + 3_000);
+  const later = [row(ROOT, 1, T0 + 10), row(300, 200, T0 + 2_000)];
+  tree.absorb(later, T0 + 6_000);
+  check('adopts an orphan that provably started while its parent was alive', pids(tree, later), [ROOT, 300]);
+}
+
+{
+  // Copilot: 200 last seen at +100, exits; PID 200 is reused by an unrelated program that
+  // starts child 400 at +2000 and exits, all between snapshots. 400 is ambiguous: left alone.
+  const tree = make();
+  tree.absorb([row(ROOT, 1, T0 + 10), row(200, ROOT, T0 + 20)], T0 + 100);
+  const rows = [row(ROOT, 1, T0 + 10), row(400, 200, T0 + 2_000)];
+  tree.absorb(rows, T0 + 3_100);
+  check('ignores an orphan started after its parent was last seen', pids(tree, rows), [ROOT]);
 }
 
 {
@@ -65,6 +89,23 @@ function check(name, actual, expected) {
   const rows = [row(ROOT, 1, T0 + 90_000)];
   tree.absorb(rows, T0 + 91_000);
   check('never kills a reused root PID', pids(tree, rows), []);
+}
+
+{
+  // Copilot: the launcher exits before the first snapshot and its PID is reused. The root's
+  // identity is never taken from a snapshot made after the spawned process exited.
+  const tree = make();
+  rootRunning = false;
+  const rows = [row(ROOT, 1, T0 + 500), row(500, ROOT, T0 + 600)];
+  tree.absorb(rows, T0 + 1_000);
+  check('does not take the root identity after the root exited', pids(tree, rows), []);
+}
+
+{
+  const tree = make();
+  const rows = [row(300, 200, T0 + 30), row(ROOT, 1, T0 + 10), row(200, ROOT, T0 + 20)];
+  tree.absorb(rows, T0 + 100);
+  check('orders kill targets parents first', tree.targets(rows).map((r) => r.pid), [ROOT, 200, 300]);
 }
 
 check(
