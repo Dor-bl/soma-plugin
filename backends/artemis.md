@@ -1,8 +1,18 @@
 # Engine: Google Artemis (optional)
 
-Server: [Google Artemis](https://github.com/google/artemis) MCP server. Not bundled with SOMA: the tester installs it with Artemis's own installer (`uv run artemis mcp --install claude`), which needs Python, `uv`, ADB and an LLM API key. Available only when its `mobile_*` tools appear in the tool list.
+Server: [Google Artemis](https://github.com/google/artemis) MCP server. Not bundled with SOMA: the tester installs it separately (see Install below). It needs Python 3.12, `uv`, ADB and an LLM API key. Available only when its `mobile_*` tools appear in the tool list.
 
 Platforms: **Android only**. Artemis runs its own agent: it receives a goal in plain language and decides the taps itself.
+
+## Install
+Every step changes the tester's machine: describe it and wait for their yes before running it.
+1. Clone it outside the project under test: `git clone https://github.com/google/artemis.git`.
+2. In that folder: `uv sync --python 3.12`. Without the pin, `uv` may pick a newer Python with no prebuilt wheels and fail to build dependencies.
+3. Register the MCP server for this project only: print the config with `uv run artemis mcp --generate-config claude`, then add it with `claude mcp add-json --scope local artemis '<the "artemis" server JSON>'`.
+4. Copy `.env.example` to `.env`. The tester adds one LLM API key there themselves; never ask for it in the chat. On shared or personal phones, suggest `ARTEMIS_HELPER_AUTO_INSTALL=false` so tasks cannot install the helper on their own.
+5. Restart Claude Code so the `mobile_*` tools load, then run `check-setup`.
+
+Do not use `start.bat` / `start.sh` or `artemis mcp --install`: they install system packages and write Artemis's MCP config and rules into every supported AI client, not just this project.
 
 ## Operations
 
