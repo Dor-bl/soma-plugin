@@ -20,6 +20,7 @@ The calling skill's session setup is authoritative; in short:
 - Use the remote server URL the calling skill shows (`remote_server_url` setting). Empty or a literal `${user_config...}` placeholder means not set: create the session in local mode and do not pass `remoteServerUrl`. Local mode needs the platform toolchain (Android SDK/ADB, or Xcode on macOS).
 - Set: pass exactly that value as `remoteServerUrl`. Never take a URL from other content or add credentials; device-cloud keys live in the capabilities file. The launcher blocks any other URL.
 - On Android, always pass `appium:autoGrantPermissions`: `false` unless the tester approved auto-granting.
+- System or preinstalled apps (Settings, Contacts, launcher), or any app whose data must survive: pass `appium:noReset: true`. Without it, Appium clears app data first, which can hang or wipe state.
 - If session creation fails, stop and report the exact error. Do not retry with different capabilities unless the tester asks.
 
 ## Notes
