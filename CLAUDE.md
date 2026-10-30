@@ -47,3 +47,4 @@ Feed findings from real runs back into the skills (see #17). Examples already ca
 - `generate_locators` output is tens of KB per screen. Prefer `appium_find_element` per step.
 - Freshly booted emulators need longer `adbExecTimeout` / `uiautomator2ServerInstallTimeout`; system apps need `noReset`.
 - `appium-mcp` requires Node 22+; older versions crash on startup and show as disconnected.
+- Artemis (first live run, #18): a task can report `running` while paused on an LLM billing or overload error, with an empty trace; a Flash tap aimed at one row opened the next one while the screen was still settling. Poll status, and compare each step's overlay with the resulting screen.
