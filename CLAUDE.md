@@ -32,7 +32,7 @@ CI also runs a link check (lychee) on all Markdown, so links must resolve.
 
 ## Writing skills
 
-- Skills drive the device through `appium-mcp` tools. Do not reimplement what the server already does.
+- Skills drive the device through an engine's MCP tools: `appium-mcp` by default, or the optional Google Artemis server (`mobile_*` tools). Skills say what to do; tool names and engine-specific rules live in `backends/`. Do not reimplement what the server already does.
 - If a skill starts relying on a new `appium-mcp` tool, add it to `REQUIRED_TOOLS` in `scripts/mcp-smoke.mjs` so upstream removals are caught.
 - Session setup reads `${user_config.remote_server_url}`: empty means local mode (no `remoteServerUrl`), set means pass it as `remoteServerUrl`. Keep this wording consistent across skills.
 - Anything that runs local tools (`adb`, `appium`, test clients) must say whether it applies to remote sessions too. Local `adb` can hit the wrong device when the server is remote.
