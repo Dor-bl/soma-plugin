@@ -28,6 +28,7 @@ CI also runs a link check (lychee) on all Markdown, so links must resolve.
 - Every command needs a `description` in its frontmatter.
 - Every `${user_config.<key>}` used in a skill must be declared in `plugin.json`, and every declared key must be used.
 - The README version badge must match `plugin.json` `version`. Bump both together.
+- Every `appium-mcp@<version>` in the README and skills must match the version pinned in `scripts/start-appium-mcp.mjs`. Bump them together.
 
 ## Writing skills
 
