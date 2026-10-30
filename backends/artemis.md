@@ -26,11 +26,12 @@ Do not use `start.bat` / `start.sh` or `artemis mcp --install`: they install sys
 ## Consent gate (every skill)
 Before the first Artemis call of a run (`mobile_run_task` or `mobile_get_device_state`), get the tester's explicit yes to: Artemis as the engine, the device serial, the helper install or update on that device, and screenshots and screen text going to their LLM provider. This applies even when the helper is already installed. Skip it only if the tester already approved Artemis on that same device earlier in this conversation. Any skill that uses Artemis must pass this gate, whether or not its own confirmation step lists these items.
 
-## Exploration (explore-app)
-- `mobile_run_task` with `model="Pro"`: Artemis documents Flash as unsuitable for exploration.
-- `locked_app_package`: the app's package name. For a file, use the package name the calling skill's app binary checks found, never the path.
-- `app_path`: the confirmed file, on the first task only.
-- `device_serial`: the serial the tester confirmed, on every call.
+## Task parameters (every skill)
+- **Pick the device before the confirmation:** list devices with `adb devices -l` (read-only, local only) and ask the tester to choose if more than one is attached. If none is in state `device` (none attached, `offline` or `unauthorized`), stop and ask the tester to connect, authorize or start one, or to choose another engine; never boot an emulator without their yes. If the device is locked, ask the tester to unlock it.
+- `device_serial`: the confirmed serial, on every `mobile_run_task` and `mobile_get_device_state` call.
+- `locked_app_package`: the confirmed Android package name, on every `mobile_run_task`. For a file, use the package name the calling skill's app binary checks found, never the path.
+- `app_path`: the confirmed local `.apk`, on the first `mobile_run_task` only, when the app came from a file.
+- `model`: `"Flash"` for one fixed test step (`run-manual-test`), `"Pro"` for exploration (`explore-app`): Artemis documents Flash as unsuitable for exploration.
 
 ## Using it for QA
 - **Bind the run to one device.** At the start, pick the device (ask if more than one is connected) and pass its serial as `device_serial` to every `mobile_run_task` and `mobile_get_device_state` call. Without it, a task can auto-select one device while screen reads go to the default device, so a step runs on one device and is verified on another.
