@@ -148,7 +148,14 @@ for (const signal of ['SIGINT', 'SIGTERM', 'SIGHUP']) {
   process.on(signal, () => finish(130, `✘ Interrupted (${signal})`));
 }
 
-const send = (msg) => child.stdin.write(JSON.stringify({ jsonrpc: '2.0', ...msg }) + '\n');
+// Once finish() has started, the server is being stopped: send nothing more, and treat a
+// broken input pipe as expected. Before that, a broken pipe is a failure.
+const send = (msg) => {
+  if (!finished) child.stdin.write(JSON.stringify({ jsonrpc: '2.0', ...msg }) + '\n');
+};
+child.stdin.on('error', (err) => {
+  if (!finished) finish(1, `✘ Writing to the server failed: ${err.message}`);
+});
 const pending = new Map();
 const request = (id, method, params = {}) =>
   new Promise((resolve) => {
@@ -158,6 +165,8 @@ const request = (id, method, params = {}) =>
 
 let buffer = '';
 child.stdout.on('data', (chunk) => {
+  // A late reply must not resume the handshake while cleanup runs
+  if (finished) return;
   buffer += chunk;
   let nl;
   while ((nl = buffer.indexOf('\n')) >= 0) {
