@@ -39,10 +39,12 @@ export function killCommand(targets) {
     [
       '-NoProfile',
       '-Command',
-      `foreach ($t in @(${list})) { $id, $created = $t.Split(':'); try { ` +
-        '$p = [Diagnostics.Process]::GetProcessById([int]$id); ' +
+      // GetProcessById holds no handle, and StartTime and Kill() would each open their own.
+      // Reading .Handle first opens one that the Process object keeps and reuses for both.
+      `foreach ($t in @(${list})) { $id, $created = $t.Split(':'); $p = $null; try { ` +
+        '$p = [Diagnostics.Process]::GetProcessById([int]$id); $null = $p.Handle; ' +
         'if ([DateTimeOffset]::new($p.StartTime).ToUnixTimeMilliseconds() -eq [long]$created) { $p.Kill(); "killed $id" } ' +
-        '} catch {} }',
+        '} catch {} finally { if ($p) { $p.Dispose() } } }',
     ],
   ];
 }

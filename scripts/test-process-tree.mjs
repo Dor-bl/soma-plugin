@@ -134,6 +134,10 @@ check(
   check('kill list keeps a single target intact', script([row(17480, 1, 1793307752479)]).includes("@('17480:1793307752479')"), true);
   check('kill list keeps each of several targets intact', script([row(1, 0, 10), row(2, 0, 20)]).includes("@('1:10','2:20')"), true);
   check('kill only after the creation time matches', /-eq \[long\]\$created\) \{ \$p\.Kill\(\)/.test(script([row(1, 0, 10)])), true);
+  // The handle must be opened before the check and kept until after the kill
+  const one = script([row(1, 0, 10)]);
+  check('opens the handle before checking the start time', one.indexOf('$null = $p.Handle') >= 0 && one.indexOf('$null = $p.Handle') < one.indexOf('$p.StartTime'), true);
+  check('releases the handle afterwards', /finally \{ if \(\$p\) \{ \$p\.Dispose\(\) \} \}/.test(one), true);
 }
 
 if (failed) {
