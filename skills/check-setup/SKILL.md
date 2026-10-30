@@ -5,7 +5,7 @@ description: Check whether the tester's machine is ready to run mobile tests thr
 
 # Check local setup
 
-Remote Appium server URL configured: `${user_config.remote_server_url}`. If it is empty or still shows as a literal `${user_config...}` placeholder, no remote server is configured. If set, only a reachable server is needed: skip the local checks and just confirm the URL responds. Still run the test client checks below, since generated scripts run on the tester's machine even when the server is remote.
+Remote Appium server URL configured: `${user_config.remote_server_url}`. If it is empty or still shows as a literal `${user_config...}` placeholder, no remote server is configured. If set, the device-side checks are not needed: confirm the URL responds, and skip the Android, local Appium 2 and iOS checks below. Still run the Node.js, npm and appium-mcp startup checks, since `appium-mcp` itself always runs on the tester's machine (`.mcp.json` starts it locally via `npx`), and the test client checks, since generated scripts run there too.
 
 Remote URL checks (report each as OK / MISSING):
 - Uses `https://`, or `http://` only for `localhost` / `127.0.0.1` / `[::1]`, with no query or fragment. If it breaks these rules, SOMA blocks all remote servers at startup and only the exact configured URL is ever allowed.
