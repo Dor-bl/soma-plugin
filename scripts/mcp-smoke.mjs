@@ -95,24 +95,49 @@ function stopWindowsTree() {
 
 // child.kill() only stops the top process (the launcher here) and can leave the
 // appium-mcp node process running, so stop the whole tree.
-function stopServer() {
+// SIGTERM only asks: wait briefly for the group to go, then force anything still there.
+async function stopPosixGroup() {
+  process.kill(-child.pid, 'SIGTERM');
+  const deadline = Date.now() + 1_000;
+  for (;;) {
+    try {
+      process.kill(-child.pid, 0); // throws once no process in the group is left
+    } catch {
+      return;
+    }
+    if (Date.now() >= deadline) {
+      try {
+        process.kill(-child.pid, 'SIGKILL');
+      } catch {
+        // gone in the meantime
+      }
+      return;
+    }
+    await new Promise((resolve) => setTimeout(resolve, 25));
+  }
+}
+
+async function stopServer() {
   try {
     if (isWindows) stopWindowsTree();
-    else process.kill(-child.pid, 'SIGTERM');
-  } catch {
+    else await stopPosixGroup();
+  } catch (err) {
+    if (isWindows) console.error(`[soma] could not enumerate server processes, stopping only the launcher: ${err.message}`);
     child.kill();
   }
 }
 
+// Never resolves: the process exits once cleanup is done. Callers that continue after
+// finish() must await it, or they would run on while the server is being stopped.
 let finished = false;
-function finish(code, msg) {
-  if (finished) return;
+async function finish(code, msg) {
+  if (finished) return new Promise(() => {});
   finished = true;
   tracker?.kill();
   clearTimeout(timer);
   (code ? console.error : console.log)(msg);
   if (code && stderr) console.error(`--- server stderr (tail) ---\n${stderr.slice(-4000)}`);
-  stopServer();
+  await stopServer();
   process.exit(code);
 }
 
@@ -157,18 +182,18 @@ const init = await request(1, 'initialize', {
   capabilities: {},
   clientInfo: { name: 'soma-ci', version: '0.0.0' },
 });
-if (init.error) finish(1, `✘ initialize failed: ${JSON.stringify(init.error)}`);
+if (init.error) await finish(1, `✘ initialize failed: ${JSON.stringify(init.error)}`);
 const { name, version } = init.result.serverInfo ?? {};
 console.log(`Connected to ${name} ${version}`);
 send({ method: 'notifications/initialized' });
 
 const list = await request(2, 'tools/list');
-if (list.error) finish(1, `✘ tools/list failed: ${JSON.stringify(list.error)}`);
+if (list.error) await finish(1, `✘ tools/list failed: ${JSON.stringify(list.error)}`);
 const tools = new Set(list.result.tools.map((t) => t.name));
 console.log(`Server exposes ${tools.size} tools`);
 
 const missing = REQUIRED_TOOLS.filter((t) => !tools.has(t));
-if (missing.length) finish(1, `✘ Missing tools required by SOMA skills: ${missing.join(', ')}`);
+if (missing.length) await finish(1, `✘ Missing tools required by SOMA skills: ${missing.join(', ')}`);
 console.log(`✔ All ${REQUIRED_TOOLS.length} required tools present`);
 
 // With no remote_server_url configured, the launcher must block every remote server.
@@ -178,6 +203,6 @@ const blocked = await request(3, 'tools/call', {
 });
 const blockedText = JSON.stringify(blocked.result ?? blocked.error ?? {});
 if (!/Invalid remoteServerUrl/.test(blockedText)) {
-  finish(1, `✘ Remote server was not blocked without a configured URL: ${blockedText.slice(0, 300)}`);
+  await finish(1, `✘ Remote server was not blocked without a configured URL: ${blockedText.slice(0, 300)}`);
 }
-finish(0, '✔ Remote servers are blocked when no remote URL is configured');
+await finish(0, '✔ Remote servers are blocked when no remote URL is configured');
