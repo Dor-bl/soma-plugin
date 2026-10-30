@@ -9,7 +9,7 @@ description: Exploratory testing of a mobile app area without written steps (e.g
 - Platform and app under test: package/bundle ID, or local path to the .apk/.app/.ipa
 - The area or goal to explore (e.g. "checkout with a coupon"), and anything off limits (real payments, deleting data, sending messages)
 - Test account to use, if login is needed
-- With Artemis: the device serial. List connected devices with `adb devices -l` (read-only, local only; Artemis has no remote mode) and ask the tester to pick if more than one is attached. This serial goes in the confirmation and in every Artemis call.
+- With Artemis: the device serial. List connected devices with `adb devices -l` (read-only, local only; Artemis has no remote mode) and ask the tester to pick if more than one is attached. This serial goes in the confirmation and in every Artemis call. If no device is listed in state `device` (none attached, `offline` or `unauthorized`), stop and ask the tester to connect, authorize or start one, or to choose another engine; do not boot an emulator without their yes. If the chosen device is locked, ask the tester to unlock it.
 
 ## Engine
 - Remote Appium server URL configured for this plugin: `${user_config.remote_server_url}`
