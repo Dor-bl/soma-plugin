@@ -18,7 +18,7 @@
     "capabilities_file": {
       "type": "file",
       "title": "Appium capabilities file (optional)",
-      "description": "Path to a capabilities.json with per-platform presets, read by appium-mcp from disk. Put device-cloud credentials here (e.g. bstack:options, sauce:options, LT:Options for TestMu AI, formerly LambdaTest) instead of in the URL or the chat. The skills never open it, but keep it outside the project folder and out of version control.",
+      "description": "Path to a capabilities.json with per-platform presets, read by appium-mcp from disk. Put device-cloud credentials here (e.g. bstack:options, sauce:options, LT:Options for TestMu AI, formerly LambdaTest) instead of in the URL or the chat. Only check-setup reads it, after you approve the command, to check that it exists and is valid JSON without printing it; the other skills never open it. Keep it outside the project folder and out of version control.",
       "default": ""
     }
   }

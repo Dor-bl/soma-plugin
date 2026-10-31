@@ -14,6 +14,8 @@
 ![Android](https://img.shields.io/badge/Android-3DDC84?logo=android&logoColor=white)
 ![iOS](https://img.shields.io/badge/iOS-000000?logo=apple&logoColor=white)
 ![Node.js](https://img.shields.io/badge/Node.js-22%2B-339933?logo=nodedotjs&logoColor=white)
+[![Engine: Appium](https://img.shields.io/badge/engine-Appium%20(default)-662d91?logo=appium&logoColor=white)](backends/appium.md)
+[![Engine: Google Artemis](https://img.shields.io/badge/engine-Google%20Artemis%20(optional)-4285F4?logo=google&logoColor=white)](backends/artemis.md)
 
 </div>
 
@@ -28,19 +30,37 @@ SOMA wraps the official [`appium-mcp`](https://github.com/appium/appium-mcp) ser
 | Type | Name | Description |
 |------|------|-------------|
 | 🧠 Skill | `check-setup` | Verify your local environment (Node, SDKs, devices) is ready |
+| 🧠 Skill | `start-device` | Start an Android emulator, wait for a full boot, and diagnose crashes |
 | 🧠 Skill | `run-manual-test` | Execute a manual test case step by step on a device |
 | 🧠 Skill | `triage-failure` | Investigate a failed step and pinpoint the likely cause |
 | 🧠 Skill | `bug-report` | Draft a structured bug report from a failure or observation |
 | 🧠 Skill | `generate-test` | Turn a manual test case into an automated Appium test script |
+| 🧠 Skill | `explore-app` | Exploratory testing of an app area; reports suspected issues with evidence |
+| ⚡ Command | `/soma:device [avd name]` | Start an emulator and wait until it is ready |
 | ⚡ Command | `/soma:run-test [platform] [steps or path]` | Run a manual test case through Appium |
 | ⚡ Command | `/soma:bug [what you saw]` | Draft a bug report |
 | ⚡ Command | `/soma:gen-test [framework] [steps or path]` | Generate an automated test from a manual test case |
+| ⚡ Command | `/soma:explore [platform] [area]` | Explore an app area and report suspected issues |
 
 **Under the hood**
 
 - 🔌 `.mcp.json` launches `appium-mcp` through `scripts/start-appium-mcp.mjs`, which runs a pinned version via `npx` (local embedded drivers by default)
+- 📱 `scripts/start-emulator.mjs`: used by `start-device` to start an emulator detached and watch it boot
 - ⚙️ `remote_server_url` setting: leave empty for local, or point it at a remote Appium/WebDriver server or device cloud. Only that exact URL is allowed, and only if it's `https://` (plain `http://` for localhost only) with no embedded credentials. When it's empty, all remote servers are blocked
-- 🔑 `capabilities_file` setting (optional): a `capabilities.json` read from disk by `appium-mcp`. Put device-cloud credentials here instead of in the URL or the chat. The skills are told never to open it, but Claude's file tools could still read it, so keep it out of the project folder and out of version control
+- 🔑 `capabilities_file` setting (optional): a `capabilities.json` read from disk by `appium-mcp`. Put device-cloud credentials here instead of in the URL or the chat. Only `check-setup` reads it, after you approve the command, to check that it exists and is valid JSON without printing it; the other skills are told never to open it. Claude's file tools could still read it, so keep it out of the project folder and out of version control
+- 🧩 Engines: skills describe *what* to do; [`backends/`](backends/README.md) describes *how* each engine does it
+
+## 🧩 Engines
+
+| Engine | Platforms | Setup | Used for |
+|--------|-----------|-------|----------|
+| [Appium](backends/appium.md) *(default)* | Android, iOS | Bundled | Everything |
+| [Google Artemis](backends/artemis.md) *(optional)* | Android | Install separately and register for this project only ([avoid the global installer](backends/artemis.md#install)); needs its own LLM API key | `explore-app` by default when installed; `run-manual-test` and `triage-failure` when you ask for it |
+
+Without Artemis installed, SOMA behaves exactly as before. Artemis is an autonomous agent: SOMA runs it one test step at a time and checks its trace, so it can't route around a bug and report a pass.
+
+> [!NOTE]
+> SOMA's version pin and remote-URL allowlist cover `appium-mcp` only. Artemis is installed and updated outside SOMA, and its own agent and LLM key are yours to manage.
 
 ## 🛠️ Requirements (local mode)
 
@@ -68,6 +88,7 @@ Then try:
 ```text
 /soma:run-test android "Open the app, log in with test user, verify the home screen"
 /soma:bug "Checkout button does nothing after adding a coupon"
+/soma:explore android "checkout with a coupon code"
 ```
 
 ## ⚠️ Known limitations (v0.1)
@@ -75,7 +96,7 @@ Then try:
 > [!WARNING]
 > SOMA is an early scaffold. Expect rough edges.
 
-- 🧪 Skills have been run on Android emulators only; iOS and physical devices are untested.
+- 🧪 Only lightly tested on devices: `generate-test` has passed one end-to-end run through Appium on an Android 11 emulator, and `explore-app` has run once through Artemis on an Android 13 emulator. The other skills and iOS haven't been run on a device yet.
 - 🛡️ Protection against prompt injection from app or device content (e.g. on-screen text telling Claude to run a command) relies on skill instructions, not tool restrictions. Tool-level limits are tracked in issue #8.
 - 📌 `appium-mcp` is pinned to an exact version (`1.97.1`). Bump it deliberately after testing; its transitive dependencies are still resolved by npm at install time.
 - 🌐 The remote URL policy covers the URL you configure only. Redirects and direct-connect endpoints chosen by the server aren't re-checked, so only point SOMA at servers you trust.
