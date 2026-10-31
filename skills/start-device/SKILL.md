@@ -13,22 +13,24 @@ Android emulators only. For a physical device, ask the tester to connect it with
 
 ## 1. Pick the emulator
 Run `node "${CLAUDE_PLUGIN_ROOT}/scripts/start-emulator.mjs" --list`.
-- An emulator already running and listed as `device`: it is ready. Skip to step 4.
+- A line starting `✘ SETUP:` (exit 3): `adb` or the emulator is missing or broken. Report it and offer the `check-setup` skill; do not continue.
 - No AVDs found: say so and point the tester to Android Studio's Device Manager to create one. Do not create one yourself.
-- One AVD: use it. More than one: ask which, unless the tester already named it.
+- Use the AVD the tester named. Otherwise: if exactly one AVD exists, or exactly one is already running, use it; if more than one could fit, ask which.
+- Always go on to step 2, even for an emulator that is already running: `device` in adb only means it is reachable, not that Android has finished booting.
 
 ## 2. Start it and watch the boot
-Run `node "${CLAUDE_PLUGIN_ROOT}/scripts/start-emulator.mjs" <avd>`. It starts the emulator detached (it keeps running afterwards), waits up to 5 minutes, and ends with a `STATUS:` line.
+Run `node "${CLAUDE_PLUGIN_ROOT}/scripts/start-emulator.mjs" <avd>`. It starts the emulator detached (it keeps running afterwards), or waits on the instance that is already running or still starting, for up to 5 minutes, and ends with a `STATUS:` line.
 - `offline` while it waits is normal: the emulator is still booting. Only `sys.boot_completed=1` means it is ready, and the script waits for that.
 - `STATUS: BOOTED`: go to step 4.
 - `STATUS: TIMEOUT`: the emulator is still running but slow. Run the script again with the same AVD; it waits on the running emulator without starting a new one. If it times out twice, treat it like a crash.
 - `STATUS: CRASHED`: go to step 3.
+- `STATUS: ALREADY RUNNING` (exit 3): retry flags were given, but the AVD is still running, and flags only apply when the emulator starts. Ask the tester to close that emulator's window, then run the same command again.
 
 ## 3. If it crashes
 If the log says `Running multiple emulators with the same AVD`, the AVD is already running but was still booting, so the script could not identify it. Run step 2 again in a minute; no retry flags are needed.
 
 Otherwise, report the facts the script printed before suggesting anything: how long it ran, the `OpenGL Renderer` line, any snapshot warnings, and the last log lines. Then try the safe retries, one at a time, asking before each:
-1. **Software rendering, cold boot**: `--cold --gpu swiftshader_indirect`. This is the most common fix when the renderer is a real GPU (AMD, Intel or NVIDIA), especially with an older driver. Rendering is slower but fine for QA.
+1. **Software rendering, cold boot**: `--cold --gpu swiftshader_indirect`. This is the most common fix when the renderer is a real GPU (AMD, Intel or NVIDIA), especially with an older driver. Rendering is slower but fine for QA. The flags only take effect on a fresh start: after a double timeout the hung emulator is still running, so ask the tester to close its window first (the script refuses the flags with `ALREADY RUNNING` otherwise).
 2. **Hypervisor check**: `emulator -accel-check`. If acceleration is not usable, the fix is in the BIOS or Windows features, not the AVD. Explain it; do not change system settings.
 
 Never use `-wipe-data`, delete snapshots, edit the AVD's `config.ini` or update SDK packages without the tester's explicit OK. Wiping erases installed apps and data on the emulator.
