@@ -60,12 +60,29 @@ function install() {
       process.exit(1);
     }
   }
-  // Drop installs of older lockfiles (about 370 MB each). In-progress staging folders
-  // of other launchers end in .tmp-<pid> and are left alone.
+  // Best effort: drop installs of older lockfiles (about 370 MB each), and staging
+  // folders left by installs that were killed. A staging folder whose launcher is
+  // still running is left alone. A failure here must not stop the new server, e.g.
+  // on Windows while another session still runs an old install.
   for (const name of readdirSync(dataDir)) {
-    if (/^appium-mcp-[0-9a-f]{16}$/.test(name) && join(dataDir, name) !== installDir) {
+    const stale = /^appium-mcp-[0-9a-f]{16}$/.test(name)
+      ? join(dataDir, name) !== installDir
+      : /^appium-mcp-[0-9a-f]{16}\.tmp-(\d+)$/.test(name) && !isRunning(Number(name.split('.tmp-')[1]));
+    if (!stale) continue;
+    try {
       rmSync(join(dataDir, name), { recursive: true, force: true });
+    } catch (err) {
+      log(`could not remove the old install ${name}: ${err.message}`);
     }
+  }
+}
+
+function isRunning(pid) {
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch (err) {
+    return err.code === 'EPERM';
   }
 }
 
