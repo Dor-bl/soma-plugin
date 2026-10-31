@@ -7,7 +7,7 @@
 // compromised transitive release cannot be picked up silently.
 import { spawn, spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
-import { copyFileSync, existsSync, mkdirSync, readdirSync, readFileSync, renameSync, rmSync } from 'node:fs';
+import { copyFileSync, existsSync, mkdirSync, readdirSync, readFileSync, renameSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { allowRegexFor } from './allowlist.mjs';
@@ -30,6 +30,18 @@ const installDir = join(dataDir, `appium-mcp-${lockHash}`);
 const entry = join(installDir, 'node_modules', 'appium-mcp', binPath);
 
 if (!existsSync(entry)) install();
+
+// Mark this install as in use, so a launcher for a newer lockfile (e.g. another
+// session after a plugin update) does not delete it while this server runs: the
+// server loads some modules only when a tool first needs them.
+const inUseMarker = join(installDir, `.in-use-${process.pid}`);
+try {
+  writeFileSync(inUseMarker, '');
+} catch (err) {
+  log(`could not mark the install as in use: ${err.message}`);
+}
+process.on('exit', () => rmSync(inUseMarker, { force: true }));
+removeStaleInstalls();
 
 function install() {
   log(`installing ${APPIUM_MCP} from the lockfile into ${installDir} (first start can take several minutes)`);
@@ -60,20 +72,37 @@ function install() {
       process.exit(1);
     }
   }
-  // Best effort: drop installs of older lockfiles (about 370 MB each), and staging
-  // folders left by installs that were killed. A staging folder whose launcher is
-  // still running is left alone. A failure here must not stop the new server, e.g.
-  // on Windows while another session still runs an old install.
+}
+
+// Best effort: drop installs of older lockfiles (about 370 MB each) that no running
+// launcher has marked as in use, and staging folders left by installs that were
+// killed. A failure here must not stop the new server, e.g. on Windows when a file
+// is still held open.
+function removeStaleInstalls() {
+  // Markers of launchers that were force-killed (no exit handler ran)
+  for (const f of readdirSync(installDir)) {
+    if (/^\.in-use-\d+$/.test(f) && !isRunning(Number(f.slice(8)))) rmSync(join(installDir, f), { force: true });
+  }
   for (const name of readdirSync(dataDir)) {
-    const stale = /^appium-mcp-[0-9a-f]{16}$/.test(name)
-      ? join(dataDir, name) !== installDir
-      : /^appium-mcp-[0-9a-f]{16}\.tmp-(\d+)$/.test(name) && !isRunning(Number(name.split('.tmp-')[1]));
+    const dir = join(dataDir, name);
+    const staging = /^appium-mcp-[0-9a-f]{16}\.tmp-(\d+)$/.exec(name);
+    const stale = staging
+      ? !isRunning(Number(staging[1]))
+      : /^appium-mcp-[0-9a-f]{16}$/.test(name) && dir !== installDir && !inUse(dir);
     if (!stale) continue;
     try {
-      rmSync(join(dataDir, name), { recursive: true, force: true });
+      rmSync(dir, { recursive: true, force: true });
     } catch (err) {
       log(`could not remove the old install ${name}: ${err.message}`);
     }
+  }
+}
+
+function inUse(dir) {
+  try {
+    return readdirSync(dir).some((f) => /^\.in-use-\d+$/.test(f) && isRunning(Number(f.slice(8))));
+  } catch {
+    return true; // can't tell, so keep it
   }
 }
 
