@@ -15,7 +15,7 @@ Android emulators only. For a physical device, ask the tester to connect it with
 Run `node "${CLAUDE_PLUGIN_ROOT}/scripts/start-emulator.mjs" --list`.
 - A line starting `✘ SETUP:` (exit 3): `adb` or the emulator is missing or broken. Report it and offer the `check-setup` skill; do not continue.
 - No AVDs found: say so and point the tester to Android Studio's Device Manager to create one. Do not create one yourself.
-- Use the AVD the tester named. Otherwise: if exactly one AVD exists, or exactly one is already running, use it; if more than one could fit, ask which.
+- Use the AVD the tester named. Otherwise: if exactly one AVD exists, or exactly one is already running and `--list` names its AVD, use it; if more than one could fit, or a running emulator shows `avd=unknown` while several AVDs exist, ask which.
 - Always go on to step 2, even for an emulator that is already running: `device` in adb only means it is reachable, not that Android has finished booting.
 
 ## 2. Start it and watch the boot

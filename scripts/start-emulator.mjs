@@ -10,6 +10,7 @@
 // 3 usage/setup error, including startup flags for an AVD that is already running.
 import { spawn, execFileSync } from 'node:child_process';
 import { existsSync, mkdtempSync, openSync, readFileSync } from 'node:fs';
+import { createServer } from 'node:net';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
@@ -64,8 +65,12 @@ function avdName(serial) {
 
 // Emulators adb knows about, as { serial, state, avd }. The AVD name is only readable once
 // the device is online.
-function adbEmulators() {
-  return run(ADB, ['devices']).split(/\r?\n/).slice(1)
+// strict: exit with a setup error if `adb devices` fails (e.g. its server can't start),
+// rather than treating that as "no emulators running"
+function adbEmulators(strict = false) {
+  const devices = exec(ADB, ['devices']);
+  if (!devices.ok && strict) fail(3, 'SETUP: `adb devices` failed; the adb server may not start. Try `adb kill-server` then `adb devices`.');
+  return devices.out.split(/\r?\n/).slice(1)
     .map((l) => l.trim().split(/\s+/))
     .filter(([serial]) => serial?.startsWith('emulator-'))
     .map(([serial, state]) => ({ serial, state, avd: state === 'device' ? avdName(serial) : null }));
@@ -85,10 +90,17 @@ function avdProcessRunning(name) {
   return listing.out.split(/\r?\n/).some((line) => /emulator|qemu-system/i.test(line) && re.test(line));
 }
 
+// True if nothing is listening on this local port (the emulator binds 127.0.0.1)
+const portFree = (port) => new Promise((resolve) => {
+  const server = createServer();
+  server.once('error', () => resolve(false));
+  server.listen(port, '127.0.0.1', () => server.close(() => resolve(true)));
+});
+
 const args = process.argv.slice(2);
 
 if (args[0] === '--list') {
-  const running = adbEmulators();
+  const running = adbEmulators(true);
   console.log(`emulator: ${EMULATOR}`);
   console.log(`AVDs: ${avds.length ? avds.join(', ') : '(none found)'}`);
   for (const r of running) console.log(`running: ${r.serial} ${r.state} avd=${r.avd ?? 'unknown (still starting)'}`);
@@ -111,7 +123,7 @@ if (!avds.includes(avd)) fail(3, `AVD "${avd}" not found. Run with --list to see
 
 const start = Date.now();
 const elapsed = () => `${Math.round((Date.now() - start) / 1000)}s`;
-const known = adbEmulators();
+const known = adbEmulators(true);
 let serial = known.find((r) => r.avd === avd)?.serial ?? null;
 // Already running: adb names it, or its process is up while adb can't name it yet
 const existing = serial !== null || avdProcessRunning(avd) === true;
@@ -125,10 +137,12 @@ if (existing) {
   }
   console.log(serial ? `already running as ${serial}; waiting for boot only` : `${avd} is already starting; waiting for it to come online`);
 } else {
-  // Pick the first free console port so the serial is known up front
+  // Pick a free console/adb port pair (port, port + 1) so the serial is known up front.
+  // adb only knows the emulators it lists, so also check that both ports are really free.
   const used = new Set(known.map((r) => Number(r.serial.split('-')[1])));
   let port = 5554;
-  while (used.has(port)) port += 2;
+  while (port <= 5584 && (used.has(port) || !(await portFree(port)) || !(await portFree(port + 1)))) port += 2;
+  if (port > 5584) fail(3, 'SETUP: no free emulator port pair between 5554 and 5585.');
   serial = `emulator-${port}`;
 
   const emuArgs = ['-avd', avd, '-port', String(port)];
