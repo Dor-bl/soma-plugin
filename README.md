@@ -14,6 +14,8 @@
 ![Android](https://img.shields.io/badge/Android-3DDC84?logo=android&logoColor=white)
 ![iOS](https://img.shields.io/badge/iOS-000000?logo=apple&logoColor=white)
 ![Node.js](https://img.shields.io/badge/Node.js-22%2B-339933?logo=nodedotjs&logoColor=white)
+[![Engine: Appium](https://img.shields.io/badge/engine-Appium%20(default)-662d91?logo=appium&logoColor=white)](backends/appium.md)
+[![Engine: Google Artemis](https://img.shields.io/badge/engine-Google%20Artemis%20(optional)-4285F4?logo=google&logoColor=white)](backends/artemis.md)
 
 </div>
 
@@ -94,7 +96,7 @@ Then try:
 > [!WARNING]
 > SOMA is an early scaffold. Expect rough edges.
 
-- 🧪 Only lightly tested on devices: `generate-test` has passed one end-to-end run on an Android 11 emulator. The other skills and iOS haven't been run on a device yet.
+- 🧪 Only lightly tested on devices: `generate-test` has passed one end-to-end run through Appium on an Android 11 emulator, and `explore-app` has run once through Artemis on an Android 13 emulator. The other skills and iOS haven't been run on a device yet.
 - 📌 `appium-mcp` is pinned to an exact version (`1.97.1`). Bump it deliberately after testing; its transitive dependencies are still resolved by npm at install time.
 - 🌐 The remote URL policy covers the URL you configure only. Redirects and direct-connect endpoints chosen by the server aren't re-checked, so only point SOMA at servers you trust.
 - 🔓 SOMA can't add authentication to a self-hosted Appium server. Put it behind an authenticating reverse proxy or VPN; never expose it unauthenticated on a shared network.
