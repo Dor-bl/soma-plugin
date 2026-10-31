@@ -1,6 +1,6 @@
 ---
 name: check-setup
-description: Check whether the tester's machine is ready to run mobile tests through appium-mcp (Node, Android SDK/ADB, Xcode, emulators) and explain what is missing. Use for first-time setup or when a session fails to start.
+description: Check whether the tester's machine is ready to run mobile tests through appium-mcp (Node, Android SDK/ADB, Xcode, emulators), plus the optional Google Artemis engine, and explain what is missing. Use for first-time setup or when a session fails to start.
 ---
 
 # Check local setup
@@ -34,6 +34,13 @@ Check that the client actually loads its entry point, not just that it is listed
 - Python: `python -c "from appium import webdriver"`. A bare `import appium` can pass on an empty `appium/` folder, because Python treats it as a namespace package. Fix: `pip install --force-reinstall Appium-Python-Client`, or use a virtualenv.
 - Node: `node -e "require('webdriverio')"`, run from the test project.
 - Java: the `io.appium:java-client` dependency resolves in the project build.
+
+## Optional engine: Google Artemis
+Only if the tester uses or asks about Artemis (see `${CLAUDE_PLUGIN_ROOT}/backends/artemis.md`):
+- `mobile_*` tools visible in the Claude tool list. If not, report MISSING and point to the Install note in `${CLAUDE_PLUGIN_ROOT}/backends/artemis.md`. Do not install or register anything without the tester's confirmation, and never suggest `start.bat`/`start.sh` or `artemis mcp --install`: they write config into every AI client on the machine.
+- If `mobile_*` tools are visible but the tester never set an LLM API key, report MISSING and tell them to add one to Artemis's `.env` themselves. Never ask for the key or print the file.
+- If visible, call `mobile_diagnose` in check-only mode (no automatic fixes, no AVD launch) and report its verdict (`ready` / `degraded` / `blocked`) with its fix list. Its `Run:` lines and `attempt_fix` install or change things (winget, scripts, the helper app): apply any of them only after the tester's confirmation. If a key looks set but tasks stall, rerun it with `verify_credentials=true`.
+- Artemis is Android only and needs its own LLM API key. On first use it installs an accessibility-service helper app on the device; the tester can check it with `uv run artemis helper status`.
 
 ## Output
 A short checklist with the exact command to fix each MISSING item. Do not install anything or change system settings without the tester's explicit confirmation. If the tester is on Windows or Linux and wants iOS, say plainly that local iOS testing needs a Mac and suggest a remote server.
