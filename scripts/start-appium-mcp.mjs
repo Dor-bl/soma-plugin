@@ -40,8 +40,12 @@ try {
 } catch (err) {
   log(`could not mark the install as in use: ${err.message}`);
 }
-process.on('exit', () => rmSync(inUseMarker, { force: true }));
-removeStaleInstalls();
+process.on('exit', () => removeQuietly(inUseMarker));
+try {
+  removeStaleInstalls();
+} catch (err) {
+  log(`skipped cleaning up old installs: ${err.message}`);
+}
 
 function install() {
   log(`installing ${APPIUM_MCP} from the lockfile into ${installDir} (first start can take several minutes)`);
@@ -81,7 +85,7 @@ function install() {
 function removeStaleInstalls() {
   // Markers of launchers that were force-killed (no exit handler ran)
   for (const f of readdirSync(installDir)) {
-    if (/^\.in-use-\d+$/.test(f) && !isRunning(Number(f.slice(8)))) rmSync(join(installDir, f), { force: true });
+    if (/^\.in-use-\d+$/.test(f) && !isRunning(Number(f.slice(8)))) removeQuietly(join(installDir, f));
   }
   for (const name of readdirSync(dataDir)) {
     const dir = join(dataDir, name);
@@ -95,6 +99,14 @@ function removeStaleInstalls() {
     } catch (err) {
       log(`could not remove the old install ${name}: ${err.message}`);
     }
+  }
+}
+
+function removeQuietly(path) {
+  try {
+    rmSync(path, { force: true });
+  } catch (err) {
+    log(`could not remove ${path}: ${err.message}`);
   }
 }
 
