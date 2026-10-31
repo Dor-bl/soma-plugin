@@ -34,7 +34,7 @@ To use the device tools here, add a local-scope entry with the absolute path; it
 claude mcp add --scope local appium-mcp -- node "/absolute/path/to/this repo/scripts/start-appium-mcp.mjs"
 ```
 
-It runs with no remote URL, so remote servers stay blocked and only local devices work. Do not change `.mcp.json` to fix this: the variables are what make the plugin work for users.
+The entry passes no remote URL, so remote servers stay blocked and only local devices work, as long as `SOMA_REMOTE_SERVER_URL` is not exported in your shell: the launcher reads it from the environment, and if it is set, remote sessions to that one URL are allowed (every other host stays blocked). Do not change `.mcp.json` to fix this: the variables are what make the plugin work for users.
 
 ## Conventions enforced by `check-plugin.mjs`
 
