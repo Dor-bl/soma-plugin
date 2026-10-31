@@ -38,4 +38,4 @@ Never use `-wipe-data`, delete snapshots, edit the AVD's `config.ini` or update 
 If a retry works, tell the tester which flags fixed it, and that they can make it permanent in the AVD settings (for example `hw.gpu.mode = swiftshader_indirect` in `config.ini`, or Graphics: Software in Android Studio). Do not make that change yourself.
 
 ## 4. Confirm it is ready
-Report the serial, AVD name and Android version from the `BOOTED` line. If `run-manual-test` or `generate-test` is next, the device is ready for a session.
+Report the serial, AVD name and Android version from the `BOOTED` line. If `run-manual-test`, `generate-test` or `explore-app` is next, the device is ready for it.
