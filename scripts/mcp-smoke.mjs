@@ -27,14 +27,19 @@ const REQUIRED_TOOLS = [
   // start-device, via backends/appium.md
   'prepare_ios_simulator',
 ];
-// Includes the npx download of appium-mcp, which is slow on a cold cache.
+// Includes the first npm ci install of appium-mcp, which is slow on a cold cache.
 const TIMEOUT_MS = Number(process.env.SMOKE_TIMEOUT_MS ?? 480_000);
 
 // Substitute variables the way Claude Code does, with every plugin setting
 // left at its empty default.
 const pluginRoot = fileURLToPath(new URL('..', import.meta.url)).replace(/[\\/]$/, '');
+// CLAUDE_PLUGIN_DATA is taken from the environment when set (CI points it at a cached
+// folder); otherwise it stays empty and the launcher installs into the plugin's .runtime/.
 const resolve = (value) =>
-  value.replaceAll('${CLAUDE_PLUGIN_ROOT}', pluginRoot).replace(/\$\{user_config\.\w+\}/g, '');
+  value
+    .replaceAll('${CLAUDE_PLUGIN_ROOT}', pluginRoot)
+    .replaceAll('${CLAUDE_PLUGIN_DATA}', process.env.CLAUDE_PLUGIN_DATA ?? '')
+    .replace(/\$\{user_config\.\w+\}/g, '');
 
 const config = JSON.parse(readFileSync(new URL('../.mcp.json', import.meta.url), 'utf8'));
 const server = config.mcpServers['appium-mcp'];
@@ -50,7 +55,7 @@ const child = spawn(command, args, {
   env,
   // npx is a .cmd shim on Windows and needs a shell; node does not.
   shell: isWindows && command !== 'node',
-  // Own process group on POSIX, so the whole launcher -> npx -> node tree can be stopped
+  // Own process group on POSIX, so the whole launcher -> npm/appium-mcp tree can be stopped
   detached: !isWindows,
 });
 let stderr = '';

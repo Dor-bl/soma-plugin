@@ -55,10 +55,26 @@ if (plugin?.version) {
   }
 }
 
-// Every appium-mcp version mentioned in docs and skills must match the one the launcher pins
-const pinned = read('scripts/start-appium-mcp.mjs').match(/'appium-mcp@([^']+)'/)?.[1];
-if (!pinned) fail('scripts/start-appium-mcp.mjs: pinned appium-mcp version not found');
-else {
+// appium-mcp is pinned in runtime/package.json and locked in runtime/package-lock.json.
+// Every version mentioned in docs and skills, and the lockfile, must match that pin.
+const runtimePkg = JSON.parse(read('runtime/package.json'));
+const pinned = runtimePkg.dependencies?.['appium-mcp'];
+if (!pinned || !/^\d+\.\d+\.\d+$/.test(pinned)) {
+  fail(`runtime/package.json: appium-mcp must be pinned to an exact version, got ${pinned}`);
+} else {
+  const lock = JSON.parse(read('runtime/package-lock.json'));
+  if (lock.packages?.['']?.dependencies?.['appium-mcp'] !== pinned) {
+    fail('runtime/package-lock.json: out of date with runtime/package.json; run npm install --package-lock-only --ignore-scripts in runtime/');
+  }
+  const locked = lock.packages?.['node_modules/appium-mcp'];
+  if (locked?.version !== pinned) fail(`runtime/package-lock.json: appium-mcp ${locked?.version} != pinned ${pinned}`);
+  if (!locked?.bin?.['appium-mcp']) fail('runtime/package-lock.json: appium-mcp has no bin entry for the launcher');
+  // Every package needs an integrity hash, except ones bundled inside a hashed tarball
+  // and git dependencies pinned to a full commit SHA.
+  const unpinned = Object.entries(lock.packages ?? {}).filter(
+    ([k, v]) => k && !v.link && !v.integrity && !v.inBundle && !/^git\+[^#]+#[0-9a-f]{40}$/.test(v.resolved ?? ''),
+  );
+  if (unpinned.length) fail(`runtime/package-lock.json: not pinned by hash or commit: ${unpinned.map(([k]) => k).join(', ')}`);
   const docs = ['README.md', ...readdirSync(join(root, 'skills')).map((d) => `skills/${d}/SKILL.md`)];
   for (const p of docs.filter((p) => existsSync(join(root, p)))) {
     for (const m of read(p).matchAll(/appium-mcp@([\w.-]+)/g)) {

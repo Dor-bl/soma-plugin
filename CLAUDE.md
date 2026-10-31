@@ -5,7 +5,8 @@ SOMA is a Claude Code plugin for mobile QA, built on the official [`appium-mcp`]
 ## Layout
 
 - `.claude-plugin/plugin.json`: manifest, version and `userConfig` (`remote_server_url`)
-- `.mcp.json`: starts `appium-mcp` via `npx`
+- `.mcp.json`: starts `scripts/start-appium-mcp.mjs`, which installs `appium-mcp` from `runtime/package-lock.json` (`npm ci --ignore-scripts`, into `${CLAUDE_PLUGIN_DATA}`) and runs it with a remote-URL allowlist
+- `runtime/`: `package.json` pinning `appium-mcp`, and the committed lockfile for its whole dependency tree
 - `skills/<name>/SKILL.md`: one skill per folder
 - `commands/*.md`: slash commands (`/soma:<file>`), each a one-line hand-off to a skill
 - `backends/`: one file per device engine (Appium default, optional Google Artemis). Skills say *what* to do; these files say *which tools* do it. Selection rules are in `backends/README.md`
@@ -19,7 +20,7 @@ node scripts/check-plugin.mjs        # frontmatter, userConfig, version badge
 node scripts/test-allowlist.mjs       # remote-server allowlist
 node scripts/test-process-tree.mjs    # Windows process-tree cleanup
 npx markdownlint-cli2 "**/*.md"
-node scripts/mcp-smoke.mjs           # slow on a cold npx cache; SMOKE_TIMEOUT_MS overrides
+node scripts/mcp-smoke.mjs           # first run installs ~370 MB; SMOKE_TIMEOUT_MS overrides, CLAUDE_PLUGIN_DATA sets the install folder
 ```
 
 CI also runs a link check (lychee) on all Markdown, so links must resolve.
@@ -30,7 +31,7 @@ CI also runs a link check (lychee) on all Markdown, so links must resolve.
 - Every command needs a `description` in its frontmatter.
 - Every `${user_config.<key>}` used in a skill must be declared in `plugin.json`, and every declared key must be used.
 - The README version badge must match `plugin.json` `version`. Bump both together.
-- Every `appium-mcp@<version>` in the README and skills must match the version pinned in `scripts/start-appium-mcp.mjs`. Bump them together.
+- Every `appium-mcp@<version>` in the README and skills must match the version pinned in `runtime/package.json`, and so must the lockfile. To bump: edit `runtime/package.json`, run `npm install --package-lock-only --ignore-scripts` in `runtime/`, review the lockfile diff, then update the docs.
 
 ## Writing skills
 
