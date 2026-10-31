@@ -19,7 +19,7 @@ Run `node "${CLAUDE_PLUGIN_ROOT}/scripts/start-emulator.mjs" --list`.
 - Always go on to step 2, even for an emulator that is already running: `device` in adb only means it is reachable, not that Android has finished booting.
 
 ## 2. Start it and watch the boot
-Run `node "${CLAUDE_PLUGIN_ROOT}/scripts/start-emulator.mjs" <avd>`. It starts the emulator detached (it keeps running afterwards), or waits on the instance that is already running or still starting, for up to 5 minutes, and ends with a `STATUS:` line.
+Run `node "${CLAUDE_PLUGIN_ROOT}/scripts/start-emulator.mjs" <avd>`. It starts the emulator detached (it keeps running afterward), or waits on the instance that is already running or still starting, for up to 5 minutes, and ends with a `STATUS:` line.
 - `offline` while it waits is normal: the emulator is still booting. Only `sys.boot_completed=1` means it is ready, and the script waits for that.
 - `STATUS: BOOTED`: go to step 4.
 - `STATUS: TIMEOUT`: the emulator is still running but slow. Run the script again with the same AVD; it waits on the running emulator without starting a new one. If it times out twice, treat it like a crash.
