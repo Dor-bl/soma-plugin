@@ -35,6 +35,8 @@ jobs:
         run: node scripts/check-plugin.mjs
       - name: Remote server allowlist tests
         run: node scripts/test-allowlist.mjs
+      - name: Process-tree cleanup tests
+        run: node scripts/test-process-tree.mjs
 
   docs:
     name: Markdown lint and links

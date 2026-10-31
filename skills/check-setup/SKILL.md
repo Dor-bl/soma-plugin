@@ -1,11 +1,11 @@
 ---
 name: check-setup
-description: Check whether the tester's machine is ready to run mobile tests through appium-mcp (Node, Android SDK/ADB, Xcode, emulators) and explain what is missing. Use for first-time setup or when a session fails to start.
+description: Check whether the tester's machine is ready to run mobile tests through appium-mcp (Node, Android SDK/ADB, Xcode, emulators), plus the optional Google Artemis engine, and explain what is missing. Use for first-time setup or when a session fails to start.
 ---
 
 # Check local setup
 
-Remote Appium server URL configured: `${user_config.remote_server_url}`. If it is empty or still shows as a literal `${user_config...}` placeholder, no remote server is configured. If set, only a reachable server is needed: skip the local checks and just confirm the URL responds. Still run the test client checks below, since generated scripts run on the tester's machine even when the server is remote.
+Remote Appium server URL configured: `${user_config.remote_server_url}`. If it is empty or still shows as a literal `${user_config...}` placeholder, no remote server is configured. If set, the device-side checks are not needed: confirm the URL responds, and skip the Android, local Appium 2 and iOS checks below. Still run the Node.js, npm and appium-mcp startup checks, since `appium-mcp` itself always runs on the tester's machine (`.mcp.json` starts it locally with Node through `scripts/start-appium-mcp.mjs`, which runs the pinned `appium-mcp` with `npx`), and the test client checks, since generated scripts run there too.
 
 Remote URL checks (report each as OK / MISSING):
 - Uses `https://`, or `http://` only for `localhost` / `127.0.0.1` / `[::1]`, with no query or fragment. If it breaks these rules, SOMA blocks all remote servers at startup and only the exact configured URL is ever allowed.
@@ -15,21 +15,32 @@ Remote URL checks (report each as OK / MISSING):
 
 ## Local checks (run what applies, report each as OK / MISSING / UNKNOWN)
 - Node.js 22 or newer (`node --version`). `appium-mcp` requires `>=22`; older versions crash on startup and the server shows as disconnected. Fix: install Node 22 LTS (e.g. `winget install OpenJS.NodeJS.LTS` on Windows, or via nvm), then restart Claude.
+- npm 10 or newer (`npm --version`). Node 22 ships npm 10, so an older number means an old npm is in the way. Find out which case it is before suggesting a fix:
+  - Windows, and `%APPDATA%\npm\node_modules\npm` exists: a leftover global npm is shadowing Node's own (`npm.cmd` prefers it). Fix: `npm uninstall -g npm`, then check `npm --version` again.
+  - Otherwise (macOS/Linux, nvm, or Windows without that folder): the old npm replaced Node's own copy, so uninstalling it would leave no npm at all. Never suggest `npm uninstall -g npm` here. Fix: `npm install -g npm@10`, or reinstall Node 22.
 - Android: `adb` on PATH, `ANDROID_HOME`/`ANDROID_SDK_ROOT` set, at least one emulator or device listed by `adb devices`. If an emulator crashes on start (e.g. exit code 139), suggest relaunching it with `-gpu swiftshader_indirect`. Hardware GPU rendering often fails on older graphics cards.
 - Local Appium 2 server for running generated scripts (only if the tester runs `generate-test` scripts): `appium --version`, with the needed driver installed (`appium driver list --installed`, e.g. uiautomator2 or xcuitest)
 - iOS (macOS only): Xcode installed, command line tools selected, at least one simulator available
 - appium-mcp server visible and connected in the Claude tool list. If it is not, offer a manual startup diagnostic:
   - Ask the tester first. `npx -y appium-mcp@1.97.1` downloads and installs the package and its dependencies if they are not cached.
-  - Run it with a time limit (about 60 seconds), capture stderr, and stop the process when the limit is reached.
-  - Exited with an error before the limit: MISSING. Quote the key error line.
-  - Still running at the limit with no error: the server starts (a healthy stdio server waits for input and never exits on its own). The problem is likely Claude's MCP config or a needed restart.
-  - Still running but stderr shows it is still downloading: UNKNOWN. Run it again once the install has finished.
+  - Run `node "${CLAUDE_PLUGIN_ROOT}/scripts/mcp-smoke.mjs"` with the environment variable `SMOKE_TIMEOUT_MS=120000`. It is the same check CI runs: it starts the server exactly as `.mcp.json` does, performs a real MCP handshake (`initialize`, then `tools/list`), checks the tools SOMA needs are present and that remote servers are blocked, then stops the server. Do not judge startup from whether the process is still running: a server can sit installing for minutes, or exit at once when its input closes, so only an answered handshake proves it works.
+  - Exit 0: the server works. The problem is Claude's MCP config or a needed restart.
+  - Exit 1: MISSING. Quote the key error line from the stderr it prints. `Missing tools required by SOMA skills` means an `appium-mcp` release changed its tools, and `Remote server was not blocked` means the remote allowlist failed; report either as a plugin issue, not a setup problem.
+  - Exit 2 (no `tools/list` response in time): UNKNOWN. The first run may still be installing; run it once more.
+  - `ERR_MODULE_NOT_FOUND` right after a Node upgrade usually means the npx cache was built by the old Node or npm. With the tester's approval, delete the `_npx` folder inside the npm cache (`npm config get cache` prints its location), then run the check again.
 
 ## Test client checks (local or remote server; only if the tester runs or plans to run `generate-test` scripts)
 Check that the client actually loads its entry point, not just that it is listed as installed. A package can show as installed with its files missing.
 - Python: `python -c "from appium import webdriver"`. A bare `import appium` can pass on an empty `appium/` folder, because Python treats it as a namespace package. Fix: `pip install --force-reinstall Appium-Python-Client`, or use a virtualenv.
 - Node: `node -e "require('webdriverio')"`, run from the test project.
 - Java: the `io.appium:java-client` dependency resolves in the project build.
+
+## Optional engine: Google Artemis
+Only if the tester uses or asks about Artemis (see `${CLAUDE_PLUGIN_ROOT}/backends/artemis.md`):
+- `mobile_*` tools visible in the Claude tool list. If not, report MISSING and point to the Install note in `${CLAUDE_PLUGIN_ROOT}/backends/artemis.md`. Do not install or register anything without the tester's confirmation, and never suggest `start.bat`/`start.sh` or `artemis mcp --install`: they write config into every AI client on the machine.
+- If `mobile_*` tools are visible but the tester never set an LLM API key, report MISSING and tell them to add one to Artemis's `.env` themselves. Never ask for the key or print the file.
+- If visible, call `mobile_diagnose` in check-only mode (no automatic fixes, no AVD launch) and report its verdict (`ready` / `degraded` / `blocked`) with its fix list. Its `Run:` lines and `attempt_fix` install or change things (winget, scripts, the helper app): apply any of them only after the tester's confirmation. If a key looks set but tasks stall, rerun it with `verify_credentials=true`.
+- Artemis is Android only and needs its own LLM API key. On first use it installs an accessibility-service helper app on the device; the tester can check it with `uv run artemis helper status`.
 
 ## Output
 A short checklist with the exact command to fix each MISSING item. Do not install anything or change system settings without the tester's explicit confirmation. If the tester is on Windows or Linux and wants iOS, say plainly that local iOS testing needs a Mac and suggest a remote server.
