@@ -75,7 +75,7 @@ Then try:
 > [!WARNING]
 > SOMA is an early scaffold. Expect rough edges.
 
-- 🧪 Skills are untested against real devices.
+- 🧪 Only lightly tested on devices: `generate-test` has passed one end-to-end run on an Android 11 emulator. The other skills and iOS haven't been run on a device yet.
 - 📌 `appium-mcp` is pinned to an exact version (`1.97.1`). Bump it deliberately after testing; its transitive dependencies are still resolved by npm at install time.
 - 🌐 The remote URL policy covers the URL you configure only. Redirects and direct-connect endpoints chosen by the server aren't re-checked, so only point SOMA at servers you trust.
 - 🔓 SOMA can't add authentication to a self-hosted Appium server. Put it behind an authenticating reverse proxy or VPN; never expose it unauthenticated on a shared network.
