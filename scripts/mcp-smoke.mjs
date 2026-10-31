@@ -24,6 +24,8 @@ const REQUIRED_TOOLS = [
   'appium_set_value',
   'appium_get_text',
   'appium_app_lifecycle',
+  // start-device, via backends/appium.md
+  'prepare_ios_simulator',
 ];
 // Includes the npx download of appium-mcp, which is slow on a cold cache.
 const TIMEOUT_MS = Number(process.env.SMOKE_TIMEOUT_MS ?? 480_000);
