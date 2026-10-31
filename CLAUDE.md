@@ -31,7 +31,7 @@ Opening this repo in Claude Code loads `.mcp.json` as a project config, not as a
 To use the device tools here, add a local-scope entry with the absolute path; it overrides the project one for you only:
 
 ```bash
-claude mcp add --scope local appium-mcp -- node <absolute path to this repo>/scripts/start-appium-mcp.mjs
+claude mcp add --scope local appium-mcp -- node "/absolute/path/to/this repo/scripts/start-appium-mcp.mjs"
 ```
 
 It runs with no remote URL, so remote servers stay blocked and only local devices work. Do not change `.mcp.json` to fix this: the variables are what make the plugin work for users.
