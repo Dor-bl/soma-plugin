@@ -126,7 +126,12 @@ const elapsed = () => `${Math.round((Date.now() - start) / 1000)}s`;
 const known = adbEmulators(true);
 let serial = known.find((r) => r.avd === avd)?.serial ?? null;
 // Already running: adb names it, or its process is up while adb can't name it yet
-const existing = serial !== null || avdProcessRunning(avd) === true;
+const processRunning = serial === null ? avdProcessRunning(avd) : true;
+// Not knowing is not "not running": guessing could launch a second copy of the AVD
+if (processRunning === null) {
+  fail(3, `SETUP: could not read the process list to check whether ${avd} is already running, so it was not started.`);
+}
+const existing = serial !== null || processRunning;
 let child = null;
 let logPath = null;
 
@@ -155,6 +160,10 @@ if (existing) {
   console.log(`log: ${logPath}`);
   child = spawn(EMULATOR, emuArgs, { detached: true, stdio: ['ignore', log, log], windowsHide: true });
   child.unref();
+  child.on('error', (err) => {
+    exited = true;
+    finish(3, `SETUP: could not start ${EMULATOR}: ${err.message}`);
+  });
 }
 
 function logFacts() {
@@ -182,17 +191,26 @@ child?.on('exit', (code) => {
   finish(1, `CRASHED: emulator exited after ${elapsed()} with code ${code}, before boot completed`);
 });
 
+let adbFailures = 0;
 const poll = setInterval(() => {
   if (exited) return;
+  // adb that stops working looks like "not listed" until the timeout; a single slow call
+  // during boot is tolerated, three failures in a row are a setup error
+  if (!exec(ADB, ['devices'], 5_000).ok) {
+    if (++adbFailures >= 3) finish(3, 'SETUP: `adb devices` stopped working while waiting for the boot.');
+    return;
+  }
+  adbFailures = 0;
   // An instance that was still starting: find its serial once adb can name it
   if (!serial) serial = adbEmulators().find((r) => r.avd === avd)?.serial ?? null;
   const state = (serial && run(ADB, ['-s', serial, 'get-state'], 5_000)) || 'not listed';
-  // An emulator we didn't start has no exit event: notice when its process is gone
-  if (existing && state !== 'device' && avdProcessRunning(avd) === false) {
+  const booted = state === 'device' && run(ADB, ['-s', serial, 'shell', 'getprop', 'sys.boot_completed'], 5_000) === '1';
+  // An emulator we didn't start has no exit event: notice when its process is gone. Only
+  // when the boot check also failed, so a process-list mismatch can't fake a crash.
+  if (existing && !booted && avdProcessRunning(avd) === false) {
     finish(1, `CRASHED: the running ${avd} emulator exited after ${elapsed()}, before boot completed`);
     return;
   }
-  const booted = state === 'device' && run(ADB, ['-s', serial, 'shell', 'getprop', 'sys.boot_completed'], 5_000) === '1';
   const now = booted ? 'boot completed' : state;
   if (now !== last) {
     console.log(`[${elapsed()}] ${serial ?? avd}: ${now}`);
