@@ -14,8 +14,8 @@ Server: `appium-mcp`, bundled in `.mcp.json`. Platforms: Android and iOS. Claude
 | Read the screen | `appium_get_page_source` (assertions), `appium_get_text` |
 | Screenshot | `appium_screenshot` |
 | App install / launch / stop | `appium_app_lifecycle` |
-| Pick a local iOS simulator (macOS only) | `select_device` with `platform: ios`, `iosDeviceType: simulator` |
-| Prepare an iOS simulator (macOS only) | `prepare_ios_simulator` with the `udid`. It returns a `capabilitiesHint` with `appium:webDriverAgentUrl`. Forced WDA refresh: `forceRefreshWda: true` |
+| Pick a local iOS simulator (macOS only) | `select_device` with `platform: ios`, `iosDeviceType: simulator`, `deviceUdid`. It does not show iOS versions; list those with `xcrun simctl list devices available` |
+| Prepare an iOS simulator (macOS only) | `prepare_ios_simulator` with the `udid`. It returns `wdaAppPath` and a `capabilitiesHint` with `appium:webDriverAgentUrl`. Forced WDA refresh: `forceRefreshWda: true` (re-downloads only; it does not reinstall WDA already on the simulator) |
 | Prepare a real iOS device (macOS only) | `appium_prepare_ios_real_device` |
 
 ## Session setup

@@ -49,9 +49,9 @@ Report the serial, AVD name and Android version from the `BOOTED` line. If `run-
 Simulators run only on a Mac with Xcode. On Windows or Linux, say so plainly and suggest a remote server or device cloud (the `remote_server_url` setting); do not continue. iOS uses the Appium engine; Artemis is Android only. The operations named below are in `${CLAUDE_PLUGIN_ROOT}/backends/appium.md`.
 
 ### 1. Pick the simulator
-List the simulators with the "Pick a device" operation, for an iOS simulator.
-- An error, or no simulators: check `xcode-select -p` and `xcrun simctl list runtimes`. If Xcode or its command line tools are missing, report it and offer the `check-setup` skill. If no iOS runtime is installed, point the tester to Xcode > Settings > Components (Platforms in older Xcode) to download one; to create a simulator, Window > Devices and Simulators. Do not install runtimes or create simulators yourself.
-- Use the simulator the tester named, matching its name and iOS version exactly (several runtimes can each have an "iPhone 16"). Otherwise: if exactly one is already booted, or exactly one exists, use it; if more than one could fit, ask which. Never guess a UDID.
+Run `xcrun simctl list devices available`. It groups simulators under their iOS version (`-- iOS 18.2 --`) with each one's name, UDID and state; the "Pick a device" operation lists names and UDIDs but not versions.
+- An error, or no iOS simulators: check `xcode-select -p` and `xcrun simctl list runtimes`. If Xcode or its command line tools are missing, report it and offer the `check-setup` skill. If no iOS runtime is installed, point the tester to Xcode > Settings > Components (Platforms in older Xcode) to download one; to create a simulator, Window > Devices and Simulators. Do not install runtimes or create simulators yourself.
+- Use the simulator the tester named, matching its name and iOS version exactly (several runtimes can each have an "iPhone 16"). Otherwise: if exactly one is already booted, or exactly one exists, use it; if more than one could fit, ask which, showing each one's iOS version. Never guess a UDID. Then select it with the "Pick a device" operation, passing that UDID.
 
 ### 2. Boot it and start WebDriverAgent
 1. Run `xcrun simctl bootstatus <udid> -b`. It boots the simulator if it is shut down, then waits until iOS has finished booting; on a booted one it returns at once. It runs headless, so the Simulator window may not open; if the tester wants to watch, run `open -a Simulator` too. A first boot after creating a simulator or installing a runtime can take several minutes. If it shows no progress for 5 minutes, stop it and go to step 3.
@@ -61,9 +61,9 @@ List the simulators with the "Pick a device" operation, for an iOS simulator.
 Report the exact error first: which command or tool failed and its last output lines. Then, asking before each:
 - **Boot hangs or fails**: `xcrun simctl shutdown <udid>`, then step 2 again. If it still fails, check that the runtime shows as available in `xcrun simctl list runtimes`; an unavailable runtime means re-downloading it in Xcode, which the tester does.
 - **WDA download fails** (network, proxy, or GitHub blocked): report it. If the tester can get the prebuilt `WebDriverAgentRunner-Runner.app`, they can set `APPIUM_MCP_WDA_APP_PATH` to its absolute path for appium-mcp and restart Claude; it then skips the download.
-- **WDA does not start or the session cannot reach it**: run "Prepare an iOS simulator" once more with a forced WDA refresh, since the cached copy may be corrupt or built for another Xcode.
+- **WDA does not start or the session cannot reach it**: the copy installed on the simulator may be corrupt or built for another Xcode. A forced WDA refresh only replaces the downloaded copy; WDA already on the simulator is not reinstalled. So run "Prepare an iOS simulator" with a forced WDA refresh, then `xcrun simctl install <udid> "<wdaAppPath>"` with the `wdaAppPath` it returned, then "Prepare an iOS simulator" again (without the refresh) and use the new `appium:webDriverAgentUrl` it returns.
 
 Never run `xcrun simctl erase` or `delete`, switch Xcode with `xcode-select -s`, or install Xcode components without the tester's explicit OK. Erasing wipes installed apps and data on the simulator.
 
 ### 4. Confirm the simulator is ready
-Report the simulator name, iOS version and UDID. If `run-manual-test`, `generate-test` or `explore-app` is next, the simulator is ready: create the session with `appium:udid` set to that UDID and the `appium:webDriverAgentUrl` from step 2.
+Report the simulator name, iOS version (from step 1) and UDID. If `run-manual-test`, `generate-test` or `explore-app` is next, the simulator is ready: create the session with `appium:udid` set to that UDID and the `appium:webDriverAgentUrl` from step 2.
