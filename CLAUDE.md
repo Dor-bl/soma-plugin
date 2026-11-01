@@ -5,7 +5,7 @@ SOMA is a Claude Code plugin for mobile QA, built on the official [`appium-mcp`]
 ## Layout
 
 - `.claude-plugin/plugin.json`: manifest, version and `userConfig` (`remote_server_url`)
-- `.mcp.json`: starts `appium-mcp` via `npx`
+- `.mcp.json`: starts `appium-mcp` through `scripts/start-appium-mcp.mjs` (pinned version, remote-URL allowlist)
 - `skills/<name>/SKILL.md`: one skill per folder
 - `commands/*.md`: slash commands (`/soma:<file>`), each a one-line hand-off to a skill
 - `backends/`: one file per device engine (Appium default, optional Google Artemis). Skills say *what* to do; these files say *which tools* do it. Selection rules are in `backends/README.md`
@@ -23,6 +23,18 @@ node scripts/mcp-smoke.mjs           # slow on a cold npx cache; SMOKE_TIMEOUT_M
 ```
 
 CI also runs a link check (lychee) on all Markdown, so links must resolve.
+
+## Running appium-mcp while working in this repo
+
+Opening this repo in Claude Code loads `.mcp.json` as a project config, not as a plugin, so `${CLAUDE_PLUGIN_ROOT}` and `${user_config.*}` stay unsubstituted. The launcher path does not resolve and `appium-mcp` shows "Failed to connect" (`Connection closed`). Plugin users are not affected, and `mcp-smoke.mjs` substitutes the variables itself.
+
+To use the device tools here, add a local-scope entry with the absolute path; it overrides the project one for you only:
+
+```bash
+claude mcp add --scope local appium-mcp -- node "/absolute/path/to/this repo/scripts/start-appium-mcp.mjs"
+```
+
+The entry passes no remote URL, so remote servers stay blocked and only local devices work, as long as `SOMA_REMOTE_SERVER_URL` is not exported in your shell: the launcher reads it from the environment, and if it is set, remote sessions to that one URL are allowed (every other host stays blocked). Do not change `.mcp.json` to fix this: the variables are what make the plugin work for users.
 
 ## Conventions enforced by `check-plugin.mjs`
 
