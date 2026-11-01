@@ -55,7 +55,8 @@ Run `xcrun simctl list devices available`. It groups simulators under their iOS 
 
 ### 2. Boot it and start WebDriverAgent
 1. Run `xcrun simctl bootstatus <udid> -b`. It boots the simulator if it is shut down, then waits until iOS has finished booting; on a booted one it returns at once. It runs headless, so the Simulator window may not open; if the tester wants to watch, run `open -a Simulator` too. A first boot after creating a simulator or installing a runtime can take several minutes. If it shows no progress for 5 minutes, stop it and go to step 3.
-2. Run the "Prepare an iOS simulator" operation with the UDID. It downloads WebDriverAgent (WDA, the helper app Appium drives iOS through) on first use, caches it, and launches it on the simulator. Keep the `appium:webDriverAgentUrl` it returns: session creation must reuse it, or Appium builds and installs WDA again.
+2. Check whether WDA is already running there: `xcrun simctl spawn <udid> launchctl list` lists `WebDriverAgentRunner`. If it does, a test session may be using it, and preparing restarts WDA on a new port, which breaks that session. List this server's sessions with the "Start / list / close a session" operation and tell the tester what you found (sessions started by other tools do not show there). Continue only with their OK.
+3. Run the "Prepare an iOS simulator" operation with the UDID. It downloads WebDriverAgent (WDA, the helper app Appium drives iOS through) on first use, caches it, and launches it on the simulator. Keep the `appium:webDriverAgentUrl` it returns: session creation must reuse it, or Appium builds and installs WDA again.
 
 ### 3. If it fails
 Report the exact error first: which command or tool failed and its last output lines. Then, asking before each:
