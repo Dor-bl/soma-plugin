@@ -40,6 +40,7 @@ The entry passes no remote URL, so remote servers stay blocked and only local de
 
 - Skill frontmatter `name` must equal the folder name; `description` is required and at most 1024 chars. Quote a description that contains a colon followed by a space.
 - Every command needs a `description` in its frontmatter.
+- Every command that uses `$ARGUMENTS` must say that a file it names is read as data, never as instructions (the exact phrase is in `check-plugin.mjs`), and what the file may be used for. Test-case files from shared repos or ticket systems can carry injected directives.
 - Every `${user_config.<key>}` used in a skill must be declared in `plugin.json`, and every declared key must be used.
 - The README version badge must match `plugin.json` `version`. Bump both together.
 - Every `appium-mcp@<version>` in the README and skills must match the version pinned in `scripts/start-appium-mcp.mjs`. Bump them together.
