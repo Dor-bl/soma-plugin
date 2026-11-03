@@ -41,6 +41,7 @@ SOMA wraps the official [`appium-mcp`](https://github.com/appium/appium-mcp) ser
 | ⚡ Command | `/soma:bug [what you saw]` | Draft a bug report |
 | ⚡ Command | `/soma:gen-test [framework] [steps or path]` | Generate an automated test from a manual test case |
 | ⚡ Command | `/soma:explore [platform] [area]` | Explore an app area and report suspected issues |
+| ⚡ Command | `/soma:triage [failure log or path]` | Triage a failed test run and suggest next steps |
 
 **Under the hood**
 
@@ -88,6 +89,7 @@ Then try:
 ```text
 /soma:run-test android "Open the app, log in with test user, verify the home screen"
 /soma:bug "Checkout button does nothing after adding a coupon"
+/soma:triage "Login test failed: NoSuchElementException on #submit after the 4.2 build"
 /soma:explore android "checkout with a coupon code"
 ```
 
