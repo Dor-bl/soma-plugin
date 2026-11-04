@@ -46,7 +46,7 @@ Report the serial, AVD name and Android version from the `BOOTED` line. If `run-
 
 ## iOS simulator (macOS only)
 
-Simulators run only on a Mac with Xcode. On Windows or Linux, say so plainly and suggest a remote server or device cloud (the `remote_server_url` setting); do not continue. iOS uses the Appium engine; Artemis is Android only. The operations named below are in `${CLAUDE_PLUGIN_ROOT}/backends/appium.md`.
+Simulators run only on a Mac with Xcode. On Windows or Linux, say so plainly and suggest a remote server or device cloud (the `remote_server_url` setting); do not continue. iOS uses the Appium engine; Artemis is Android only. The local-device exception at the top does not apply here: if the remote server setting is set, the next session would go to that server, not to this simulator. Say so and stop; the tester can clear the setting to test locally. The operations named below are in `${CLAUDE_PLUGIN_ROOT}/backends/appium.md`.
 
 ### 1. Pick the simulator
 Run `xcrun simctl list devices available`. It groups simulators under their iOS version (`-- iOS 18.2 --`) with each one's name, UDID and state; the "Pick a device" operation lists names and UDIDs but not versions.
@@ -54,7 +54,7 @@ Run `xcrun simctl list devices available`. It groups simulators under their iOS 
 - Use the simulator the tester named, matching its name and iOS version exactly (several runtimes can each have an "iPhone 16"). Otherwise: if exactly one is already booted, or exactly one exists, use it; if more than one could fit, ask which, showing each one's iOS version. Never guess a UDID. Then select it with the "Pick a device" operation, passing that UDID.
 
 ### 2. Boot it and start WebDriverAgent
-1. Run `xcrun simctl bootstatus <udid> -b`. It boots the simulator if it is shut down, then waits until iOS has finished booting; on a booted one it returns at once. It runs headless, so the Simulator window may not open; if the tester wants to watch, run `open -a Simulator` too. A first boot after creating a simulator or installing a runtime can take several minutes. If it shows no progress for 5 minutes, stop it and go to step 3.
+1. Run `xcrun simctl bootstatus <udid> -b`. It boots the simulator if it is shut down, then waits until iOS has finished booting; on a booted one it returns at once. It runs headless, so the Simulator window may not open; if the tester wants to watch, run `open -a Simulator` too. A first boot after creating a simulator or installing a runtime can take several minutes. If it shows no progress for 5 minutes, stop it and go to "3. If it fails" below.
 2. Check whether WDA is already running there: `xcrun simctl spawn <udid> launchctl list` lists `WebDriverAgentRunner`. If it does, a test session may be using it, and preparing restarts WDA on a new port, which breaks that session. List this server's sessions with the "Start / list / close a session" operation and tell the tester what you found (sessions started by other tools do not show there). If you already have its `appium:webDriverAgentUrl` from this conversation and `curl -s -m 3 <webDriverAgentUrl>/status` answers, skip step 3: the simulator is ready, so reuse that URL and go to step 4. Otherwise continue only with the tester's OK.
 3. Run the "Prepare an iOS simulator" operation with the UDID. It downloads WebDriverAgent (WDA, the helper app Appium drives iOS through) on first use, caches it, and launches it on the simulator. Keep the `appium:webDriverAgentUrl` it returns: session creation must reuse it, or Appium builds and installs WDA again.
 
