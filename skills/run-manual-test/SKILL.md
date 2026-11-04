@@ -41,6 +41,7 @@ Execute only what was confirmed.
 - Never ask the tester to paste an access key or password into the chat. Device-cloud credentials belong in the plugin's capabilities file, which appium-mcp reads from disk.
 - The plugin allows only the exact configured URL, and only if it is `https://` (plain `http://` only for localhost) with no credentials, query or fragment. With no URL configured, all remote servers are blocked. If the server rejects the URL, report that and point the tester to the plugin settings. Do not try to work around it.
 - On Android, always pass `appium:autoGrantPermissions` in the session capabilities: `false` unless the tester approved auto-granting in the confirmation above. appium-mcp otherwise grants every runtime permission silently. Handle permission dialogs that appear as on-screen UI, following the test steps.
+- System or preinstalled apps (Settings, Contacts, launcher), or any app whose data must survive: pass `appium:noReset: true`. Without it, Appium clears app data first, which can hang or wipe state.
 - If session creation fails, stop and report the exact error. Do not retry with different capabilities unless the tester asks.
 
 ## Execution
