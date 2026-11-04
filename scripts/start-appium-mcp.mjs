@@ -46,8 +46,11 @@ mkdirSync(dataDir, { recursive: true });
 
 // The marker also keeps the install while this server runs: the server loads some
 // modules only when a tool first needs them.
-let claimed = await claimInstall();
-for (let attempt = 0; !claimed && attempt < 3; attempt++) {
+let claimed = false;
+for (let attempt = 0; !claimed && attempt < 5; attempt++) {
+  claimed = await claimInstall();
+  // A failed claim on a complete install means removal raced it: just claim again
+  if (claimed || existsSync(entry)) continue;
   const staging = await install();
   try {
     renameSync(staging, installDir);
@@ -55,7 +58,6 @@ for (let attempt = 0; !claimed && attempt < 3; attempt++) {
     // Another launcher finished the same install first; use that one.
     rmSync(staging, { recursive: true, force: true });
   }
-  claimed = await claimInstall();
 }
 if (!claimed) {
   log(`could not set up ${APPIUM_MCP} in ${installDir}; it was not started`);
@@ -78,9 +80,19 @@ async function claimInstall() {
   } catch {
     return false; // not installed (yet)
   }
-  const deadline = Date.now() + 60_000;
-  while (liveDoomFiles(installDir).length && Date.now() < deadline) await new Promise((r) => setTimeout(r, 50));
-  if (existsSync(entry)) return true;
+  // Wait as long as a remover runs: its doom file stops counting once it exits
+  const slowAfter = Date.now() + 60_000;
+  let warned = false;
+  while (liveDoomFiles(installDir).length) {
+    if (!warned && Date.now() > slowAfter) {
+      log(`still waiting for another launcher to finish removing or keeping ${basename(installDir)}`);
+      warned = true;
+    }
+    await new Promise((r) => setTimeout(r, 50));
+  }
+  // Both, in this folder: removal may have moved our marker into trash while a fresh
+  // copy of the same install took its place, and that copy does not carry our claim
+  if (existsSync(inUseMarker) && existsSync(entry)) return true;
   removeQuietly(inUseMarker);
   return false;
 }
