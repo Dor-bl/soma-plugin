@@ -24,6 +24,8 @@ node scripts/mcp-smoke.mjs           # slow on a cold npx cache; SMOKE_TIMEOUT_M
 
 CI also runs a link check (lychee) on all Markdown, so links must resolve.
 
+Not in CI: `node scripts/injection-check.mjs` runs live Claude Code sessions (needs the `claude` CLI, logged in, and uses model calls) to check that `run-test`, `gen-test` and `bug` ignore and flag instructions hidden in a test-case file. Run it after changing `commands/` or a skill's untrusted-content rules.
+
 ## Running appium-mcp while working in this repo
 
 Opening this repo in Claude Code loads `.mcp.json` as a project config, not as a plugin, so `${CLAUDE_PLUGIN_ROOT}` and `${user_config.*}` stay unsubstituted. The launcher path does not resolve and `appium-mcp` shows "Failed to connect" (`Connection closed`). Plugin users are not affected, and `mcp-smoke.mjs` substitutes the variables itself.
