@@ -18,6 +18,7 @@ claude plugin validate .
 node scripts/check-plugin.mjs        # frontmatter, userConfig, version badge
 node scripts/test-allowlist.mjs       # remote-server allowlist
 node scripts/test-process-tree.mjs    # Windows process-tree cleanup
+node scripts/test-triage-command.mjs  # /soma:triage command contract
 npx markdownlint-cli2 "**/*.md"
 node scripts/mcp-smoke.mjs           # slow on a cold npx cache; SMOKE_TIMEOUT_MS overrides
 ```
