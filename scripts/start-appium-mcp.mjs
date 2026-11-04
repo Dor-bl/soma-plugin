@@ -8,7 +8,7 @@
 import { spawn, spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { copyFileSync, existsSync, mkdirSync, readdirSync, readFileSync, renameSync, rmSync, writeFileSync } from 'node:fs';
-import { join } from 'node:path';
+import { basename, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { allowRegexFor } from './allowlist.mjs';
 
@@ -29,49 +29,65 @@ const dataDir = configured && !configured.includes('${') ? configured : fileURLT
 const installDir = join(dataDir, `appium-mcp-${lockHash}`);
 const entry = join(installDir, 'node_modules', 'appium-mcp', binPath);
 
-// Launchers of different plugin versions share dataDir. Checking an install and
-// marking it in use, and choosing what to delete, both happen under one lock, so
-// cleanup cannot remove an install that another launcher is about to run.
+// Launchers of different plugin versions share dataDir, and each removes installs of
+// other lockfiles that no running launcher uses. There is no lock (a crashed holder
+// could leave it stale); instead claiming and removing follow a handshake:
+// - A launcher claims an install by writing its in-use marker into it, waiting while
+//   a live launcher is deciding whether to remove it (a `<install>.doom-<pid>` file),
+//   then checking the install is still complete.
+// - Removal creates its doom file first, skips the install if it has a live marker,
+//   renames it to a trash name, and checks the markers again. A marker written in
+//   between belongs to a launcher that is waiting on the doom file, so the install
+//   is renamed back.
+// Either the claiming launcher sees the doom file, or removal sees its marker.
 const SIGNALS = ['SIGINT', 'SIGTERM', 'SIGHUP'];
-const lockPath = join(dataDir, '.lock');
 const inUseMarker = join(installDir, `.in-use-${process.pid}`);
 mkdirSync(dataDir, { recursive: true });
 
-// Mark this install as in use, so a launcher for a newer lockfile (e.g. another
-// session after a plugin update) does not delete it while this server runs: the
-// server loads some modules only when a tool first needs them.
-const claimInstall = () => {
-  if (!existsSync(entry)) return false;
-  try {
-    writeFileSync(inUseMarker, '');
-  } catch (err) {
-    log(`could not mark the install as in use: ${err.message}`);
-  }
-  return true;
-};
-
-if (!(await withLock(claimInstall))) {
+// The marker also keeps the install while this server runs: the server loads some
+// modules only when a tool first needs them.
+let claimed = await claimInstall();
+for (let attempt = 0; !claimed && attempt < 3; attempt++) {
   const staging = await install();
-  await withLock(() => {
-    try {
-      renameSync(staging, installDir);
-    } catch {
-      // Another launcher finished the same install first; use that one.
-      rmSync(staging, { recursive: true, force: true });
-    }
-    if (!claimInstall()) {
-      log(`could not move the install into place at ${installDir}`);
-      process.exit(1);
-    }
-  });
+  try {
+    renameSync(staging, installDir);
+  } catch {
+    // Another launcher finished the same install first; use that one.
+    rmSync(staging, { recursive: true, force: true });
+  }
+  claimed = await claimInstall();
+}
+if (!claimed) {
+  log(`could not set up ${APPIUM_MCP} in ${installDir}; it was not started`);
+  process.exit(1);
 }
 process.on('exit', () => removeQuietly(inUseMarker));
 
-try {
-  const trash = await withLock(markStaleInstalls);
-  for (const dir of trash) removeDir(dir);
-} catch (err) {
-  log(`skipped cleaning up old installs: ${err.message}`);
+// After the server has started (below), so deleting old installs does not delay it
+setTimeout(() => {
+  try {
+    removeStaleInstalls();
+  } catch (err) {
+    log(`skipped cleaning up old installs: ${err.message}`);
+  }
+}, 0);
+
+async function claimInstall() {
+  try {
+    writeFileSync(inUseMarker, '');
+  } catch {
+    return false; // not installed (yet)
+  }
+  const deadline = Date.now() + 60_000;
+  while (liveDoomFiles(installDir).length && Date.now() < deadline) await new Promise((r) => setTimeout(r, 50));
+  if (existsSync(entry)) return true;
+  removeQuietly(inUseMarker);
+  return false;
+}
+
+function liveDoomFiles(dir) {
+  const prefix = `${basename(dir)}.doom-`;
+  return readdirSync(dataDir).filter((f) => f.startsWith(prefix) && isRunning(Number(f.slice(prefix.length))));
 }
 
 // Installs into a staging folder and returns its path. Runs npm asynchronously, so a
@@ -135,64 +151,58 @@ function killTree(pid, isWindows) {
   }
 }
 
-// Takes an exclusive lock file in dataDir, runs fn, and releases it. A lock held by a
-// launcher that no longer runs is taken over. If the lock cannot be had within 60 s,
-// fn still runs, so a stuck lock never stops the server from starting.
-async function withLock(fn) {
-  const deadline = Date.now() + 60_000;
-  let held = false;
-  while (!held && Date.now() < deadline) {
-    try {
-      writeFileSync(lockPath, String(process.pid), { flag: 'wx' });
-      held = true;
-    } catch (err) {
-      if (err.code !== 'EEXIST') break;
-      const owner = Number(readFileSafe(lockPath));
-      if (owner && !isRunning(owner)) removeQuietly(lockPath);
-      else await new Promise((r) => setTimeout(r, 100));
-    }
-  }
-  if (!held) log('could not take the install lock; continuing without it');
-  try {
-    return await fn();
-  } finally {
-    if (held) removeQuietly(lockPath);
-  }
-}
-
-// Under the lock: renames installs of older lockfiles (about 370 MB each) that no
-// running launcher has marked as in use, and staging folders of installs that were
-// killed, to trash names, and returns them. They are deleted after the lock is
-// released, so a slow delete does not hold up other launchers. Best effort: a failure
-// here must not stop the new server, e.g. on Windows when a file is still held open.
-function markStaleInstalls() {
+// Best effort: removes installs of other lockfiles (about 370 MB each) that no running
+// launcher uses, staging folders of installs that were killed, and leftovers of
+// removals that were interrupted. A failure here must not stop the server, e.g. on
+// Windows when a file is still held open.
+function removeStaleInstalls() {
   // Markers of launchers that were force-killed (no exit handler ran)
   for (const f of readdirSync(installDir)) {
     if (/^\.in-use-\d+$/.test(f) && !isRunning(Number(f.slice(8)))) removeQuietly(join(installDir, f));
   }
-  const trash = [];
   for (const name of readdirSync(dataDir)) {
     const dir = join(dataDir, name);
+    // Only its own launcher and npm use a staging folder
     const staging = /^appium-mcp-[0-9a-f]{16}\.tmp-(\d+)$/.exec(name);
-    const leftover = /^appium-mcp-[0-9a-f]{16}(?:\.tmp-\d+)?\.trash-(\d+)$/.exec(name);
-    let stale;
-    if (staging) stale = !isRunning(Number(staging[1])) && !isRunning(Number(readFileSafe(join(dir, '.npm-pid'))));
-    else if (leftover) stale = !isRunning(Number(leftover[1])); // a delete that was interrupted
-    else stale = /^appium-mcp-[0-9a-f]{16}$/.test(name) && dir !== installDir && !inUse(dir);
-    if (!stale) continue;
-    if (leftover) {
-      trash.push(dir);
-      continue;
-    }
-    const target = `${dir}.trash-${process.pid}`;
-    try {
-      renameSync(dir, target);
-      trash.push(target);
-    } catch (err) {
-      log(`could not remove the old install ${name}: ${err.message}`);
+    const leftover = /^appium-mcp-[0-9a-f]{16}(?:\.tmp-\d+)?\.(?:trash|doom)-(\d+)$/.exec(name);
+    if (staging) {
+      if (!isRunning(Number(staging[1])) && !isRunning(Number(readFileSafe(join(dir, '.npm-pid'))))) removeDir(dir);
+    } else if (leftover) {
+      if (!isRunning(Number(leftover[1]))) removeDir(dir);
+    } else if (/^appium-mcp-[0-9a-f]{16}$/.test(name) && dir !== installDir) {
+      retire(dir);
     }
   }
-  return trash;
+}
+
+// The removal side of the handshake described at the top
+function retire(dir) {
+  const doom = `${dir}.doom-${process.pid}`;
+  try {
+    writeFileSync(doom, '', { flag: 'wx' });
+  } catch {
+    return;
+  }
+  let trash;
+  try {
+    if (inUse(dir)) return;
+    renameSync(dir, `${dir}.trash-${process.pid}`);
+    trash = `${dir}.trash-${process.pid}`;
+    if (inUse(trash)) {
+      try {
+        renameSync(trash, dir);
+        trash = undefined;
+      } catch {
+        // A fresh copy of the same install already took its place; that launcher uses it
+      }
+    }
+  } catch (err) {
+    // ENOENT: another launcher removed it first
+    if (err.code !== 'ENOENT') log(`could not remove the old install ${basename(dir)}: ${err.message}`);
+  } finally {
+    removeQuietly(doom);
+  }
+  if (trash) removeDir(trash);
 }
 
 function removeDir(dir) {
