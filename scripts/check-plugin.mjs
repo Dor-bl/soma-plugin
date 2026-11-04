@@ -88,6 +88,19 @@ for (const dir of readdirSync(join(root, 'skills'))) {
   for (const m of read(p).matchAll(/\$\{user_config\.(\w+)\}/g)) usedConfigKeys.add(m[1]);
 }
 
+// Skills that quote screenshots, logs or page source back to the tester must keep
+// their redaction rules (issue #9)
+const REDACTING_SKILLS = ['bug-report', 'run-manual-test', 'explore-app', 'triage-failure'];
+for (const dir of REDACTING_SKILLS) {
+  const p = `skills/${dir}/SKILL.md`;
+  // A listed skill that was renamed or removed must fail, not be skipped
+  if (!existsSync(join(root, p))) {
+    fail(`${p}: missing (listed in REDACTING_SKILLS; update the list if the skill was renamed)`);
+  } else if (!/^## Sensitive data \(redaction\)$/m.test(read(p))) {
+    fail(`${p}: missing "## Sensitive data (redaction)" section`);
+  }
+}
+
 // Commands
 for (const file of readdirSync(join(root, 'commands')).filter((f) => f.endsWith('.md'))) {
   const p = `commands/${file}`;
