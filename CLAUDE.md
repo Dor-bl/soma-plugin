@@ -25,6 +25,18 @@ node scripts/mcp-smoke.mjs           # first run installs ~370 MB; SMOKE_TIMEOUT
 
 CI also runs a link check (lychee) on all Markdown, so links must resolve.
 
+## Running appium-mcp while working in this repo
+
+Opening this repo in Claude Code loads `.mcp.json` as a project config, not as a plugin, so `${CLAUDE_PLUGIN_ROOT}` and `${user_config.*}` stay unsubstituted. The launcher path does not resolve and `appium-mcp` shows "Failed to connect" (`Connection closed`). Plugin users are not affected, and `mcp-smoke.mjs` substitutes the variables itself.
+
+To use the device tools here, add a local-scope entry with the absolute path; it overrides the project one for you only:
+
+```bash
+claude mcp add --scope local appium-mcp -- node "/absolute/path/to/this repo/scripts/start-appium-mcp.mjs"
+```
+
+The entry passes no remote URL, so remote servers stay blocked and only local devices work, as long as `SOMA_REMOTE_SERVER_URL` is not exported in your shell: the launcher reads it from the environment, and if it is set, remote sessions to that one URL are allowed (every other host stays blocked). Do not change `.mcp.json` to fix this: the variables are what make the plugin work for users.
+
 ## Conventions enforced by `check-plugin.mjs`
 
 - Skill frontmatter `name` must equal the folder name; `description` is required and at most 1024 chars. Quote a description that contains a colon followed by a space.
@@ -50,4 +62,5 @@ Feed findings from real runs back into the skills (see #17). Examples already ca
 - `generate_locators` output is tens of KB per screen. Prefer `appium_find_element` per step.
 - Freshly booted emulators need longer `adbExecTimeout` / `uiautomator2ServerInstallTimeout`; system apps need `noReset`.
 - `appium-mcp` requires Node 22+; older versions crash on startup and show as disconnected.
+- iOS simulator (first live run, #31): WDA launched by `prepare_ios_simulator` stopped about a minute later, before any session, and session creation failed with `ECONNREFUSED`. Check WDA's `/status` right before creating a session and prepare again if it is down.
 - Artemis (first live run, #18): a task can report `running` while paused on an LLM billing or overload error, with an empty trace; a Flash tap aimed at one row opened the next one while the screen was still settling. Poll status, and compare each step's overlay with the resulting screen.
