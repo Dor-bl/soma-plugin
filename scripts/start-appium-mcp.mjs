@@ -270,6 +270,18 @@ delete env.SOMA_DATA_DIR;
 // Run the entry point with this same node, so no shell is involved on any platform.
 const child = spawn(process.execPath, [entry], { stdio: 'inherit', env });
 
+// Mark the install with the server's own PID too. If this launcher is force-killed
+// (SIGKILL runs no handlers), the server keeps running, and this marker keeps a
+// launcher of another plugin version from removing the install under it.
+const serverMarker = child.pid ? join(installDir, `.in-use-${child.pid}`) : null;
+if (serverMarker) {
+  try {
+    writeFileSync(serverMarker, '');
+  } catch (err) {
+    log(`could not mark the install as in use by the server: ${err.message}`);
+  }
+}
+
 for (const signal of ['SIGINT', 'SIGTERM']) {
   process.on(signal, () => child.kill(signal));
 }
@@ -278,6 +290,7 @@ child.on('error', (err) => {
   process.exit(1);
 });
 child.on('exit', (code, signal) => {
+  if (serverMarker) removeQuietly(serverMarker);
   if (signal) {
     // Drop the forwarding handler so re-raising terminates this process
     // with the same signal instead of being caught and exiting 0.
