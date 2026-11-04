@@ -93,7 +93,10 @@ for (const dir of readdirSync(join(root, 'skills'))) {
 const REDACTING_SKILLS = ['bug-report', 'run-manual-test', 'explore-app', 'triage-failure'];
 for (const dir of REDACTING_SKILLS) {
   const p = `skills/${dir}/SKILL.md`;
-  if (existsSync(join(root, p)) && !/^## Sensitive data \(redaction\)$/m.test(read(p))) {
+  // A listed skill that was renamed or removed must fail, not be skipped
+  if (!existsSync(join(root, p))) {
+    fail(`${p}: missing (listed in REDACTING_SKILLS; update the list if the skill was renamed)`);
+  } else if (!/^## Sensitive data \(redaction\)$/m.test(read(p))) {
     fail(`${p}: missing "## Sensitive data (redaction)" section`);
   }
 }
