@@ -15,7 +15,7 @@ SOMA is a Claude Code plugin for mobile QA, built on the official [`appium-mcp`]
 
 ```bash
 claude plugin validate .
-node scripts/check-plugin.mjs        # frontmatter, userConfig, version badge
+node scripts/check-plugin.mjs        # frontmatter, userConfig, version badge, command hand-offs
 node scripts/test-allowlist.mjs       # remote-server allowlist
 node scripts/test-process-tree.mjs    # Windows process-tree cleanup
 node scripts/test-triage-command.mjs  # /soma:triage command contract
@@ -40,7 +40,7 @@ The entry passes no remote URL, so remote servers stay blocked and only local de
 ## Conventions enforced by `check-plugin.mjs`
 
 - Skill frontmatter `name` must equal the folder name; `description` is required and at most 1024 chars. Quote a description that contains a colon followed by a space.
-- Every command needs a `description` in its frontmatter.
+- Every command needs a `description` in its frontmatter, must hand off with "Use the <skill> skill" to a skill that exists, and must have a row in the README "What's inside" table.
 - Every `${user_config.<key>}` used in a skill must be declared in `plugin.json`, and every declared key must be used.
 - The README version badge must match `plugin.json` `version`. Bump both together.
 - Every `appium-mcp@<version>` in the README and skills must match the version pinned in `scripts/start-appium-mcp.mjs`. Bump them together.
