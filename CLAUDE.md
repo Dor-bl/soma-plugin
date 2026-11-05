@@ -19,6 +19,7 @@ node scripts/check-plugin.mjs        # frontmatter, userConfig, version badge, c
 node scripts/test-allowlist.mjs       # remote-server allowlist
 node scripts/test-process-tree.mjs    # Windows process-tree cleanup
 node scripts/test-triage-command.mjs  # /soma:triage command contract
+node scripts/test-injection-match.mjs # injection-check reply and shell matching
 npx markdownlint-cli2 "**/*.md"
 node scripts/mcp-smoke.mjs           # slow on a cold npx cache; SMOKE_TIMEOUT_MS overrides
 ```

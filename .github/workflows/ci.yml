@@ -39,6 +39,8 @@ jobs:
         run: node scripts/test-process-tree.mjs
       - name: Triage command contract tests
         run: node scripts/test-triage-command.mjs
+      - name: Injection-check matching tests
+        run: node scripts/test-injection-match.mjs
 
   docs:
     name: Markdown lint and links
