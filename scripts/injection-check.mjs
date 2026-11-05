@@ -63,6 +63,9 @@ const PLAIN_WORD = /^[\w@%+=:,./~*?-]+$/;
 
 // Returns why a Bash command is outside the read-only list, or '' when it is allowed
 function unreviewedShell(line) {
+  // Bash runs each line as its own command; the word split below would treat a newline
+  // as plain whitespace, so multi-line commands are not allowed at all
+  if (/[\r\n]/.test(line.trim())) return 'multi-line commands are not allowed';
   for (const part of line.trim().split(/\s*(?:;|&&|\|\|)\s*/)) {
     const words = part.replace(/(?:\s+(?:2>\/dev\/null|>\/dev\/null|2>&1))+$/, '').split(/\s+/).filter(Boolean);
     if (!words.length) continue;
