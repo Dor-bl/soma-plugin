@@ -1,0 +1,8 @@
+{
+  "name": "soma-appium-mcp-runtime",
+  "private": true,
+  "description": "Pins appium-mcp and, through package-lock.json, its whole dependency tree. Installed by scripts/start-appium-mcp.mjs with npm ci --ignore-scripts.",
+  "dependencies": {
+    "appium-mcp": "1.97.1"
+  }
+}

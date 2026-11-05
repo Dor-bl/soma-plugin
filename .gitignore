@@ -7,3 +7,6 @@ Thumbs.db
 # secrets; it is obsolete (it writes an unpinned appium-mcp@latest .mcp.json), so
 # do not commit or re-run it.
 setup-soma.ps1
+
+# appium-mcp install when CLAUDE_PLUGIN_DATA is not set (see scripts/start-appium-mcp.mjs)
+.runtime/
