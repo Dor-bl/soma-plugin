@@ -28,6 +28,7 @@ One file per app, platform and locale: `<folder>/<package-or-bundleId>.<android|
 ```
 
 - `strategy` is `accessibility id` or `id`. Never store XPath, coordinates or text-only matches: they break between builds and devices.
+- Store a locator only if it is unique on that screen: `appium_find_elements` with it must return exactly one element. Shared ids are common (on Android Settings every row is `android:id/title`, and a bare lookup returns the first row, not the one you want). If no unique `accessibility id` or `id` exists for an element, store nothing for it and look it up normally each run.
 - `appVersion` must equal the installed version. If it differs, ignore the whole file and rebuild it.
 - `to` lists how to reach another screen (the element to tap). It is a hint, not a script.
 
