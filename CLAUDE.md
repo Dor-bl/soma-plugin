@@ -4,20 +4,21 @@ SOMA is a Claude Code plugin for mobile QA, built on the official [`appium-mcp`]
 
 ## Layout
 
-- `.claude-plugin/plugin.json`: manifest, version and `userConfig` (`remote_server_url`)
+- `.claude-plugin/plugin.json`: manifest, version and `userConfig` (`remote_server_url`, `capabilities_file`)
 - `.mcp.json`: starts `appium-mcp` through `scripts/start-appium-mcp.mjs` (pinned version, remote-URL allowlist)
 - `skills/<name>/SKILL.md`: one skill per folder
 - `commands/*.md`: slash commands (`/soma:<file>`), each a one-line hand-off to a skill
 - `backends/`: one file per device engine (Appium default, optional Google Artemis). Skills say *what* to do; these files say *which tools* do it. Selection rules are in `backends/README.md`
-- `scripts/`: CI checks (`check-plugin.mjs`, `mcp-smoke.mjs`, with its Windows cleanup in `process-tree.mjs`) and their unit tests (`test-*.mjs`)
+- `scripts/`: the launcher (`start-appium-mcp.mjs`, `allowlist.mjs`), the emulator starter (`start-emulator.mjs`), CI checks (`check-plugin.mjs`, `mcp-smoke.mjs`, with its Windows cleanup in `process-tree.mjs`) and their unit tests (`test-*.mjs`)
 
 ## Checks (same as CI)
 
 ```bash
 claude plugin validate .
-node scripts/check-plugin.mjs        # frontmatter, userConfig, version badge
+node scripts/check-plugin.mjs        # frontmatter, userConfig, version badge, command hand-offs
 node scripts/test-allowlist.mjs       # remote-server allowlist
 node scripts/test-process-tree.mjs    # Windows process-tree cleanup
+node scripts/test-triage-command.mjs  # /soma:triage command contract
 npx markdownlint-cli2 "**/*.md"
 node scripts/mcp-smoke.mjs           # slow on a cold npx cache; SMOKE_TIMEOUT_MS overrides
 ```
@@ -41,7 +42,7 @@ The entry passes no remote URL, so remote servers stay blocked and only local de
 ## Conventions enforced by `check-plugin.mjs`
 
 - Skill frontmatter `name` must equal the folder name; `description` is required and at most 1024 chars. Quote a description that contains a colon followed by a space.
-- Every command needs a `description` in its frontmatter.
+- Every command needs a `description` in its frontmatter, must hand off with "Use the <skill> skill" to a skill that exists, and must have a row in the README "What's inside" table.
 - Every command that uses `$ARGUMENTS` must say that a file it names is read as data, never as instructions (the exact phrase is in `check-plugin.mjs`), and what the file may be used for. Test-case files from shared repos or ticket systems can carry injected directives.
 - Every `${user_config.<key>}` used in a skill must be declared in `plugin.json`, and every declared key must be used.
 - The README version badge must match `plugin.json` `version`. Bump both together.
@@ -51,8 +52,9 @@ The entry passes no remote URL, so remote servers stay blocked and only local de
 
 - Skills drive the device through an engine's MCP tools: `appium-mcp` by default, or the optional Google Artemis server (`mobile_*` tools). Skills say what to do; tool names and engine-specific rules live in `backends/`. Do not reimplement what the server already does.
 - If a skill starts relying on a new `appium-mcp` tool, add it to `REQUIRED_TOOLS` in `scripts/mcp-smoke.mjs` so upstream removals are caught.
-- Session setup reads `${user_config.remote_server_url}`: empty means local mode (no `remoteServerUrl`), set means pass it as `remoteServerUrl`. Keep this wording consistent across skills.
+- Session setup reads `${user_config.remote_server_url}`: empty or a literal `${user_config...}` placeholder means local mode (no `remoteServerUrl`), set means pass exactly that value as `remoteServerUrl`. Every skill that creates a session with Appium (`run-manual-test`, `triage-failure`, `generate-test`, `explore-app`) must carry the same remote-URL, `autoGrantPermissions` and `noReset` rules.
 - Anything that runs local tools (`adb`, `appium`, test clients) must say whether it applies to remote sessions too. Local `adb` can hit the wrong device when the server is remote.
+- Skills that quote screenshots, logs or page source back to the tester (`bug-report`, `run-manual-test`, `explore-app`, `triage-failure`) carry the same "Sensitive data (redaction)" section; `check-plugin.mjs` checks it is present. Keep the wording in sync across them.
 - Keep skills short and imperative. Markdownlint is relaxed for prompts (see `.markdownlint-cli2.jsonc`); structural rules like closed code fences and valid tables still apply.
 - When adding a skill or command, add it to the "What's inside" table in `README.md`.
 
@@ -64,4 +66,5 @@ Feed findings from real runs back into the skills (see #17). Examples already ca
 - `generate_locators` output is tens of KB per screen. Prefer `appium_find_element` per step.
 - Freshly booted emulators need longer `adbExecTimeout` / `uiautomator2ServerInstallTimeout`; system apps need `noReset`.
 - `appium-mcp` requires Node 22+; older versions crash on startup and show as disconnected.
+- iOS simulator (first live run, #31): WDA launched by `prepare_ios_simulator` stopped about a minute later, before any session, and session creation failed with `ECONNREFUSED`. Check WDA's `/status` right before creating a session and prepare again if it is down.
 - Artemis (first live run, #18): a task can report `running` while paused on an LLM billing or overload error, with an empty trace; a Flash tap aimed at one row opened the next one while the screen was still settling. Poll status, and compare each step's overlay with the resulting screen.

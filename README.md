@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="assets/logo-wordmark.svg" alt="SOMA - Spear of Mobile Automation" width="480">
+<img src="assets/logo-wordmark.svg" alt="SOMA - Spear of Mobile Agents" width="480">
 
 *A Claude plugin for mobile QA testers: run manual test cases on real devices, triage failures, and write bug reports.*
 
@@ -25,29 +25,33 @@
 
 SOMA wraps the official [`appium-mcp`](https://github.com/appium/appium-mcp) server and adds test-focused **skills** and **slash commands** on top of it, so you can drive Android and iOS devices with plain language.
 
+**No code required.** Manual QA can use SOMA as is: describe a test case in plain language, watch it run on a device, and get a bug report when something fails. Generating automated tests (`/soma:gen-test`) is optional.
+
 ## 📦 What's inside
 
 | Type | Name | Description |
 |------|------|-------------|
 | 🧠 Skill | `check-setup` | Verify your local environment (Node, SDKs, devices) is ready |
-| 🧠 Skill | `start-device` | Start an Android emulator, wait for a full boot, and diagnose crashes |
+| 🧠 Skill | `start-device` | Start an Android emulator or iOS simulator, wait for a full boot, and diagnose crashes |
 | 🧠 Skill | `run-manual-test` | Execute a manual test case step by step on a device |
 | 🧠 Skill | `triage-failure` | Investigate a failed step and pinpoint the likely cause |
 | 🧠 Skill | `bug-report` | Draft a structured bug report from a failure or observation |
 | 🧠 Skill | `generate-test` | Turn a manual test case into an automated Appium test script |
 | 🧠 Skill | `explore-app` | Exploratory testing of an app area; reports suspected issues with evidence |
-| ⚡ Command | `/soma:device [avd name]` | Start an emulator and wait until it is ready |
+| ⚡ Command | `/soma:setup [focus]` | Check your environment is ready and explain how to fix what is missing |
+| ⚡ Command | `/soma:device [avd or simulator name]` | Start an emulator or simulator and wait until it is ready |
 | ⚡ Command | `/soma:run-test [platform] [steps or path]` | Run a manual test case through Appium |
 | ⚡ Command | `/soma:bug [what you saw]` | Draft a bug report |
 | ⚡ Command | `/soma:gen-test [framework] [steps or path]` | Generate an automated test from a manual test case |
 | ⚡ Command | `/soma:explore [platform] [area]` | Explore an app area and report suspected issues |
+| ⚡ Command | `/soma:triage [failure log or path]` | Triage a failed test run and suggest next steps |
 
 **Under the hood**
 
 - 🔌 `.mcp.json` launches `appium-mcp` through `scripts/start-appium-mcp.mjs`, which runs a pinned version via `npx` (local embedded drivers by default)
 - 📱 `scripts/start-emulator.mjs`: used by `start-device` to start an emulator detached and watch it boot
 - ⚙️ `remote_server_url` setting: leave empty for local, or point it at a remote Appium/WebDriver server or device cloud. Only that exact URL is allowed, and only if it's `https://` (plain `http://` for localhost only) with no embedded credentials. When it's empty, all remote servers are blocked
-- 🔑 `capabilities_file` setting (optional): a `capabilities.json` read from disk by `appium-mcp`. Put device-cloud credentials here so they never enter the conversation, and keep it out of version control
+- 🔑 `capabilities_file` setting (optional): a `capabilities.json` read from disk by `appium-mcp`. Put device-cloud credentials here instead of in the URL or the chat. Only `check-setup` reads it, after you approve the command, to check that it exists and is valid JSON without printing it; the other skills are told never to open it. Claude's file tools could still read it, so keep it out of the project folder and out of version control
 - 🧩 Engines: skills describe *what* to do; [`backends/`](backends/README.md) describes *how* each engine does it
 
 ## 🧩 Engines
@@ -81,13 +85,14 @@ claude --plugin-dir ./soma
 ```
 
 > [!TIP]
-> Run the `check-setup` skill first to make sure your environment is ready.
+> Run `/soma:setup` (the `check-setup` skill) first to make sure your environment is ready. Add a focus such as `android`, `ios` or `artemis` to check one area.
 
 Then try:
 
 ```text
 /soma:run-test android "Open the app, log in with test user, verify the home screen"
 /soma:bug "Checkout button does nothing after adding a coupon"
+/soma:triage "Login test failed: NoSuchElementException on #submit after the 4.2 build"
 /soma:explore android "checkout with a coupon code"
 ```
 
@@ -97,6 +102,7 @@ Then try:
 > SOMA is an early scaffold. Expect rough edges.
 
 - 🧪 Only lightly tested on devices: `generate-test` has passed one end-to-end run through Appium on an Android 11 emulator, and `explore-app` has run once through Artemis on an Android 13 emulator. The other skills and iOS haven't been run on a device yet.
+- 🛡️ Protection against prompt injection from app or device content (e.g. on-screen text telling Claude to run a command) relies on skill instructions, not tool restrictions. Tool-level limits are tracked in issue #8.
 - 📌 `appium-mcp` is pinned to an exact version (`1.97.1`). Bump it deliberately after testing; its transitive dependencies are still resolved by npm at install time.
 - 🌐 The remote URL policy covers the URL you configure only. Redirects and direct-connect endpoints chosen by the server aren't re-checked, so only point SOMA at servers you trust.
 - 🔓 SOMA can't add authentication to a self-hosted Appium server. Put it behind an authenticating reverse proxy or VPN; never expose it unauthenticated on a shared network.
