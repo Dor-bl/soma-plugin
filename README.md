@@ -32,6 +32,7 @@ SOMA wraps the official [`appium-mcp`](https://github.com/appium/appium-mcp) ser
 | Type | Name | Description |
 |------|------|-------------|
 | 🧠 Skill | `check-setup` | Verify your local environment (Node, SDKs, devices) is ready |
+| 🧠 Skill | `setup-artemis` | Install the optional Google Artemis engine for this project only, step by step |
 | 🧠 Skill | `start-device` | Start an Android emulator or iOS simulator, wait for a full boot, and diagnose crashes |
 | 🧠 Skill | `run-manual-test` | Execute a manual test case step by step on a device |
 | 🧠 Skill | `triage-failure` | Investigate a failed step and pinpoint the likely cause |
@@ -39,6 +40,7 @@ SOMA wraps the official [`appium-mcp`](https://github.com/appium/appium-mcp) ser
 | 🧠 Skill | `generate-test` | Turn a manual test case into an automated Appium test script |
 | 🧠 Skill | `explore-app` | Exploratory testing of an app area; reports suspected issues with evidence |
 | ⚡ Command | `/soma:setup [focus]` | Check your environment is ready and explain how to fix what is missing |
+| ⚡ Command | `/soma:setup-artemis [folder]` | Install the optional Artemis engine for this project, asking before each step |
 | ⚡ Command | `/soma:device [avd or simulator name]` | Start an emulator or simulator and wait until it is ready |
 | ⚡ Command | `/soma:run-test [platform] [steps or path]` | Run a manual test case through Appium |
 | ⚡ Command | `/soma:bug [what you saw]` | Draft a bug report |
