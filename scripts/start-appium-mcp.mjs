@@ -7,7 +7,7 @@
 // compromised transitive release cannot be picked up silently.
 import { spawn, spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
-import { copyFileSync, existsSync, mkdirSync, readdirSync, readFileSync, renameSync, rmSync, statSync, writeFileSync } from 'node:fs';
+import { closeSync, copyFileSync, existsSync, mkdirSync, openSync, readdirSync, readFileSync, renameSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { basename, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { allowRegexFor } from './allowlist.mjs';
@@ -43,15 +43,11 @@ const entry = join(installDir, 'node_modules', 'appium-mcp', binPath);
 // Either the claiming launcher sees the doom file, or removal sees its marker.
 const SIGNALS = ['SIGINT', 'SIGTERM', 'SIGHUP'];
 const inUseMarker = join(installDir, `.in-use-${process.pid}`);
+const installLog = `${installDir}.install.log`;
 mkdirSync(dataDir, { recursive: true });
 
-// The marker also keeps the install while this server runs: the server loads some
-// modules only when a tool first needs them.
-let claimed = false;
-for (let attempt = 0; !claimed && attempt < 5; attempt++) {
-  claimed = await claimInstall();
-  // A failed claim on a complete install means removal raced it: just claim again
-  if (claimed || existsSync(entry)) continue;
+// Installer mode (see runInstaller): install, move the result into place, and exit
+if (process.argv[2] === '--install') {
   const staging = await install();
   try {
     renameSync(staging, installDir);
@@ -64,6 +60,17 @@ for (let attempt = 0; !claimed && attempt < 5; attempt++) {
       process.exit(1);
     }
   }
+  process.exit(0);
+}
+
+// The marker also keeps the install while this server runs: the server loads some
+// modules only when a tool first needs them.
+let claimed = false;
+for (let attempt = 0; !claimed && attempt < 5; attempt++) {
+  claimed = await claimInstall();
+  // A failed claim on a complete install means removal raced it: just claim again
+  if (claimed || existsSync(entry)) continue;
+  await runInstaller();
 }
 if (!claimed) {
   log(`could not set up ${APPIUM_MCP} in ${installDir}; it was not started`);
@@ -143,6 +150,40 @@ function startedAt(pid) {
     ? spawnSync('powershell', ['-NoProfile', '-NonInteractive', '-Command', `(Get-Process -Id ${pid}).StartTime.ToUniversalTime().ToString('o')`], { encoding: 'utf8', windowsHide: true })
     : spawnSync('ps', ['-o', 'lstart=', '-p', String(pid)], { encoding: 'utf8', env: { ...process.env, LC_ALL: 'C' } });
   return Date.parse(run.stdout?.trim() ?? '');
+}
+
+// Runs the install in a detached copy of this script and waits for it. Claude Code gives
+// an MCP server 30 s to start and then stops it, while a cold install takes minutes; the
+// detached installer keeps going, so a reconnect (/mcp) or the next session finds the
+// install ready instead of starting over. A launcher that finds an installer already
+// running waits for that one.
+async function runInstaller() {
+  let pid = liveInstaller();
+  if (pid) {
+    log(`waiting for another launcher's install of ${APPIUM_MCP} to finish`);
+  } else {
+    log(`installing ${APPIUM_MCP} from the lockfile into ${installDir} (first start can take several minutes; if Claude Code reports that the server failed to connect, reconnect with /mcp once it has finished)`);
+    const out = openSync(installLog, 'w');
+    const child = spawn(process.execPath, [fileURLToPath(import.meta.url), '--install'], {
+      detached: true, stdio: ['ignore', out, out], windowsHide: true,
+    });
+    closeSync(out);
+    child.unref();
+    pid = child.pid;
+  }
+  while (!existsSync(entry) && isRunning(pid)) await new Promise((r) => setTimeout(r, 500));
+  if (!existsSync(entry)) {
+    log(`the install of ${APPIUM_MCP} failed; its output:\n${readFileSafe(installLog).slice(-3000)}`);
+    process.exit(1);
+  }
+  removeQuietly(installLog);
+}
+
+// PID of a running installer for this lockfile (its staging folder is named after it), or 0
+function liveInstaller() {
+  const prefix = `${basename(installDir)}.tmp-`;
+  const pid = readdirSync(dataDir).filter((f) => f.startsWith(prefix)).map((f) => Number(f.slice(prefix.length))).find(isRunning);
+  return pid ?? 0;
 }
 
 // Installs into a staging folder and returns its path. Runs npm asynchronously, so a
@@ -230,6 +271,8 @@ function removeStaleInstalls() {
       if (!isRunning(Number(staging[1])) && !isRunning(Number(readFileSafe(join(dir, '.npm-pid'))))) removeDir(dir);
     } else if (leftover) {
       if (!isRunning(Number(leftover[1]))) removeDir(dir);
+    } else if (/^appium-mcp-[0-9a-f]{16}\.install\.log$/.test(name) && dir !== installLog) {
+      removeQuietly(dir);
     } else if (/^appium-mcp-[0-9a-f]{16}$/.test(name) && dir !== installDir) {
       retire(dir);
     }
