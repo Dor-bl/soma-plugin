@@ -34,7 +34,8 @@ const entry = join(installDir, 'node_modules', 'appium-mcp', binPath);
 // could leave it stale); instead claiming and removing follow a handshake:
 // - A launcher claims an install by writing its in-use marker into it, waiting while
 //   a live launcher is deciding whether to remove it (a `<install>.doom-<pid>` file),
-//   then checking the install is still complete.
+//   then checking the install is still complete. A doom file older than 60 s is stale
+//   (its remover was killed and the PID reused) and is deleted.
 // - Removal creates its doom file first, skips the install if it has a live marker,
 //   renames it to a trash name, and checks the markers again. A marker written in
 //   between belongs to a launcher that is waiting on the doom file, so the install
@@ -81,12 +82,15 @@ async function claimInstall() {
     return false; // not installed (yet)
   }
   // Wait as long as a remover runs: its doom file stops counting once it exits
-  const slowAfter = Date.now() + 60_000;
-  let warned = false;
-  while (liveDoomFiles(installDir).length) {
-    if (!warned && Date.now() > slowAfter) {
-      log(`still waiting for another launcher to finish removing or keeping ${basename(installDir)}`);
-      warned = true;
+  const staleAfter = Date.now() + 60_000;
+  let doomFiles;
+  while ((doomFiles = liveDoomFiles(installDir)).length) {
+    if (Date.now() > staleAfter) {
+      // A remover holds its doom file for milliseconds. One this old was left by a
+      // remover that was killed, and its PID now belongs to an unrelated process.
+      log(`removing ${doomFiles.join(', ')}: left by a launcher that was killed while removing an install`);
+      for (const f of doomFiles) removeQuietly(join(dataDir, f));
+      break;
     }
     await new Promise((r) => setTimeout(r, 50));
   }
@@ -133,7 +137,12 @@ async function install() {
     stopping = true;
     log(`${signal} during install: stopping npm`);
     killTree(npm.pid, isWindows);
-    await Promise.race([done, new Promise((r) => setTimeout(r, 5000))]);
+    const exited = await Promise.race([done.then(() => true), new Promise((r) => setTimeout(() => r(false), 5000))]);
+    // Still running: force it, so npm does not keep writing into the folder removed below
+    if (!exited) {
+      killTree(npm.pid, isWindows, 'SIGKILL');
+      await Promise.race([done, new Promise((r) => setTimeout(r, 2000))]);
+    }
     rmSync(staging, { recursive: true, force: true });
     for (const s of SIGNALS) process.removeAllListeners(s);
     process.kill(process.pid, signal);
@@ -153,11 +162,12 @@ async function install() {
   return staging;
 }
 
-function killTree(pid, isWindows) {
+// taskkill /F already forces on Windows; signal applies to POSIX
+function killTree(pid, isWindows, signal = 'SIGTERM') {
   if (!pid) return;
   try {
     if (isWindows) spawnSync('taskkill', ['/pid', String(pid), '/T', '/F'], { stdio: 'ignore', windowsHide: true });
-    else process.kill(-pid, 'SIGTERM');
+    else process.kill(-pid, signal);
   } catch {
     // already gone
   }
