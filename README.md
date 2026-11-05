@@ -38,6 +38,7 @@ SOMA wraps the official [`appium-mcp`](https://github.com/appium/appium-mcp) ser
 | 🧠 Skill | `bug-report` | Draft a structured bug report from a failure or observation |
 | 🧠 Skill | `generate-test` | Turn a manual test case into an automated Appium test script |
 | 🧠 Skill | `explore-app` | Exploratory testing of an app area; reports suspected issues with evidence |
+| ⚡ Command | `/soma:setup [focus]` | Check your environment is ready and explain how to fix what is missing |
 | ⚡ Command | `/soma:device [avd or simulator name]` | Start an emulator or simulator and wait until it is ready |
 | ⚡ Command | `/soma:run-test [platform] [steps or path]` | Run a manual test case through Appium |
 | ⚡ Command | `/soma:bug [what you saw]` | Draft a bug report |
@@ -84,7 +85,7 @@ claude --plugin-dir ./soma
 ```
 
 > [!TIP]
-> Run the `check-setup` skill first to make sure your environment is ready.
+> Run `/soma:setup` (the `check-setup` skill) first to make sure your environment is ready. Add a focus such as `android`, `ios` or `artemis` to check one area.
 
 Then try:
 

@@ -117,6 +117,20 @@ for (const key of declared) {
   if (!usedConfigKeys.has(key)) fail(`userConfig "${key}" is declared but never used`);
 }
 
+// Every command hands off to an existing skill and is listed in the README "What's inside" table
+const readme = read('README.md');
+const skillDirs = new Set(readdirSync(join(root, 'skills')));
+for (const file of readdirSync(join(root, 'commands')).filter((f) => f.endsWith('.md'))) {
+  const p = `commands/${file}`;
+  const skill = read(p).match(/\bUse the ([\w-]+) skill\b/)?.[1];
+  if (!skill) fail(`${p}: does not say "Use the <skill> skill"`);
+  else if (!skillDirs.has(skill)) fail(`${p}: hands off to unknown skill "${skill}"`);
+  const name = `/soma:${file.replace(/\.md$/, '')}`;
+  if (!new RegExp(`^\\|[^|]*Command[^|]*\\|\\s*\`${name}[\\s\`]`, 'm').test(readme)) {
+    fail(`README.md: "What's inside" table has no row for ${name}`);
+  }
+}
+
 if (errors.length) {
   console.error(errors.map((e) => `✘ ${e}`).join('\n'));
   process.exit(1);
