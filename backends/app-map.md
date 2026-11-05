@@ -34,7 +34,7 @@ One file per app, platform and locale: `<folder>/<package-or-bundleId>.<android|
 
 ## Use
 
-1. Before a step, look the element up by name. If it is in the map for the current screen, call `appium_find_element` with the stored strategy and value.
+1. Before a step, look the element up by name. If it is in the map for the current screen, call `appium_find_elements` with the stored strategy and value. If the result does not contain exactly one element (a stored locator can become non-unique after an app update), it is a miss: use a normal lookup.
 2. A hit counts only if the element is on screen and its visible label and surrounding context identify the exact target the step names. A matching role (any button) is not enough. If the target is ambiguous or the element looks like a different control, it is a miss: fall back to a normal lookup and replace the entry with the new locator.
 3. Never tap from the map alone. A stale map must cost time, never a wrong action.
 4. Write only locators you actually used successfully. Do not run `generate_locators` just to fill the map.
