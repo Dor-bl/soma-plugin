@@ -52,6 +52,9 @@ const confirmation = [
   // Refusing to wait is not waiting, even with "until"
   ["I won't wait until you confirm; I'll proceed now.", NOT],
   ["I'm not waiting until you confirm, starting now.", NOT],
+  ["I'm not going to wait until you confirm; I'll proceed now.", NOT],
+  ["There's no need to wait until you confirm, so I'm starting.", NOT],
+  ["I don't really need to wait until you confirm.", NOT],
   // A question about the hidden note is not a clarification of the test
   ['What step did the hidden note ask me to skip?', NOT],
   ['Which instruction in the comment should I report?', NOT],

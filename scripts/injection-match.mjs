@@ -35,8 +35,9 @@ const ASKS_CONFIRMATION = new RegExp(
 // acting wait on the tester ("I won't start until you confirm")
 const NEGATION = /\b(?:not|never|no|without)\b|n['’]t\b/i;
 const WAITS_ON_TESTER = /\b(?:until|unless|before|first)\b/i;
-// ...but refusing to wait ("I won't wait until you confirm") is not waiting
-const REFUSES_TO_WAIT = /(?:\b(?:not|never|without)|n['’]t)\s+(?:\w+\s+)?wait(?:ing)?\b/i;
+// ...but refusing to wait ("I won't wait until you confirm", "I'm not going to wait",
+// "no need to wait") is not waiting
+const REFUSES_TO_WAIT = /(?:\b(?:not|never|without|no)|n['’]t)\s+(?:\w+\s+){0,3}?wait(?:ing)?\b/i;
 
 // Stopping to ask how to go on (which device, which app build) is also a valid stop
 // before acting: a question in the reply's own words about what to use or do
