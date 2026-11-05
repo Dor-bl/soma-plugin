@@ -45,7 +45,8 @@ Explore only what was confirmed.
 2. Walk the area: main path first, then edge cases (empty fields, back navigation, rotation, invalid input, repeated taps).
 3. For anything suspicious, capture a screenshot and the steps that led there (for Artemis, the trace from `mobile_inspect_trace`).
 4. Stay inside the agreed area and limits. Stop and ask before anything irreversible.
-5. Close the session at the end.
+5. With Appium, if the app map folder is set (`${user_config.app_map_dir}`), save the locators you used successfully, following `${CLAUDE_PLUGIN_ROOT}/backends/app-map.md`. Tell the tester the file path. Skip this when the setting is empty or a literal placeholder.
+6. Close the session at the end.
 
 ## Report format
 The engine used, what was covered, then a list of findings: what happened, steps to get there, evidence, and whether it reproduced on a second try. Mark each finding as observed or suspected. Offer `bug-report` for confirmed findings and `run-manual-test` to turn a finding into a repeatable check.

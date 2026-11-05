@@ -20,6 +20,12 @@
       "title": "Appium capabilities file (optional)",
       "description": "Path to a capabilities.json with per-platform presets, read by appium-mcp from disk. Put device-cloud credentials here (e.g. bstack:options, sauce:options, LT:Options for TestMu AI, formerly LambdaTest) instead of in the URL or the chat. Only check-setup reads it, after you approve the command, to check that it exists and is valid JSON without printing it; the other skills never open it. Keep it outside the project folder and out of version control.",
       "default": ""
+    },
+    "app_map_dir": {
+      "type": "directory",
+      "title": "App map folder (optional)",
+      "description": "Leave empty to turn app maps off. Set to a folder where explore-app saves the locators it found per app, and run-manual-test reuses them to skip repeat lookups (Appium only). Maps hold element names and locators, never typed or on-screen user data. Keep the folder out of version control unless your team wants to share it.",
+      "default": ""
     }
   }
 }
