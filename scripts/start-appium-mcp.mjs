@@ -7,7 +7,7 @@
 // compromised transitive release cannot be picked up silently.
 import { spawn, spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
-import { copyFileSync, existsSync, mkdirSync, readdirSync, readFileSync, renameSync, rmSync, writeFileSync } from 'node:fs';
+import { copyFileSync, existsSync, mkdirSync, readdirSync, readFileSync, renameSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { basename, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { allowRegexFor } from './allowlist.mjs';
@@ -34,8 +34,8 @@ const entry = join(installDir, 'node_modules', 'appium-mcp', binPath);
 // could leave it stale); instead claiming and removing follow a handshake:
 // - A launcher claims an install by writing its in-use marker into it, waiting while
 //   a live launcher is deciding whether to remove it (a `<install>.doom-<pid>` file),
-//   then checking the install is still complete. A doom file older than 60 s is stale
-//   (its remover was killed and the PID reused) and is deleted.
+//   then checking the install is still complete. A doom file is deleted only once its
+//   PID is shown to be reused (the process started after the file was written).
 // - Removal creates its doom file first, skips the install if it has a live marker,
 //   renames it to a trash name, and checks the markers again. A marker written in
 //   between belongs to a launcher that is waiting on the doom file, so the install
@@ -55,9 +55,14 @@ for (let attempt = 0; !claimed && attempt < 5; attempt++) {
   const staging = await install();
   try {
     renameSync(staging, installDir);
-  } catch {
-    // Another launcher finished the same install first; use that one.
+  } catch (err) {
     rmSync(staging, { recursive: true, force: true });
+    // Another launcher finished the same install first: use that one. Otherwise (e.g.
+    // EPERM/EBUSY from an antivirus scan on Windows) a retry would repeat the whole npm ci.
+    if (!existsSync(entry)) {
+      log(`could not move the new install into ${installDir}: ${err.message}`);
+      process.exit(1);
+    }
   }
 }
 if (!claimed) {
@@ -82,15 +87,23 @@ async function claimInstall() {
     return false; // not installed (yet)
   }
   // Wait as long as a remover runs: its doom file stops counting once it exits
-  const staleAfter = Date.now() + 60_000;
+  let checkAfter = Date.now() + 60_000;
+  let warned = false;
   let doomFiles;
   while ((doomFiles = liveDoomFiles(installDir)).length) {
-    if (Date.now() > staleAfter) {
-      // A remover holds its doom file for milliseconds. One this old was left by a
-      // remover that was killed, and its PID now belongs to an unrelated process.
-      log(`removing ${doomFiles.join(', ')}: left by a launcher that was killed while removing an install`);
-      for (const f of doomFiles) removeQuietly(join(dataDir, f));
-      break;
+    if (Date.now() > checkAfter) {
+      // A remover holds its doom file for milliseconds. One held this long belongs to a
+      // paused remover (keep waiting) or to one that was killed and whose PID was
+      // reused: that process started after the doom file was written.
+      for (const f of doomFiles.filter(isReusedPid)) {
+        log(`removing ${f}: left by a launcher that was killed while removing an install`);
+        removeQuietly(join(dataDir, f));
+      }
+      if (!warned && liveDoomFiles(installDir).length) {
+        log(`still waiting for another launcher to finish removing or keeping ${basename(installDir)}`);
+        warned = true;
+      }
+      checkAfter = Date.now() + 60_000;
     }
     await new Promise((r) => setTimeout(r, 50));
   }
@@ -103,7 +116,33 @@ async function claimInstall() {
 
 function liveDoomFiles(dir) {
   const prefix = `${basename(dir)}.doom-`;
-  return readdirSync(dataDir).filter((f) => f.startsWith(prefix) && isRunning(Number(f.slice(prefix.length))));
+  return readdirSync(dataDir).filter((f) => f.startsWith(prefix) && isRunning(doomPid(f)));
+}
+
+function doomPid(name) {
+  return Number(name.slice(name.lastIndexOf('.doom-') + 6));
+}
+
+// True only when the doom file's PID now belongs to a process that started after the
+// file was written. If either time can't be read, the file is kept (startup waits).
+function isReusedPid(name) {
+  let written;
+  try {
+    written = statSync(join(dataDir, name)).mtimeMs;
+  } catch {
+    return false; // already gone
+  }
+  return startedAt(doomPid(name)) > written;
+}
+
+// Start time of a process in ms since the epoch, or NaN if it can't be read. ps prints
+// whole seconds (rounded down), so a remover is never taken for a reused PID.
+function startedAt(pid) {
+  if (!Number.isInteger(pid) || pid <= 0) return NaN;
+  const run = process.platform === 'win32'
+    ? spawnSync('powershell', ['-NoProfile', '-NonInteractive', '-Command', `(Get-Process -Id ${pid}).StartTime.ToUniversalTime().ToString('o')`], { encoding: 'utf8', windowsHide: true })
+    : spawnSync('ps', ['-o', 'lstart=', '-p', String(pid)], { encoding: 'utf8', env: { ...process.env, LC_ALL: 'C' } });
+  return Date.parse(run.stdout?.trim() ?? '');
 }
 
 // Installs into a staging folder and returns its path. Runs npm asynchronously, so a
