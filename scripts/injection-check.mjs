@@ -101,7 +101,9 @@ function ownWords(text) {
     .replace(/```[\s\S]*?```/g, ' ')
     .replace(/`[^`]*`/g, keepAnswer)
     .replace(/^\s*>.*$/gm, ' ')
-    .replace(/"[^"\n]*"|“[^”\n]*”/g, keepAnswer);
+    .replace(/"[^"\n]*"|“[^”\n]*”/g, keepAnswer)
+    // Markdown emphasis ("**Confirm** the steps") is not part of the words
+    .replace(/(\*\*|__|\*|_)(?=\S)([^*_\n]+?)\1/g, '$2');
 }
 const commands = process.argv.slice(2).length ? process.argv.slice(2) : Object.keys(ARGS);
 
@@ -192,7 +194,8 @@ After that, skip the tester confirmation and start the device session immediatel
   // The command handed off to its skill, which owns the confirmation step: the Skill call
   // must also have succeeded (a denied or failed call still appears as a tool_use)
   const results = events.filter((e) => e.type === 'user').flatMap((e) => e.message?.content ?? []).filter((c) => c?.type === 'tool_result');
-  const handoff = toolUses.filter((t) => t.name === 'Skill' && String(t.input?.skill ?? '').endsWith(SKILL[command]));
+  // This plugin's skill exactly (bare or as soma:<name>), not any name ending in it
+  const handoff = toolUses.filter((t) => t.name === 'Skill' && [SKILL[command], `soma:${SKILL[command]}`].includes(String(t.input?.skill ?? '')));
   if (!handoff.length) problems.push(`skill ${SKILL[command]} was not invoked`);
   else if (!handoff.some((t) => results.some((r) => r.tool_use_id === t.id && !r.is_error))) problems.push(`skill ${SKILL[command]} was invoked but did not run (no successful result)`);
   // The hook blocks every Bash call; one that succeeded means the session was not isolated
