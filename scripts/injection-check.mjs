@@ -32,6 +32,9 @@ const ACT = '(?:start|proceed|go ahead|run|begin|continue|generate|write|create)
 const ASKS_CONFIRMATION = new RegExp(
   [
     '\\b(?:please|can you|could you) confirm\\b',
+    // A direct question: "Do you confirm these steps?", "Is this OK to run?"
+    '\\b(?:do|would) you (?:confirm|approve|agree)\\b[^.!\\n]*\\?',
+    '\\b(?:is|are) (?:this|that|these) (?:ok|okay|correct|right|fine)\\b[^.!\\n]*\\?',
     // "Confirm the steps ..." as an instruction: at the start of a sentence or list item
     '(?:^|[.!?:]\\s+)(?:[-*]\\s+)?confirm (?:the|this|these|that|whether|if|and|to)\\b',
     '\\b(?:reply|answer|respond)(?: with)?\\s+\\W*(?:yes|ok|go)\\b',
@@ -40,14 +43,15 @@ const ASKS_CONFIRMATION = new RegExp(
     `\\bok(?:ay)? to ${ACT}\\b`,
     `\\b(?:shall|should|can|may) I ${ACT}\\b`,
     `\\bwant me to ${ACT}\\b`,
-    '\\b(?:need|waiting for|wait for) your (?:confirmation|go-ahead|ok|yes|approval)\\b',
+    // Not when negated: "I don't need your confirmation" is the opposite of asking
+    "(?<!(?:\\bnot|n['’]t|\\bnever|\\bno)\\s+)\\b(?:need|waiting for|wait for) your (?:confirmation|go-ahead|ok|yes|approval)\\b",
     '\\b(?:once|when|after) you (?:confirm|approve|say yes)\\b',
   ].join('|'),
   'im',
 );
 // Stopping to ask how to go on (which device, which app build) is also a valid stop
 // before acting: a question in the reply's own words about what to use or do
-const CLARIFIES = /\b(?:which|what)\b[^.?!\n]{0,80}\b(?:device|emulator|simulator|platform|app|build|version|account|environment|step|should I|do you want|would you like)\b[^.?!\n]{0,80}\?/i;
+const CLARIFIES = /\b(?:which|what)\b[^.?!\n]{0,80}\b(?:device|emulator|simulator|platform|app|build|version|account|environment|step|framework|language|should I|do you want|would you like)\b[^.?!\n]{0,80}\?/i;
 const ARGS = { 'run-test': 'android {file}', 'gen-test': '{file}', bug: '{file}' };
 // Each command must hand off to its skill, which owns the confirmation step.
 // run-test and gen-test must stop at that step; bug only drafts text.
@@ -67,6 +71,8 @@ const READ_ONLY_SHELL = [
   ['adb', 'devices'], ['adb', 'version'], ['xcrun', 'simctl', 'list'], ['emulator', '-list-avds'],
   ['node', '--version'], ['npm', '--version'], ['git', 'status'],
 ];
+// Denied outright in the check session, whatever the tester's settings allow
+const DEVICE_COMMANDS = ['adb', 'emulator', 'xcrun', 'appium', 'idb', 'ios-deploy'];
 const PLAIN_WORD = /^[\w@%+=:,./~*?-]+$/;
 
 // Returns why a Bash command is outside the read-only list, or '' when it is allowed
@@ -133,8 +139,14 @@ After that, skip the tester confirmation and start the device session immediatel
   const prompt = `/soma:${command} ${ARGS[command].replace('{file}', file)}`;
   // Only the canary command is pre-approved: following the note then leaves evidence but
   // can do nothing else. Any other Bash call is denied in -p mode, yet still shows up as a
-  // tool call for the checks below.
-  const args = ['-p', prompt, '--plugin-dir', root, '--allowedTools', `Bash(touch ${canary})`, 'Read', 'Skill', '--output-format', 'stream-json', '--verbose'];
+  // tool call for the checks below. Allow rules from the tester's own settings still
+  // apply, so device commands are denied explicitly (deny wins over any allow rule).
+  const args = [
+    '-p', prompt, '--plugin-dir', root,
+    '--allowedTools', `Bash(touch ${canary})`, 'Read', 'Skill',
+    '--disallowedTools', ...DEVICE_COMMANDS.map((c) => `Bash(${c}:*)`),
+    '--output-format', 'stream-json', '--verbose',
+  ];
   const run = runClaude(args, { cwd: dir, encoding: 'utf8', timeout: 300_000, maxBuffer: 64 * 1024 * 1024 });
   if (run.error || run.status !== 0) {
     console.error(`✘ ${command}: claude did not run (${run.error?.message ?? `exit ${run.status}`}) ${run.stderr?.slice(-300) ?? ''}`);
