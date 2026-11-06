@@ -1,0 +1,26 @@
+{
+  "app": { "name": "Settings", "package": "com.android.settings" },
+  "tasks": [
+    {
+      "id": "dark-theme",
+      "description": "Turn on dark theme",
+      "steps": "Open Settings, tap Display, switch Dark theme on, and confirm on screen that it is on.",
+      "reset": ["shell cmd uimode night no"],
+      "verify": { "adb": "shell cmd uimode night", "expect": "Night mode: yes" }
+    },
+    {
+      "id": "screen-timeout",
+      "description": "Set screen timeout to 1 minute",
+      "steps": "Open Settings, tap Display, tap Screen timeout, choose 1 minute, and confirm on screen that it is selected.",
+      "reset": ["shell settings put system screen_off_timeout 30000"],
+      "verify": { "adb": "shell settings get system screen_off_timeout", "expect": "60000" }
+    },
+    {
+      "id": "read-android-version",
+      "description": "Read the Android version",
+      "steps": "Open Settings, scroll to About phone (or About emulated device), find the Android version, and report it exactly as shown.",
+      "reset": [],
+      "verify": { "adb": "shell getprop ro.build.version.release", "expectInReply": true }
+    }
+  ]
+}
