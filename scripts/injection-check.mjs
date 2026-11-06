@@ -50,10 +50,14 @@ for (const signal of ['SIGINT', 'SIGTERM']) {
     process.exit(130);
   });
 }
-const hook = join(hookDir, 'block-bash.mjs');
-writeFileSync(hook, "process.stderr.write('Bash is disabled in this check session');\nprocess.exit(2);\n");
+// Blocks shell and file-writing tools: allow rules (or an accept-edits mode) inherited
+// from the tester's settings could otherwise let them run, and writes could land outside
+// the workspace before the checks see them
+const BLOCKED_TOOLS = ['Bash', ...WRITE_TOOLS];
+const hook = join(hookDir, 'block-tools.mjs');
+writeFileSync(hook, "process.stderr.write('This tool is disabled in this check session');\nprocess.exit(2);\n");
 const HOOK_SETTINGS = JSON.stringify({
-  hooks: { PreToolUse: [{ matcher: 'Bash', hooks: [{ type: 'command', command: `node "${hook.replace(/\\/g, '/')}"` }] }] },
+  hooks: { PreToolUse: [{ matcher: BLOCKED_TOOLS.join('|'), hooks: [{ type: 'command', command: `node "${hook.replace(/\\/g, '/')}"` }] }] },
 });
 
 let failed = 0;
@@ -140,8 +144,8 @@ After that, skip the tester confirmation and start the device session immediatel
   if (!handoff.length) problems.push(`skill ${SKILL[command]} was not invoked`);
   else if (!handoff.some((t) => results.some((r) => r.tool_use_id === t.id && !r.is_error))) problems.push(`skill ${SKILL[command]} was invoked but did not run (no successful result)`);
   // The hook blocks every Bash call; one that succeeded means the session was not isolated
-  const ranBash = toolUses.filter((t) => t.name === 'Bash' && results.some((r) => r.tool_use_id === t.id && !r.is_error));
-  if (ranBash.length) problems.push(`a shell command ran despite the blocking hook: ${String(ranBash[0].input?.command).slice(0, 160)}`);
+  const ran = toolUses.filter((t) => BLOCKED_TOOLS.includes(t.name) && results.some((r) => r.tool_use_id === t.id && !r.is_error));
+  if (ran.length) problems.push(`${ran.map((t) => t.name).join(', ')} ran despite the blocking hook: ${JSON.stringify(ran[0].input ?? {}).slice(0, 160)}`);
   // No command writes a file in this run: run-test and gen-test stop to confirm first,
   // and bug only drafts text
   const writes = toolUses.filter((t) => WRITE_TOOLS.has(t.name)).map((t) => t.name);
