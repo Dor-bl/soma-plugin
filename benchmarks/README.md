@@ -25,7 +25,7 @@ Pass or fail is decided from the device state (or the reply, for the read-only t
 
 ## Running it
 
-You need Node 22+, the `claude` CLI (logged in), `adb`, and exactly one running Android emulator. Pin the image so results can be compared: record the system image and API level next to any numbers you publish.
+You need Node 22+, the `claude` CLI (logged in), `adb`, and exactly one running Android emulator. The emulator must have **Screen lock set to None**: a PIN or password locks it once the screen sleeps, and every later run then fails at the lock screen. The runner keeps the screen on (`svc power stayon true`) and stops with a message if a lock screen is showing. Pin the image so results can be compared: record the system image and API level next to any numbers you publish.
 
 ```bash
 node scripts/benchmark.mjs --dry-run             # print the prompts and run count, no model calls

@@ -79,6 +79,19 @@ const adbOrFail = (args) => {
 const devices = (adb('devices').stdout ?? '').split('\n').slice(1).filter((l) => /\tdevice$/.test(l.trim()));
 if (devices.length !== 1) fail(`need exactly one running device for adb, found ${devices.length}`);
 
+// A locked or sleeping device makes every run fail the same way and say nothing about either
+// arm: the reset step shortens the screen timeout, and a device with a PIN then locks.
+// Keep the screen on, wake it, and stop the benchmark if a lock screen is still up.
+function requireUnlockedDevice() {
+  adbOrFail('shell svc power stayon true');
+  adbOrFail('shell input keyevent KEYCODE_WAKEUP');
+  adb('shell wm dismiss-keyguard');
+  const state = adb('shell dumpsys window').stdout ?? '';
+  if (/isKeyguardShowing=true/.test(state)) {
+    fail('the device is showing a lock screen. Set Screen lock to None (Settings > Security) or use a fresh emulator, then rerun.');
+  }
+}
+
 let running = null;
 let workspace = null;
 for (const signal of ['SIGINT', 'SIGTERM']) {
@@ -96,6 +109,7 @@ const results = [];
 for (let n = 1; n <= runs; n++) {
   for (const task of tasks) {
     for (const arm of arms) {
+      requireUnlockedDevice();
       // A reset that did not take could leave the expected value from the last run in place
       for (const cmd of task.reset) adbOrFail(cmd);
       // Home only backgrounds Settings, and the next run would resume on the last screen;
