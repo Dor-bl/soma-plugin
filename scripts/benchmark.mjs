@@ -91,6 +91,9 @@ for (let n = 1; n <= runs; n++) {
     for (const arm of arms) {
       // A reset that did not take could leave the expected value from the last run in place
       for (const cmd of task.reset) adbOrFail(cmd);
+      // Home only backgrounds Settings, and the next run would resume on the last screen;
+      // force-stop ends the task but keeps the app's data (unlike pm clear)
+      adbOrFail(`shell am force-stop ${app.package}`);
       adbOrFail('shell input keyevent KEYCODE_HOME');
       const cwd = (workspace = mkdtempSync(join(tmpdir(), 'soma-bench-')));
       const args = [
@@ -133,7 +136,8 @@ function verify(task, reply) {
     const escaped = out.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     return { ok: out !== '' && new RegExp(`(?<![\\d.])${escaped}(?!\\d|\\.\\d)`).test(reply) };
   }
-  return { ok: out.includes(task.verify.expect) };
+  // Exact: "60000" must not match inside "600000"
+  return { ok: out === task.verify.expect };
 }
 
 // On Windows a folder stays locked for a moment while a child of the finished run (the

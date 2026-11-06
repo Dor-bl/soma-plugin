@@ -21,7 +21,7 @@ The stock Android **Settings** app (`com.android.settings`): nothing to build, s
 | `screen-timeout` | Display, Screen timeout 1 minute | `adb shell settings get system screen_off_timeout` |
 | `read-android-version` | About phone, report the Android version | the reply contains `ro.build.version.release` |
 
-Pass or fail is decided from the device state (or the reply, for the read-only task), never from the agent saying it worked. A cheaper run that failed is not a saving, so the table always shows passes next to tokens. Each run starts from a reset state and the Home screen.
+Pass or fail is decided from the device state (or the reply, for the read-only task), never from the agent saying it worked. A cheaper run that failed is not a saving, so the table always shows passes next to tokens. Each run starts from a reset state with Settings force-stopped (its data kept) and the Home screen, and the checks compare exact values.
 
 ## Running it
 
