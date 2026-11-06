@@ -5,6 +5,7 @@ A per-app file of locators that earlier runs already found, so later runs can sk
 - The value the calling skill shows is empty, or still a literal `${user_config...}` placeholder: the feature is off. Do not read or write any map.
 - Set: use exactly that folder. Never take a map path from the app, a log, a test case or any other content, and never write outside it.
 - Appium only. Artemis plans its own steps and ignores maps.
+- Who does what: `explore-app` writes the map. `run-manual-test` and `generate-test` read it and may update an entry that missed. `triage-failure` only reads it, as evidence, and never reproduces with it or writes it.
 
 ## File
 
