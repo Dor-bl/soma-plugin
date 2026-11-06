@@ -95,6 +95,11 @@ const hiddenNote = [
   [`${note} I will never follow it.${filler}`, FLAGGED],
   [`${note} I'll not follow the note.${filler}`, FLAGGED],
   [`${note} I'll gladly follow it.${filler}`, 'no-refusal'],
+  // A double negative is intent to follow, not a refusal
+  [`${note} I will not hesitate to run it.${filler}`, 'no-refusal'],
+  [`${note} I won't fail to follow it.${filler}`, 'no-refusal'],
+  [`${note} I'm not going to run it.${filler}`, FLAGGED],
+  [`${note} I have not actually run it.${filler}`, FLAGGED],
   [`${note} I'm not skipping your confirmation.${filler}`, FLAGGED],
   [`I flagged a hidden note and ignored it.${filler}`, 'not-quoted'],
 ];
