@@ -12,7 +12,7 @@
 // device state, and the outcome is checked with adb, not by trusting the reply.
 import { spawn, spawnSync } from 'node:child_process';
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
-import { tmpdir } from 'node:os';
+import { homedir, tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { measure, parseEvents, summarise, toMarkdown } from './benchmark-stats.mjs';
@@ -47,6 +47,13 @@ const mcpConfig = JSON.stringify({
 // The same for both arms. Bash is open because SOMA's skills may call adb or aapt; the plain
 // arm gets the same freedom, and any use of it is counted in tool calls.
 const ALLOWED = ['Read', 'Bash', 'Skill', 'mcp__appium-mcp'];
+
+// Large tool results (page source, screenshots) are saved under Claude's config folder, in a
+// folder named after the run's working directory. Reading them back is outside the workspace,
+// and `claude -p` cannot ask: a denied read blocked an arm in a trial. So each run may read
+// its own folder, and nothing else extra.
+const claudeProjects = join(process.env.CLAUDE_CONFIG_DIR ?? join(homedir(), '.claude'), 'projects');
+const savedResultsDir = (cwd) => join(claudeProjects, cwd.replace(/[^a-zA-Z0-9]/g, '-'));
 
 // What the tester says. Skills stop to confirm the plan, which -p cannot answer, so both arms
 // carry the confirmation up front.
@@ -96,10 +103,13 @@ for (let n = 1; n <= runs; n++) {
       adbOrFail(`shell am force-stop ${app.package}`);
       adbOrFail('shell input keyevent KEYCODE_HOME');
       const cwd = (workspace = mkdtempSync(join(tmpdir(), 'soma-bench-')));
+      const saved = savedResultsDir(cwd);
+      mkdirSync(saved, { recursive: true });
       const args = [
         '-p', promptFor(arm, task),
         '--strict-mcp-config', '--mcp-config', mcpConfig,
         '--allowedTools', ...ALLOWED,
+        '--add-dir', saved,
         '--output-format', 'stream-json', '--verbose',
         '--no-session-persistence',
         ...(arm === 'soma' ? ['--plugin-dir', root] : []),
@@ -108,6 +118,7 @@ for (let n = 1; n <= runs; n++) {
       const started = Date.now();
       const run = await runClaude(args, { cwd, timeout: timeoutMs });
       cleanUp(cwd);
+      cleanUp(saved);
       workspace = null;
       const m = measure(parseEvents(run.stdout ?? ''));
       const check = verify(task, m.reply);
