@@ -106,7 +106,7 @@ for (const dir of readdirSync(join(root, 'skills'))) {
 
 // Skills that quote screenshots, logs or page source back to the tester must keep
 // their redaction rules (issue #9)
-const REDACTING_SKILLS = ['bug-report', 'run-manual-test', 'explore-app', 'triage-failure'];
+const REDACTING_SKILLS = ['bug-report', 'run-manual-test', 'explore-app', 'triage-failure', 'write-test-case'];
 for (const dir of REDACTING_SKILLS) {
   const p = `skills/${dir}/SKILL.md`;
   // A listed skill that was renamed or removed must fail, not be skipped
