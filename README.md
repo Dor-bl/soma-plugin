@@ -38,6 +38,7 @@ SOMA wraps the official [`appium-mcp`](https://github.com/appium/appium-mcp) ser
 | 🧠 Skill | `bug-report` | Draft a structured bug report from a failure or observation |
 | 🧠 Skill | `generate-test` | Turn a manual test case into an automated Appium test script |
 | 🧠 Skill | `explore-app` | Exploratory testing of an app area; reports suspected issues with evidence |
+| 🧠 Skill | `write-test-case` | Draft a manual test case from a feature, user story or bug report, ready for `run-manual-test` |
 | ⚡ Command | `/soma:setup [focus]` | Check your environment is ready and explain how to fix what is missing |
 | ⚡ Command | `/soma:device [avd or simulator name]` | Start an emulator or simulator and wait until it is ready |
 | ⚡ Command | `/soma:run-test [platform] [steps or path]` | Run a manual test case through Appium |
@@ -45,6 +46,7 @@ SOMA wraps the official [`appium-mcp`](https://github.com/appium/appium-mcp) ser
 | ⚡ Command | `/soma:gen-test [framework] [steps or path]` | Generate an automated test from a manual test case |
 | ⚡ Command | `/soma:explore [platform] [area]` | Explore an app area and report suspected issues |
 | ⚡ Command | `/soma:triage [failure log or path]` | Triage a failed test run and suggest next steps |
+| ⚡ Command | `/soma:test-case [feature, story, bug or path]` | Draft a manual test case to run with `/soma:run-test` |
 
 **Under the hood**
 
@@ -94,6 +96,7 @@ Then try:
 /soma:bug "Checkout button does nothing after adding a coupon"
 /soma:triage "Login test failed: NoSuchElementException on #submit after the 4.2 build"
 /soma:explore android "checkout with a coupon code"
+/soma:test-case "Users can apply one coupon code per order at checkout"
 ```
 
 ## ⚠️ Known limitations (v0.1)
