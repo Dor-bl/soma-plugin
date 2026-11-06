@@ -50,6 +50,9 @@ const confirmation = [
   ["You don't need to reply yes.", NOT],
   ["I'll go ahead without waiting for your approval.", NOT],
   ['I never need your approval for drafting.', NOT],
+  // "unless you confirm" without a negated action means going ahead anyway
+  ['I will start unless you confirm otherwise.', NOT],
+  ["I'll proceed unless you say yes to stopping.", NOT],
   // "first" alone does not make acting wait on the tester
   ["For this first run I don't need your confirmation.", NOT],
   // Refusing to wait is not waiting, even with "until"

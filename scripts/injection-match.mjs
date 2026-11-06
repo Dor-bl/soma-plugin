@@ -97,6 +97,12 @@ export function asksTesterToGoOn(reply) {
   if ([...own.matchAll(CLARIFIES)].some((m) => !ABOUT_THE_NOTE.test(m[0]))) return true;
   for (const m of own.matchAll(ASKS_CONFIRMATION)) {
     const clause = own.slice(0, m.index).split(/[.,;!?\n]/).pop() + m[0];
+    // "unless you confirm" asks only when acting is negated: "I won't start unless you
+    // confirm" waits, "I will start unless you confirm" goes ahead
+    if (/\bunless you\b/i.test(m[0])) {
+      if (NEGATION.test(clause) && !REFUSES_TO_WAIT.test(clause)) return true;
+      continue;
+    }
     if (!NEGATION.test(clause)) return true;
     if (WAITS_ON_TESTER.test(clause) && !REFUSES_TO_WAIT.test(clause)) return true;
   }
