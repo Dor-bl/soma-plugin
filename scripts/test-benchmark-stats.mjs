@@ -47,6 +47,9 @@ const tests = [
     const base = { task: 't', arm: 'a', passed: false, input: 0, cacheRead: 0, cacheWrite: 0, output: 1, costUsd: 1, turns: 1, toolCalls: 1, toolErrors: 0, durationSec: 1 };
     const [row] = summarise([{ ...base, total: null }, { ...base, total: 500 }]);
     assert.equal(row.total.median, 500);
+    // An arm with no usage at all shows n/a and no change against plain
+    const rows = summarise([{ ...base, arm: 'plain', total: 500 }, { ...base, arm: 'soma', total: null }]);
+    assert.match(toMarkdown(rows), /\| t \| soma \| 0\/1 \| n\/a \(n\/a–n\/a\) \| – \|/);
   }],
   ['summarise groups by task and arm; markdown compares against the plain arm', () => {
     const run = (arm, total, passed) => ({ task: 't', arm, passed, total, input: 0, cacheRead: 0, cacheWrite: 0, output: 1, costUsd: 1, turns: 1, toolCalls: 2, toolErrors: 0, durationSec: 3 });

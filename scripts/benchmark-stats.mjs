@@ -76,7 +76,7 @@ export function toMarkdown(rows, baselineArm = 'plain') {
   ];
   for (const r of rows) {
     const base = rows.find((o) => o.task === r.task && o.arm === baselineArm);
-    const change = base?.total.median && r.arm !== baselineArm ? `${((r.total.median / base.total.median - 1) * 100).toFixed(0)}%` : '–';
+    const change = r.total.median != null && base?.total.median && r.arm !== baselineArm ? `${((r.total.median / base.total.median - 1) * 100).toFixed(0)}%` : '–';
     lines.push(
       `| ${r.task} | ${r.arm} | ${r.passed}/${r.runs} | ${fmt(r.total.median)} (${fmt(r.total.min)}–${fmt(r.total.max)}) | ${change} | ${fmt(r.output.median)} | ${fmt(r.toolCalls.median)} | ${fmt(r.costUsd.median, 2)} | ${fmt(r.durationSec.median)} |`,
     );

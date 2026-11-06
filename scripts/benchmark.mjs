@@ -110,7 +110,7 @@ for (let n = 1; n <= runs; n++) {
       const check = verify(task, m.reply);
       const passed = !run.error && !m.isError && check.ok;
       results.push({ task: task.id, arm, run: n, passed, checkError: check.error ?? null, ...m, wallSec: (Date.now() - started) / 1000, error: run.error?.message ?? null });
-      console.log(`${passed ? '✔' : '✘'}${check.error ? ' (adb check failed: ' + check.error + ')' : ''} run ${n} ${task.id} [${arm}]: ${m.total.toLocaleString('en-US')} tokens, ${m.toolCalls} tool calls, ${m.durationSec?.toFixed(0) ?? '?'} s${run.error ? ` (${run.error.message})` : ''}`);
+      console.log(`${passed ? '✔' : '✘'}${check.error ? ' (adb check failed: ' + check.error + ')' : ''} run ${n} ${task.id} [${arm}]: ${m.total == null ? 'no usage reported' : m.total.toLocaleString('en-US') + ' tokens'}, ${m.toolCalls} tool calls, ${m.durationSec?.toFixed(0) ?? '?'} s${run.error ? ` (${run.error.message})` : ''}`);
     }
   }
 }
