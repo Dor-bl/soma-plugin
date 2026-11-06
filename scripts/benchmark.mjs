@@ -21,7 +21,10 @@ const root = fileURLToPath(new URL('..', import.meta.url)).replace(/[\\/]+$/, ''
 const { app, tasks: allTasks } = JSON.parse(readFileSync(join(root, 'benchmarks', 'tasks.json'), 'utf8'));
 const flag = (name, fallback) => {
   const i = process.argv.indexOf(`--${name}`);
-  return i < 0 ? fallback : process.argv[i + 1];
+  if (i < 0) return fallback;
+  const value = process.argv[i + 1];
+  if (value === undefined || value.startsWith('--')) fail(`--${name} needs a value`);
+  return value;
 };
 const runs = Number(flag('runs', 3));
 const arms = flag('arms', 'plain,soma').split(',');
@@ -60,6 +63,12 @@ if (dryRun) {
 }
 
 const adb = (args) => spawnSync('adb', args.split(' '), { encoding: 'utf8' });
+// For steps that must work for a run to mean anything: stop the whole benchmark otherwise
+const adbOrFail = (args) => {
+  const r = adb(args);
+  if (r.error || r.status !== 0) fail(`adb ${args} failed: ${r.error?.message ?? (r.stderr || `exit ${r.status}`).trim()}`);
+  return r;
+};
 const devices = (adb('devices').stdout ?? '').split('\n').slice(1).filter((l) => /\tdevice$/.test(l.trim()));
 if (devices.length !== 1) fail(`need exactly one running device for adb, found ${devices.length}`);
 
@@ -68,7 +77,7 @@ let workspace = null;
 for (const signal of ['SIGINT', 'SIGTERM']) {
   process.on(signal, () => {
     if (running) killTree(running);
-    if (workspace) rmSync(workspace, { recursive: true, force: true });
+    if (workspace) cleanUp(workspace);
     console.error(`✘ stopped by ${signal}`);
     process.exit(130);
   });
@@ -80,8 +89,9 @@ const results = [];
 for (let n = 1; n <= runs; n++) {
   for (const task of tasks) {
     for (const arm of arms) {
-      for (const cmd of task.reset) adb(cmd);
-      adb(`shell input keyevent KEYCODE_HOME`);
+      // A reset that did not take could leave the expected value from the last run in place
+      for (const cmd of task.reset) adbOrFail(cmd);
+      adbOrFail('shell input keyevent KEYCODE_HOME');
       const cwd = (workspace = mkdtempSync(join(tmpdir(), 'soma-bench-')));
       const args = [
         '-p', promptFor(arm, task),
@@ -94,12 +104,13 @@ for (let n = 1; n <= runs; n++) {
       ];
       const started = Date.now();
       const run = await runClaude(args, { cwd, timeout: timeoutMs });
-      rmSync(cwd, { recursive: true, force: true });
+      cleanUp(cwd);
       workspace = null;
       const m = measure(parseEvents(run.stdout ?? ''));
-      const passed = !run.error && !m.isError && verify(task, m.reply);
-      results.push({ task: task.id, arm, run: n, passed, ...m, wallSec: (Date.now() - started) / 1000, error: run.error?.message ?? null });
-      console.log(`${passed ? '✔' : '✘'} run ${n} ${task.id} [${arm}]: ${m.total.toLocaleString('en-US')} tokens, ${m.toolCalls} tool calls, ${m.durationSec?.toFixed(0) ?? '?'} s${run.error ? ` (${run.error.message})` : ''}`);
+      const check = verify(task, m.reply);
+      const passed = !run.error && !m.isError && check.ok;
+      results.push({ task: task.id, arm, run: n, passed, checkError: check.error ?? null, ...m, wallSec: (Date.now() - started) / 1000, error: run.error?.message ?? null });
+      console.log(`${passed ? '✔' : '✘'}${check.error ? ' (adb check failed: ' + check.error + ')' : ''} run ${n} ${task.id} [${arm}]: ${m.total.toLocaleString('en-US')} tokens, ${m.toolCalls} tool calls, ${m.durationSec?.toFixed(0) ?? '?'} s${run.error ? ` (${run.error.message})` : ''}`);
     }
   }
 }
@@ -112,10 +123,27 @@ writeFileSync(join(outDir, `${stamp}.md`), `Model: ${models.join(', ') || 'unkno
 console.log(`\n${table}\n\nSaved to ${join(outDir, stamp)}.{json,md}`);
 
 // The outcome as the device and the reply show it, never the reply alone for state changes
+// Returns { ok } or { ok: false, error } when adb itself failed, which says nothing about the task
 function verify(task, reply) {
-  const out = (adb(task.verify.adb).stdout ?? '').trim();
-  if (task.verify.expectInReply) return out !== '' && reply.includes(out);
-  return out.includes(task.verify.expect);
+  const r = adb(task.verify.adb);
+  if (r.error || r.status !== 0) return { ok: false, error: r.error?.message ?? (r.stderr || `exit ${r.status}`).trim() };
+  const out = (r.stdout ?? '').trim();
+  if (task.verify.expectInReply) {
+    // The whole value: "14" must not match inside "114" or "14.1"
+    const escaped = out.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    return { ok: out !== '' && new RegExp(`(?<![\\d.])${escaped}(?!\\d|\\.\\d)`).test(reply) };
+  }
+  return { ok: out.includes(task.verify.expect) };
+}
+
+// On Windows a folder stays locked for a moment while a child of the finished run (the
+// appium-mcp server) exits. A leftover temp folder must never lose the results.
+function cleanUp(dir) {
+  try {
+    rmSync(dir, { recursive: true, force: true, maxRetries: 10, retryDelay: 500 });
+  } catch (error) {
+    console.error(`⚠ could not remove ${dir}: ${error.code ?? error.message}`);
+  }
 }
 
 function appiumMcpVersion() {
@@ -147,7 +175,7 @@ function runClaude(args, { cwd, timeout }) {
     }
   }
   return new Promise((resolve) => {
-    const child = spawn(file, argv, { cwd, stdio: ['ignore', 'pipe', 'pipe'], detached: !win, windowsHide: true, ...extra });
+    const child = spawn(file, argv, { cwd, stdio: ['ignore', 'pipe', 'pipe'], detached: !win, windowsHide: true, env: { ...process.env, MCP_TIMEOUT: process.env.MCP_TIMEOUT ?? '120000' }, ...extra });
     running = child;
     let stdout = '';
     let stderr = '';

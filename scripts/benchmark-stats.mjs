@@ -23,15 +23,18 @@ export function measure(events) {
   const toolUses = events.filter((e) => e.type === 'assistant').flatMap((e) => e.message?.content ?? []).filter((c) => c.type === 'tool_use');
   const results = events.filter((e) => e.type === 'user').flatMap((e) => e.message?.content ?? []).filter((c) => c?.type === 'tool_result');
   const failedIds = new Set(results.filter((r) => r.is_error).map((r) => r.tool_use_id));
-  const input = usage.input_tokens ?? 0;
-  const cacheRead = usage.cache_read_input_tokens ?? 0;
-  const cacheWrite = usage.cache_creation_input_tokens ?? 0;
-  const output = usage.output_tokens ?? 0;
+  // No result event (a timeout) means no usage was reported: null, never 0, so it stays out of
+  // the medians. A run that ended in an error still reports its usage, which is kept.
+  const field = (key) => (result.usage ? usage[key] ?? 0 : null);
+  const input = field('input_tokens');
+  const cacheRead = field('cache_read_input_tokens');
+  const cacheWrite = field('cache_creation_input_tokens');
+  const output = field('output_tokens');
   return {
     model: events.find((e) => e.type === 'system' && e.subtype === 'init')?.model ?? null,
     input, cacheRead, cacheWrite, output,
     // All tokens the model processed or produced; cache reads are the bulk of a long session
-    total: input + cacheRead + cacheWrite + output,
+    total: result.usage ? input + cacheRead + cacheWrite + output : null,
     costUsd: result.total_cost_usd ?? null,
     turns: result.num_turns ?? null,
     durationSec: result.duration_ms == null ? null : result.duration_ms / 1000,

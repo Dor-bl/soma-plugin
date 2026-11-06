@@ -38,6 +38,16 @@ const tests = [
   ['a stream without a result event is an error run', () => {
     assert.equal(measure(parseEvents('{"type":"system","subtype":"init"}')).isError, true);
   }],
+  ['missing usage is null, not 0, and stays out of the medians; usage of an errored run is kept', () => {
+    const none = measure(parseEvents('{"type":"system","subtype":"init"}'));
+    assert.equal(none.total, null);
+    assert.equal(none.output, null);
+    const errored = measure(parseEvents(JSON.stringify({ type: 'result', is_error: true, usage: { output_tokens: 7 } })));
+    assert.equal(errored.total, 7);
+    const base = { task: 't', arm: 'a', passed: false, input: 0, cacheRead: 0, cacheWrite: 0, output: 1, costUsd: 1, turns: 1, toolCalls: 1, toolErrors: 0, durationSec: 1 };
+    const [row] = summarise([{ ...base, total: null }, { ...base, total: 500 }]);
+    assert.equal(row.total.median, 500);
+  }],
   ['summarise groups by task and arm; markdown compares against the plain arm', () => {
     const run = (arm, total, passed) => ({ task: 't', arm, passed, total, input: 0, cacheRead: 0, cacheWrite: 0, output: 1, costUsd: 1, turns: 1, toolCalls: 2, toolErrors: 0, durationSec: 3 });
     const rows = summarise([run('plain', 100, true), run('plain', 300, false), run('soma', 100, true)]);
