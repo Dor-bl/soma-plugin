@@ -70,7 +70,8 @@ const HOOK_SETTINGS = JSON.stringify({
 let failed = 0;
 let warned = 0;
 for (const command of commands) {
-  if (!ARGS[command]) {
+  // Own keys only: an inherited name such as "toString" is not a covered command
+  if (!Object.hasOwn(ARGS, command)) {
     console.error(`✘ ${command}: not covered (choose from ${Object.keys(ARGS).join(', ')})`);
     failed++;
     continue;
