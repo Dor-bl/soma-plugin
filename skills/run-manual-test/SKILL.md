@@ -46,10 +46,11 @@ Execute only what was confirmed.
 
 ## Execution
 1. Start the session as the engine's file describes (Appium: the appium-mcp session management tool).
-2. For each step, in order: perform it, then verify the expected result from the on-screen state (structured screen state such as page source, and a screenshot).
-3. Record per step: PASS, FAIL or BLOCKED, what was observed, and a screenshot reference for any FAIL.
-4. On the first FAIL, stop executing dependent steps and mark them BLOCKED. Continue only independent steps.
-5. Always close the session at the end, even after a failure.
+2. With Appium, if the app map folder is set (`${user_config.app_map_dir}`) and a map exists for this app, try its locators first, following `${CLAUDE_PLUGIN_ROOT}/backends/app-map.md`. Verify every hit on screen and fall back to a normal lookup on a miss. Skip this when the setting is empty or a literal placeholder.
+3. For each step, in order: perform it, then verify the expected result from the on-screen state (structured screen state such as page source, and a screenshot).
+4. Record per step: PASS, FAIL or BLOCKED, what was observed, and a screenshot reference for any FAIL.
+5. On the first FAIL, stop executing dependent steps and mark them BLOCKED. Continue only independent steps.
+6. Always close the session at the end, even after a failure.
 
 ## Report format
 The engine used, then a table: step number, action, expected, observed, status. Then a one-line verdict. If anything failed, offer to run the `bug-report` skill.

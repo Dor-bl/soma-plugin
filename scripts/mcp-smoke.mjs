@@ -14,6 +14,7 @@ const REQUIRED_TOOLS = [
   'select_device',
   'appium_session_management',
   'appium_find_element',
+  'appium_find_elements',
   'appium_gesture',
   'appium_get_page_source',
   'appium_screenshot',

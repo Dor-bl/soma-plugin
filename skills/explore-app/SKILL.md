@@ -42,10 +42,12 @@ Explore only what was confirmed.
 
 ## Exploration
 1. Start the session. If it fails, stop and report the exact error. If the server rejects the remote URL, report that and point the tester to the plugin settings. Do not try to work around it.
-2. Walk the area: main path first, then edge cases (empty fields, back navigation, rotation, invalid input, repeated taps).
-3. For anything suspicious, capture a screenshot and the steps that led there (for Artemis, the trace from `mobile_inspect_trace`).
-4. Stay inside the agreed area and limits. Stop and ask before anything irreversible.
-5. Close the session at the end.
+2. With Appium, if the app map folder is set (`${user_config.app_map_dir}`; skip this when it is empty or a literal placeholder), read `${CLAUDE_PLUGIN_ROOT}/backends/app-map.md` before you walk. Its rules apply on each screen, while that screen is still showing: after an element worked, check its locator is unique there, and keep it only if it is.
+3. Walk the area: main path first, then edge cases (empty fields, back navigation, rotation, invalid input, repeated taps).
+4. For anything suspicious, capture a screenshot and the steps that led there (for Artemis, the trace from `mobile_inspect_trace`).
+5. Stay inside the agreed area and limits. Stop and ask before anything irreversible.
+6. With maps on, write the locators you kept (used successfully and unique on their screen) to the map file and tell the tester its path.
+7. Close the session at the end.
 
 ## Report format
 The engine used, what was covered, then a list of findings: what happened, steps to get there, evidence, and whether it reproduced on a second try. Mark each finding as observed or suspected. Offer `bug-report` for confirmed findings and `run-manual-test` to turn a finding into a repeatable check.
