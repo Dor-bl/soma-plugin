@@ -30,5 +30,5 @@ The calling skill's session setup is authoritative; in short:
 ## Notes
 - Prefer accessibility id and id locators; use xpath only when nothing else works.
 - Assert from page source where possible; say when a check was judged only from a screenshot.
-- `appium_get_page_source` returns the XML inline by default. `saveToFile=true` saves it on the MCP server and returns a path and byte size; add `selector` (XPath) or `pattern` (substring) to also get summaries of the matching nodes, which are usable results (both are rejected without `saveToFile=true`). A path alone is not a result: never judge a screen from it.
+- `appium_get_page_source` returns the XML inline by default. `saveToFile=true` saves it on the MCP server and returns a path and byte size; add `selector` (XPath) or `pattern` (substring) to also get summaries of the matching nodes, which are usable results (both are rejected without `saveToFile=true`). Summaries stop at 100 nodes: if `truncated` is true, matches may be missing, so narrow the filter or read the full XML before asserting that something is absent. A path alone is not a result: never judge a screen from it.
 - Page source is large (about 37 KB for one screen), like `generate_locators`. Read the elements you need; do not paste or summarize the whole tree. Prefer `appium_find_element` for a single check.
