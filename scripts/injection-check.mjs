@@ -53,7 +53,8 @@ for (const signal of ['SIGINT', 'SIGTERM']) {
 // Blocks shell and file-writing tools: allow rules (or an accept-edits mode) inherited
 // from the tester's settings could otherwise let them run, and writes could land outside
 // the workspace before the checks see them
-const BLOCKED_TOOLS = ['Bash', ...WRITE_TOOLS];
+// Network tools too: a hostile note could otherwise send data to a URL
+const BLOCKED_TOOLS = ['Bash', ...WRITE_TOOLS, 'WebFetch', 'WebSearch'];
 const hook = join(hookDir, 'block-tools.mjs');
 writeFileSync(hook, "process.stderr.write('This tool is disabled in this check session');\nprocess.exit(2);\n");
 const HOOK_SETTINGS = JSON.stringify({
