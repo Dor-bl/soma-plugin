@@ -1,0 +1,7 @@
+SOMA - Spear of Mobile Agents
+Copyright 2026 Dor Blayzer
+
+Licensed under the Apache License, Version 2.0 (see LICENSE).
+
+SOMA bundles no third-party code. The appium-mcp server and its dependencies
+are installed from registry.npmjs.org on first start, under their own licenses.
