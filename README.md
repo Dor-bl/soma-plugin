@@ -117,7 +117,7 @@ Once SOMA is installed, try:
 
 - **Fetches** `appium-mcp` and its locked dependencies from `registry.npmjs.org`, on first start and after a pin change, into the plugin's data folder. The plugin downloads nothing else.
 - **Runs locally** `node` for the launcher and `appium-mcp`; `adb` and the Android emulator for Android; `xcrun simctl` on macOS for iOS; and the test clients you run yourself for generated scripts. Appium's drivers install their device-side agents (UiAutomator2 server, WebDriverAgent) on the emulator or simulator when a session starts, as any Appium setup does. Skills ask before installing an app or changing anything on your machine.
-- **Sends** device commands to local devices, or to the one remote server you configure. No telemetry and no other endpoints. Device-cloud credentials stay in your capabilities file and reach only that server.
+- **Sends** device commands to local devices, or to the one remote server you configure. SOMA itself opens no other connections and sends no telemetry. What the tools return (on-screen text, page source, screenshots) enters your Claude Code conversation like any tool result, so it reaches the model provider your Claude Code is configured with before the skills' redaction, which applies to reports and chat output. Device-cloud credentials stay in your capabilities file and reach only that server.
 - **Reads** on-screen text, page source and screenshots from the device during a test. The skills treat them as untrusted data, never follow instructions found in them, and redact secrets before quoting them in reports.
 
 ## ⚠️ Known limitations (v0.1)
