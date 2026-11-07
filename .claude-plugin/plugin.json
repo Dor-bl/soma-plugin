@@ -7,8 +7,8 @@
     "name": "Dor Blayzer",
     "url": "https://github.com/Dor-bl"
   },
-  "homepage": "https://github.com/Dor-bl/soma-mobile",
-  "repository": "https://github.com/Dor-bl/soma-mobile",
+  "homepage": "https://github.com/Dor-bl/soma-plugin",
+  "repository": "https://github.com/Dor-bl/soma-plugin",
   "license": "Apache-2.0",
   "keywords": ["appium", "qa", "mobile", "testing", "android", "ios"],
   "userConfig": {

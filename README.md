@@ -4,7 +4,7 @@
 
 *A Claude plugin for mobile QA testers: run manual test cases on real devices, triage failures, and write bug reports.*
 
-[![CI](https://github.com/Dor-bl/soma-mobile/actions/workflows/ci.yml/badge.svg)](https://github.com/Dor-bl/soma-mobile/actions/workflows/ci.yml)
+[![CI](https://github.com/Dor-bl/soma-plugin/actions/workflows/ci.yml/badge.svg)](https://github.com/Dor-bl/soma-plugin/actions/workflows/ci.yml)
 [![Version](https://img.shields.io/badge/version-0.1.0-blue.svg)](.claude-plugin/plugin.json)
 [![License](https://img.shields.io/badge/license-Apache%202.0-green.svg)](https://www.apache.org/licenses/LICENSE-2.0)
 [![Claude Plugin](https://img.shields.io/badge/Claude-plugin-D97757?logo=anthropic&logoColor=white)](https://docs.claude.com/en/docs/claude-code/plugins)
@@ -84,10 +84,10 @@ Without Artemis installed, SOMA behaves exactly as before. Artemis is an autonom
 In Claude Code 2.1.275 or newer:
 
 ```text
-/plugin install soma --marketplace Dor-bl/soma-mobile
+/plugin install soma --marketplace Dor-bl/soma-plugin
 ```
 
-Or in two steps: `/plugin marketplace add Dor-bl/soma-mobile`, then `/plugin install soma@soma-mobile`. To pick up a new version later, run `/plugin marketplace update soma-mobile`.
+Or in two steps: `/plugin marketplace add Dor-bl/soma-plugin`, then `/plugin install soma@soma-plugin`. To pick up a new version later, run `/plugin marketplace update soma-plugin`.
 
 > [!IMPORTANT]
 > The first start installs `appium-mcp` and its locked dependencies (about 370 MB) from `registry.npmjs.org`, which can take minutes. Claude Code waits 30 seconds for an MCP server, so `appium-mcp` may show as *failed to connect* at first. The install keeps running in the background: reconnect with `/mcp` once it has finished, or run `/soma:setup` first and let it install the server before your first test.
@@ -97,8 +97,8 @@ Or in two steps: `/plugin marketplace add Dor-bl/soma-mobile`, then `/plugin ins
 To try a checkout without installing it, start Claude from the folder *above* the clone (inside it, `.mcp.json` loads as a project server and cannot start):
 
 ```bash
-claude plugin validate ./soma-mobile
-claude --plugin-dir ./soma-mobile
+claude plugin validate ./soma-plugin
+claude --plugin-dir ./soma-plugin
 ```
 
 ## 🏁 Quick start
