@@ -359,6 +359,19 @@ const env = {
   REMOTE_SERVER_URL_ALLOW_REGEX: allowRegexFor(process.env.SOMA_REMOTE_SERVER_URL),
 };
 delete env.SOMA_REMOTE_SERVER_URL;
+// Screenshots and saved page sources go to the OS temp folder unless these are set, where
+// other local users can read screenshots on a shared host. Default to private folders in
+// the data dir; a value the tester set is kept.
+for (const [name, folder] of [['SCREENSHOTS_DIR', 'screenshots'], ['PAGE_SOURCES_DIR', 'page-sources']]) {
+  if (env[name]) continue;
+  const dir = join(dataDir, folder);
+  try {
+    mkdirSync(dir, { recursive: true, mode: 0o700 });
+    env[name] = dir;
+  } catch (err) {
+    log(`could not create ${dir}; ${folder} go to the temp folder: ${err.message}`);
+  }
+}
 delete env.SOMA_DATA_DIR;
 
 // Run the entry point with this same node, so no shell is involved on any platform.
