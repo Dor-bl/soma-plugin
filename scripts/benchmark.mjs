@@ -80,6 +80,10 @@ const adbOrFail = (args) => {
 };
 const devices = (adb('devices').stdout ?? '').split('\n').slice(1).filter((l) => /\tdevice$/.test(l.trim()));
 if (devices.length !== 1) fail(`need exactly one running device for adb, found ${devices.length}`);
+// The runs change settings and force-stop apps, so a physical phone is refused even when it
+// is the only device attached: emulator serials always look like emulator-5554
+const serial = devices[0].trim().split('\t')[0];
+if (!/^emulator-\d+$/.test(serial)) fail(`${serial} is not an emulator. The benchmark changes device settings, so it only runs on an emulator.`);
 
 // A locked or sleeping device makes every run fail the same way and say nothing about either
 // arm: the reset step shortens the screen timeout, and a device with a PIN then locks.
@@ -112,7 +116,7 @@ const stamp = new Date().toISOString().replace(/[:.]/g, '-');
 function writeReports() {
   const models = [...new Set(results.map((r) => r.model).filter(Boolean))];
   const table = toMarkdown(summarise(results));
-  writeFileSync(join(outDir, `${stamp}.json`), JSON.stringify({ date: stamp, models, runsPerCell: runs, adbDevice: devices[0], appiumMcp: appiumMcpVersion(), results }, null, 2));
+  writeFileSync(join(outDir, `${stamp}.json`), JSON.stringify({ date: stamp, models, runsPerCell: runs, adbDevice: serial, appiumMcp: appiumMcpVersion(), results }, null, 2));
   writeFileSync(join(outDir, `${stamp}.md`), `Model: ${models.join(', ') || 'unknown'}; runs per task and arm: ${runs}\n\n${table}\n`);
   return table;
 }
