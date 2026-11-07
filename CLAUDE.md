@@ -11,6 +11,7 @@ SOMA is a Claude Code plugin for mobile QA, built on the official [`appium-mcp`]
 - `commands/*.md`: slash commands (`/soma:<file>`), each a one-line hand-off to a skill
 - `backends/`: one file per device engine (Appium default, optional Google Artemis). Skills say *what* to do; these files say *which tools* do it. Selection rules are in `backends/README.md`
 - `scripts/`: the launcher (`start-appium-mcp.mjs`, `allowlist.mjs`), the emulator starter (`start-emulator.mjs`), CI checks (`check-plugin.mjs`, `mcp-smoke.mjs`, with its Windows cleanup in `process-tree.mjs`) and their unit tests (`test-*.mjs`)
+- `benchmarks/`: tasks and method for the token benchmark (plain Claude Code vs SOMA on the Android Settings app); `scripts/benchmark.mjs` runs it, `benchmark-stats.mjs` holds the tested parsing and summary
 
 ## Checks (same as CI)
 
@@ -22,13 +23,14 @@ node scripts/test-process-tree.mjs    # Windows process-tree cleanup
 node scripts/test-child-env.mjs       # credential-looking env vars stay out of appium-mcp
 node scripts/test-triage-command.mjs  # /soma:triage command contract
 node scripts/test-injection-match.mjs # injection-check reply and shell matching
+node scripts/test-benchmark-stats.mjs # benchmark run parsing and summary
 npx markdownlint-cli2 "**/*.md"
 node scripts/mcp-smoke.mjs           # first run installs ~370 MB; SMOKE_TIMEOUT_MS overrides, CLAUDE_PLUGIN_DATA sets the install folder
 ```
 
 CI also runs a link check (lychee) on all Markdown, so links must resolve.
 
-Not in CI: `node scripts/injection-check.mjs` runs live Claude Code sessions (needs the `claude` CLI, logged in, and uses model calls) to check that `run-test`, `gen-test` and `bug` ignore and flag instructions hidden in a test-case file. Run it after changing `commands/` or a skill's untrusted-content rules. It fails only on what the session did (canary created, blocked tools used, files written); its checks on the reply's wording only warn, so read any reply it prints with a ⚠.
+Not in CI: `node scripts/injection-check.mjs` runs live Claude Code sessions (needs the `claude` CLI, logged in, and uses model calls) to check that `run-test`, `gen-test` and `bug` ignore and flag instructions hidden in a test-case file. Run it after changing `commands/` or a skill's untrusted-content rules. `node scripts/benchmark.mjs` is also live-only (emulator, `adb`, model calls); see `benchmarks/README.md`. It fails only on what the session did (canary created, blocked tools used, files written); its checks on the reply's wording only warn, so read any reply it prints with a ⚠.
 
 ## Running appium-mcp while working in this repo
 

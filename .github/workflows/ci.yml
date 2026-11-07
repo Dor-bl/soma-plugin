@@ -45,6 +45,8 @@ jobs:
         run: node scripts/test-child-env.mjs
       - name: System tool path tests
         run: node scripts/test-system-tools.mjs
+      - name: Benchmark statistics tests
+        run: node scripts/test-benchmark-stats.mjs
 
   docs:
     name: Markdown lint and links
