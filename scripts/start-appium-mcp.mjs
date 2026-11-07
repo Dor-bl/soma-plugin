@@ -7,7 +7,7 @@
 // compromised transitive release cannot be picked up silently.
 import { spawn, spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
-import { closeSync, copyFileSync, existsSync, mkdirSync, openSync, readdirSync, readFileSync, renameSync, rmSync, statSync, writeFileSync } from 'node:fs';
+import { chmodSync, closeSync, copyFileSync, existsSync, lstatSync, mkdirSync, openSync, readdirSync, readFileSync, renameSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { basename, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { allowRegexFor } from './allowlist.mjs';
@@ -366,10 +366,13 @@ for (const [name, folder] of [['SCREENSHOTS_DIR', 'screenshots'], ['PAGE_SOURCES
   if (env[name]) continue;
   const dir = join(dataDir, folder);
   try {
+    // mkdir leaves an existing folder's mode alone and follows a symlink, so check both
     mkdirSync(dir, { recursive: true, mode: 0o700 });
+    if (lstatSync(dir).isSymbolicLink()) throw new Error('is a symbolic link');
+    if (process.platform !== 'win32') chmodSync(dir, 0o700);
     env[name] = dir;
   } catch (err) {
-    log(`could not create ${dir}; ${folder} go to the temp folder: ${err.message}`);
+    log(`not using ${dir} for ${folder} (${err.message}); appium-mcp saves them in the temp folder instead`);
   }
 }
 delete env.SOMA_DATA_DIR;
