@@ -12,7 +12,7 @@ Server: `appium-mcp`, bundled in `.mcp.json`. Platforms: Android and iOS. Claude
 | Tap, swipe, scroll | `appium_gesture` (`action=scroll_to_element` for off-screen elements) |
 | Type text | `appium_set_value` |
 | Read the screen | `appium_get_page_source` (assertions), `appium_get_text` |
-| Screenshot | `appium_screenshot` with `maxWidth` (about 400 for a check, 720 for evidence). It saves a PNG and returns its path: look at it with the Read tool on that path, and quote that path as the evidence reference. Never rebuild an image from this session's own saved tool results |
+| Screenshot | `appium_screenshot` with `maxWidth` (about 400 for a check, 720 for evidence). It saves a PNG and returns its path: look at it with the Read tool on that path, and quote the full path exactly as returned (folder and extension included) as the evidence reference. Never rebuild an image from this session's own saved tool results |
 | App install / launch / stop | `appium_app_lifecycle` |
 | Pick a local iOS simulator (macOS only) | `select_device` with `platform: ios`, `iosDeviceType: simulator`, `deviceUdid`. It does not show iOS versions; list those with `xcrun simctl list devices available` |
 | Prepare an iOS simulator (macOS only) | `prepare_ios_simulator` with the `udid`. It returns `wdaAppPath` and a `capabilitiesHint` with `appium:webDriverAgentUrl`. Forced WDA refresh: `forceRefreshWda: true` (re-downloads only; it does not reinstall WDA already on the simulator) |

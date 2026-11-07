@@ -47,8 +47,8 @@ Execute only what was confirmed.
 ## Execution
 1. Start the session as the engine's file describes (Appium: the appium-mcp session management tool).
 2. With Appium, if the app map folder is set (`${user_config.app_map_dir}`) and a map exists for this app, try its locators first, following `${CLAUDE_PLUGIN_ROOT}/backends/app-map.md`. Verify every hit on screen and fall back to a normal lookup on a miss. Skip this when the setting is empty or a literal placeholder.
-3. For each step, in order: perform it, then verify the expected result from structured screen state (an element attribute, or page source saved to a file and queried with a selector). Take a screenshot when the expected result is visual (colors, layout), and on every FAIL, on the failing screen before navigating away.
-4. Record per step: PASS, FAIL or BLOCKED, what was observed, and for any FAIL the saved path of its screenshot.
+3. For each step, in order: perform it, then verify the expected result from structured screen state (an element attribute, or page source saved to a file and queried with a selector). Take one screenshot when the expected result is visual (colors, layout), and one on every FAIL, on the failing screen before navigating away. Confirm that a tap landed from page source or an element attribute, not by taking another screenshot.
+4. Record per step: PASS, FAIL or BLOCKED, what was observed, and for any FAIL the saved path of its screenshot, quoted in full as the tool returned it.
 5. On the first FAIL, stop executing dependent steps and mark them BLOCKED. Continue only independent steps.
 6. Run the confirmed Cleanup section after the steps, also after a FAIL, unless a failed step makes it impossible; say what was restored.
 7. Always close the session at the end, even after a failure.
