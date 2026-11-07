@@ -1,0 +1,14 @@
+version: 2
+updates:
+  # Actions are pinned to commit SHAs; this proposes the bumps
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+  # appium-mcp and its lockfile. The launcher reads the pin from runtime/package.json, but a
+  # bump must also update the appium-mcp@<version> mentions in the README and skills
+  # (check-plugin.mjs fails otherwise), so expect to touch those in the PR.
+  - package-ecosystem: npm
+    directory: /runtime
+    schedule:
+      interval: weekly

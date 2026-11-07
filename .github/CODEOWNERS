@@ -1,0 +1,6 @@
+# Files that decide what runs on a tester's machine or in CI need an owner's review
+/.github/ @Dor-bl
+/.mcp.json @Dor-bl
+/.claude-plugin/ @Dor-bl
+/scripts/ @Dor-bl
+/runtime/ @Dor-bl
