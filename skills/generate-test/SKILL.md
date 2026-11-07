@@ -47,7 +47,7 @@ Execute only what was confirmed.
 2. If the app map folder is set (`${user_config.app_map_dir}`; skip this when it is empty or a literal placeholder) and a map exists for this app, try its locators first, following `${CLAUDE_PLUGIN_ROOT}/backends/app-map.md`. Verify every hit on screen and fall back to a normal lookup on a miss. Put a locator in the generated test only if it worked in this session. Never copy a map entry you did not use.
 3. For a step without a verified map hit, find its element with `appium_find_element`. Call `generate_locators` (optional `sessionId`, defaults to the active session) only on a new screen or when no stable locator is obvious. Its output is large (tens of KB per screen), so pick out the elements you need instead of reading all of it.
 4. Pick locators in this order: accessibility id, then id, then platform-native (`-ios predicate string` / `-ios class chain`, `-android uiautomator`). Use xpath only as a last resort and mark it in the code with a comment.
-5. Write the test from the interactions actually observed, then adapt it to the repo: test folder and file naming, existing page objects (add locators there instead of inlining), capabilities/config helpers, base classes, assertion and wait styles. Use explicit waits, never fixed sleeps.
+5. Write the test from the interactions actually observed, then adapt it to the repo: test folder and file naming, existing page objects (add locators there only if the file is inside the existing test folder; otherwise inline them), capabilities/config helpers, base classes, assertion and wait styles. Use explicit waits, never fixed sleeps.
 6. Close the session at the end if this skill created it.
 
 ## Output
