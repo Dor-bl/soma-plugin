@@ -11,6 +11,8 @@ import { closeSync, copyFileSync, existsSync, mkdirSync, openSync, readdirSync, 
 import { basename, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { allowRegexFor } from './allowlist.mjs';
+import { childEnv } from './child-env.mjs';
+import { POWERSHELL, TASKKILL } from './system-tools.mjs';
 
 const runtimeDir = fileURLToPath(new URL('../runtime/', import.meta.url));
 const manifest = JSON.parse(readFileSync(join(runtimeDir, 'package.json'), 'utf8'));
@@ -147,7 +149,7 @@ function isReusedPid(name) {
 function startedAt(pid) {
   if (!Number.isInteger(pid) || pid <= 0) return NaN;
   const run = process.platform === 'win32'
-    ? spawnSync('powershell', ['-NoProfile', '-NonInteractive', '-Command', `(Get-Process -Id ${pid}).StartTime.ToUniversalTime().ToString('o')`], { encoding: 'utf8', windowsHide: true })
+    ? spawnSync(POWERSHELL, ['-NoProfile', '-NonInteractive', '-Command', `(Get-Process -Id ${pid}).StartTime.ToUniversalTime().ToString('o')`], { encoding: 'utf8', windowsHide: true })
     : spawnSync('ps', ['-o', 'lstart=', '-p', String(pid)], { encoding: 'utf8', env: { ...process.env, LC_ALL: 'C' } });
   return Date.parse(run.stdout?.trim() ?? '');
 }
@@ -246,7 +248,7 @@ async function install() {
 function killTree(pid, isWindows, signal = 'SIGTERM') {
   if (!pid) return;
   try {
-    if (isWindows) spawnSync('taskkill', ['/pid', String(pid), '/T', '/F'], { stdio: 'ignore', windowsHide: true });
+    if (isWindows) spawnSync(TASKKILL, ['/pid', String(pid), '/T', '/F'], { stdio: 'ignore', windowsHide: true });
     else process.kill(-pid, signal);
   } catch {
     // already gone
@@ -353,7 +355,7 @@ function isRunning(pid) {
 }
 
 const env = {
-  ...process.env,
+  ...childEnv(process.env),
   REMOTE_SERVER_URL_ALLOW_REGEX: allowRegexFor(process.env.SOMA_REMOTE_SERVER_URL),
 };
 delete env.SOMA_REMOTE_SERVER_URL;

@@ -41,6 +41,8 @@ jobs:
         run: node scripts/test-triage-command.mjs
       - name: Injection-check matching tests
         run: node scripts/test-injection-match.mjs
+      - name: Child environment filter tests
+        run: node scripts/test-child-env.mjs
 
   docs:
     name: Markdown lint and links

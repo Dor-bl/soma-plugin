@@ -76,6 +76,12 @@ if (!pinned || !/^\d+\.\d+\.\d+$/.test(pinned)) {
     ([k, v]) => k && !v.link && !v.integrity && !v.inBundle && !/^git\+[^#]+#[0-9a-f]{40}$/.test(v.resolved ?? ''),
   );
   if (unpinned.length) fail(`runtime/package-lock.json: not pinned by hash or commit: ${unpinned.map(([k]) => k).join(', ')}`);
+  // A lockfile edit must not quietly point a package at another host; git dependencies are
+  // already pinned to a commit above
+  const offRegistry = Object.entries(lock.packages ?? {}).filter(
+    ([k, v]) => k && v.resolved && !v.resolved.startsWith('https://registry.npmjs.org/') && !/^git+[^#]+#[0-9a-f]{40}$/.test(v.resolved),
+  );
+  if (offRegistry.length) fail(`runtime/package-lock.json: resolved outside registry.npmjs.org: ${offRegistry.map(([k]) => k).join(', ')}`);
   const docs = ['README.md', ...readdirSync(join(root, 'skills')).map((d) => `skills/${d}/SKILL.md`)];
   for (const p of docs.filter((p) => existsSync(join(root, p)))) {
     for (const m of read(p).matchAll(/appium-mcp@([\w.-]+)/g)) {
