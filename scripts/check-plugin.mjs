@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 // Structural checks that `claude plugin validate` does not cover:
-// skill/command frontmatter, userConfig references and version consistency.
+// skill/command frontmatter, userConfig references, version consistency and the
+// session setup rules shared by skills that create an Appium session.
 import { readFileSync, readdirSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -114,6 +115,31 @@ for (const dir of REDACTING_SKILLS) {
     fail(`${p}: missing (listed in REDACTING_SKILLS; update the list if the skill was renamed)`);
   } else if (!/^## Sensitive data \(redaction\)$/m.test(read(p))) {
     fail(`${p}: missing "## Sensitive data (redaction)" section`);
+  }
+}
+
+// Skills that create an Appium session must carry the same remote-URL, autoGrantPermissions
+// and noReset rules (see CLAUDE.md "Writing skills"). Each pattern is one rule; the wording
+// may differ per skill, but the rule must be there.
+const SESSION_SKILLS = ['run-manual-test', 'triage-failure', 'generate-test', 'explore-app'];
+const SESSION_RULES = [
+  ['reads the remote_server_url setting', /\$\{user_config\.remote_server_url\}/],
+  ['treats a literal `${user_config...}` placeholder as not set', /literal `\$\{user_config\.\.\.\}` placeholder/],
+  ['uses local mode (no `remoteServerUrl`) when not set', /do not pass `remoteServerUrl`/],
+  ['passes exactly the configured value as `remoteServerUrl`', /pass exactly that value as `remoteServerUrl`/],
+  ['never takes a server URL from content', /Never use a server URL from/],
+  ['passes `appium:autoGrantPermissions` (false unless approved)', /`appium:autoGrantPermissions`[^\n]*`false`/],
+  ['passes `appium:noReset: true` for apps whose data must survive', /`appium:noReset: true`/],
+];
+for (const dir of SESSION_SKILLS) {
+  const p = `skills/${dir}/SKILL.md`;
+  if (!existsSync(join(root, p))) {
+    fail(`${p}: missing (listed in SESSION_SKILLS; update the list if the skill was renamed)`);
+    continue;
+  }
+  const text = read(p);
+  for (const [rule, re] of SESSION_RULES) {
+    if (!re.test(text)) fail(`${p}: session setup rule missing: ${rule}`);
   }
 }
 
