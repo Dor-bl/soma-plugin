@@ -11,7 +11,7 @@
 // task through /soma:run-test; "plain" sends it as a bare prompt. Each run starts from a reset
 // device state, and the outcome is checked with adb, not by trusting the reply.
 import { spawn, spawnSync } from 'node:child_process';
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
 import { homedir, tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -37,6 +37,8 @@ const dryRun = process.argv.includes('--dry-run');
 const tasks = taskIds.map((id) => allTasks.find((t) => t.id === id) ?? fail(`unknown task: ${id}`));
 for (const arm of arms) if (!['plain', 'soma'].includes(arm)) fail(`unknown arm: ${arm}`);
 if (!Number.isInteger(runs) || runs < 1) fail('--runs must be a positive integer');
+// Node turns a NaN, negative or over-2^31 timer delay into 1 ms, which would kill every run at once
+if (!Number.isFinite(timeoutMs) || timeoutMs <= 0 || timeoutMs > 2 ** 31 - 1) fail('--timeout-min must be a positive number of minutes (at most 35791)');
 
 // The plugin's own placeholders stay unsubstituted when it is loaded with --plugin-dir, and
 // skills read that as local mode; the server comes from --mcp-config instead
@@ -105,6 +107,15 @@ for (const signal of ['SIGINT', 'SIGTERM']) {
 
 mkdirSync(outDir, { recursive: true });
 const results = [];
+const stamp = new Date().toISOString().replace(/[:.]/g, '-');
+// Written after every run, so an interrupted benchmark keeps the runs it already paid for
+function writeReports() {
+  const models = [...new Set(results.map((r) => r.model).filter(Boolean))];
+  const table = toMarkdown(summarise(results));
+  writeFileSync(join(outDir, `${stamp}.json`), JSON.stringify({ date: stamp, models, runsPerCell: runs, adbDevice: devices[0], appiumMcp: appiumMcpVersion(), results }, null, 2));
+  writeFileSync(join(outDir, `${stamp}.md`), `Model: ${models.join(', ') || 'unknown'}; runs per task and arm: ${runs}\n\n${table}\n`);
+  return table;
+}
 // Interleaved, so drift (a warming emulator, a busy machine) hits both arms alike
 for (let n = 1; n <= runs; n++) {
   for (const task of tasks) {
@@ -116,12 +127,15 @@ for (let n = 1; n <= runs; n++) {
       // force-stop ends the task but keeps the app's data (unlike pm clear)
       adbOrFail(`shell am force-stop ${app.package}`);
       adbOrFail('shell input keyevent KEYCODE_HOME');
-      const cwd = (workspace = mkdtempSync(join(tmpdir(), 'soma-bench-')));
+      // Resolved: the child sees the real path (macOS /var is /private/var) and saved results are keyed by it
+      const cwd = (workspace = realpathSync(mkdtempSync(join(tmpdir(), 'soma-bench-'))));
       const saved = savedResultsDir(cwd);
       mkdirSync(saved, { recursive: true });
       const args = [
         '-p', promptFor(arm, task),
         '--strict-mcp-config', '--mcp-config', mcpConfig,
+        // Skip the caller's user settings, so a SOMA already enabled there cannot leak into the plain arm
+        '--setting-sources', 'project,local',
         '--allowedTools', ...ALLOWED,
         '--add-dir', saved,
         '--output-format', 'stream-json', '--verbose',
@@ -138,16 +152,13 @@ for (let n = 1; n <= runs; n++) {
       const check = verify(task, m.reply);
       const passed = !run.error && !m.isError && check.ok;
       results.push({ task: task.id, arm, run: n, passed, checkError: check.error ?? null, ...m, wallSec: (Date.now() - started) / 1000, error: run.error?.message ?? null });
+      writeReports();
       console.log(`${passed ? '✔' : '✘'}${check.error ? ' (adb check failed: ' + check.error + ')' : ''} run ${n} ${task.id} [${arm}]: ${m.total == null ? 'no usage reported' : m.total.toLocaleString('en-US') + ' tokens'}, ${m.toolCalls} tool calls, ${m.durationSec?.toFixed(0) ?? '?'} s${run.error ? ` (${run.error.message})` : ''}`);
     }
   }
 }
 
-const stamp = new Date().toISOString().replace(/[:.]/g, '-');
-const models = [...new Set(results.map((r) => r.model).filter(Boolean))];
-const table = toMarkdown(summarise(results));
-writeFileSync(join(outDir, `${stamp}.json`), JSON.stringify({ date: stamp, models, runsPerCell: runs, adbDevice: devices[0], appiumMcp: appiumMcpVersion(), results }, null, 2));
-writeFileSync(join(outDir, `${stamp}.md`), `Model: ${models.join(', ') || 'unknown'}; runs per task and arm: ${runs}\n\n${table}\n`);
+const table = writeReports();
 console.log(`\n${table}\n\nSaved to ${join(outDir, stamp)}.{json,md}`);
 
 // The outcome as the device and the reply show it, never the reply alone for state changes
