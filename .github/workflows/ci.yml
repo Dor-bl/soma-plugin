@@ -43,6 +43,8 @@ jobs:
         run: node scripts/test-injection-match.mjs
       - name: Child environment filter tests
         run: node scripts/test-child-env.mjs
+      - name: System tool path tests
+        run: node scripts/test-system-tools.mjs
 
   docs:
     name: Markdown lint and links
