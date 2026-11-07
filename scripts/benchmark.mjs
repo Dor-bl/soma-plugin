@@ -13,7 +13,7 @@
 import { spawn, spawnSync } from 'node:child_process';
 import { mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
 import { homedir, tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { measure, parseEvents, summarise, toMarkdown } from './benchmark-stats.mjs';
 
@@ -43,8 +43,12 @@ if (!Number.isFinite(timeoutMs) || timeoutMs <= 0 || timeoutMs > 2 ** 31 - 1) fa
 // The plugin's own placeholders stay unsubstituted when it is loaded with --plugin-dir, and
 // skills read that as local mode; the server comes from --mcp-config instead
 const launcher = join(root, 'scripts', 'start-appium-mcp.mjs');
+// Resolved here: each run's child starts in its own temporary folder, so a relative
+// CLAUDE_PLUGIN_DATA (".runtime", as the README's warm-up uses) would install a fresh
+// server per run instead of reusing the warmed one
+const dataDir = process.env.CLAUDE_PLUGIN_DATA ? resolve(process.env.CLAUDE_PLUGIN_DATA) : join(root, '.runtime');
 const mcpConfig = JSON.stringify({
-  mcpServers: { 'appium-mcp': { command: 'node', args: [launcher], env: { SOMA_DATA_DIR: process.env.CLAUDE_PLUGIN_DATA ?? join(root, '.runtime') } } },
+  mcpServers: { 'appium-mcp': { command: 'node', args: [launcher], env: { SOMA_DATA_DIR: dataDir } } },
 });
 // The same for both arms. Bash is open because SOMA's skills may call adb or aapt; the plain
 // arm gets the same freedom, and any use of it is counted in tool calls.

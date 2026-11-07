@@ -13,6 +13,7 @@ import { existsSync, mkdtempSync, openSync, readFileSync } from 'node:fs';
 import { createServer } from 'node:net';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { POWERSHELL } from './system-tools.mjs';
 
 const isWindows = process.platform === 'win32';
 const sdk = process.env.ANDROID_HOME ?? process.env.ANDROID_SDK_ROOT;
@@ -81,7 +82,7 @@ function adbEmulators(strict = false) {
 // can't be read yet. null if the process list can't be read.
 function avdProcessRunning(name) {
   const listing = isWindows
-    ? exec('powershell', ['-NoProfile', '-Command',
+    ? exec(POWERSHELL, ['-NoProfile', '-Command',
         "Get-CimInstance Win32_Process -Filter \"Name like 'emulator%' or Name like 'qemu-system%'\" | ForEach-Object { $_.CommandLine }"])
     : exec('ps', ['-A', '-o', 'args=']);
   if (!listing.ok) return null;

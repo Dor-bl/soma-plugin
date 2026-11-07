@@ -32,19 +32,23 @@ SOMA wraps the official [`appium-mcp`](https://github.com/appium/appium-mcp) ser
 | Type | Name | Description |
 |------|------|-------------|
 | 🧠 Skill | `check-setup` | Verify your local environment (Node, SDKs, devices) is ready |
+| 🧠 Skill | `setup-artemis` | Install the optional Google Artemis engine for this project only, step by step |
 | 🧠 Skill | `start-device` | Start an Android emulator or iOS simulator, wait for a full boot, and diagnose crashes |
 | 🧠 Skill | `run-manual-test` | Execute a manual test case step by step on a device |
 | 🧠 Skill | `triage-failure` | Investigate a failed step and pinpoint the likely cause |
 | 🧠 Skill | `bug-report` | Draft a structured bug report from a failure or observation |
 | 🧠 Skill | `generate-test` | Turn a manual test case into an automated Appium test script |
 | 🧠 Skill | `explore-app` | Exploratory testing of an app area; reports suspected issues with evidence |
+| 🧠 Skill | `write-test-case` | Draft a manual test case from a feature, user story or bug report, ready for `run-manual-test` |
 | ⚡ Command | `/soma:setup [focus]` | Check your environment is ready and explain how to fix what is missing |
+| ⚡ Command | `/soma:setup-artemis [folder]` | Install the optional Artemis engine for this project, asking before each step |
 | ⚡ Command | `/soma:device [avd or simulator name]` | Start an emulator or simulator and wait until it is ready |
 | ⚡ Command | `/soma:run-test [platform] [steps or path]` | Run a manual test case through Appium |
 | ⚡ Command | `/soma:bug [what you saw]` | Draft a bug report |
 | ⚡ Command | `/soma:gen-test [framework] [steps or path]` | Generate an automated test from a manual test case |
 | ⚡ Command | `/soma:explore [platform] [area]` | Explore an app area and report suspected issues |
 | ⚡ Command | `/soma:triage [failure log or path]` | Triage a failed test run and suggest next steps |
+| ⚡ Command | `/soma:test-case [feature, story, bug or path]` | Draft a manual test case to run with `/soma:run-test` |
 
 **Under the hood**
 
@@ -52,6 +56,7 @@ SOMA wraps the official [`appium-mcp`](https://github.com/appium/appium-mcp) ser
 - 📱 `scripts/start-emulator.mjs`: used by `start-device` to start an emulator detached and watch it boot
 - ⚙️ `remote_server_url` setting: leave empty for local, or point it at a remote Appium/WebDriver server or device cloud. Only that exact URL is allowed, and only if it's `https://` (plain `http://` for localhost only) with no embedded credentials. When it's empty, all remote servers are blocked
 - 🔑 `capabilities_file` setting (optional): a `capabilities.json` read from disk by `appium-mcp`. Put device-cloud credentials here instead of in the URL or the chat. Only `check-setup` reads it, after you approve the command, to check that it exists and is valid JSON without printing it; the other skills are told never to open it. Claude's file tools could still read it, so keep it out of the project folder and out of version control
+- 🗺️ `app_map_dir` setting (optional): a folder where `explore-app` saves the locators it found per app and `run-manual-test` and `generate-test` reuse them to skip repeat lookups; `triage-failure` reads them only as evidence of a changed locator (Appium only). Empty means off. Maps hold element names and locators, never typed or on-screen user data. Format and rules: [`backends/app-map.md`](backends/app-map.md)
 - 🧩 Engines: skills describe *what* to do; [`backends/`](backends/README.md) describes *how* each engine does it
 
 ## 🧩 Engines
@@ -94,6 +99,7 @@ Then try:
 /soma:bug "Checkout button does nothing after adding a coupon"
 /soma:triage "Login test failed: NoSuchElementException on #submit after the 4.2 build"
 /soma:explore android "checkout with a coupon code"
+/soma:test-case "Users can apply one coupon code per order at checkout"
 ```
 
 ## ⚠️ Known limitations (v0.1)

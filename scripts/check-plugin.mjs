@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 // Structural checks that `claude plugin validate` does not cover:
-// skill/command frontmatter, userConfig references and version consistency.
+// skill/command frontmatter, userConfig references, version consistency and the
+// session setup rules shared by skills that create an Appium session.
 import { readFileSync, readdirSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -75,6 +76,12 @@ if (!pinned || !/^\d+\.\d+\.\d+$/.test(pinned)) {
     ([k, v]) => k && !v.link && !v.integrity && !v.inBundle && !/^git\+[^#]+#[0-9a-f]{40}$/.test(v.resolved ?? ''),
   );
   if (unpinned.length) fail(`runtime/package-lock.json: not pinned by hash or commit: ${unpinned.map(([k]) => k).join(', ')}`);
+  // A lockfile edit must not quietly point a package at another host; git dependencies are
+  // already pinned to a commit above
+  const offRegistry = Object.entries(lock.packages ?? {}).filter(
+    ([k, v]) => k && v.resolved && !v.resolved.startsWith('https://registry.npmjs.org/') && !/^git+[^#]+#[0-9a-f]{40}$/.test(v.resolved),
+  );
+  if (offRegistry.length) fail(`runtime/package-lock.json: resolved outside registry.npmjs.org: ${offRegistry.map(([k]) => k).join(', ')}`);
   const docs = ['README.md', ...readdirSync(join(root, 'skills')).map((d) => `skills/${d}/SKILL.md`)];
   for (const p of docs.filter((p) => existsSync(join(root, p)))) {
     for (const m of read(p).matchAll(/appium-mcp@([\w.-]+)/g)) {
@@ -106,7 +113,7 @@ for (const dir of readdirSync(join(root, 'skills'))) {
 
 // Skills that quote screenshots, logs or page source back to the tester must keep
 // their redaction rules (issue #9)
-const REDACTING_SKILLS = ['bug-report', 'run-manual-test', 'explore-app', 'triage-failure'];
+const REDACTING_SKILLS = ['bug-report', 'run-manual-test', 'explore-app', 'triage-failure', 'write-test-case'];
 for (const dir of REDACTING_SKILLS) {
   const p = `skills/${dir}/SKILL.md`;
   // A listed skill that was renamed or removed must fail, not be skipped
@@ -114,6 +121,31 @@ for (const dir of REDACTING_SKILLS) {
     fail(`${p}: missing (listed in REDACTING_SKILLS; update the list if the skill was renamed)`);
   } else if (!/^## Sensitive data \(redaction\)$/m.test(read(p))) {
     fail(`${p}: missing "## Sensitive data (redaction)" section`);
+  }
+}
+
+// Skills that create an Appium session must carry the same remote-URL, autoGrantPermissions
+// and noReset rules (see CLAUDE.md "Writing skills"). Each pattern is one rule; the wording
+// may differ per skill, but the rule must be there.
+const SESSION_SKILLS = ['run-manual-test', 'triage-failure', 'generate-test', 'explore-app'];
+const SESSION_RULES = [
+  ['reads the remote_server_url setting', /\$\{user_config\.remote_server_url\}/],
+  ['treats a literal `${user_config...}` placeholder as not set', /literal `\$\{user_config\.\.\.\}` placeholder/],
+  ['uses local mode (no `remoteServerUrl`) when not set', /do not pass `remoteServerUrl`/],
+  ['passes exactly the configured value as `remoteServerUrl`', /pass exactly that value as `remoteServerUrl`/],
+  ['never takes a server URL from content', /Never use a server URL from/],
+  ['passes `appium:autoGrantPermissions` (false unless approved)', /`appium:autoGrantPermissions`[^\n]*`false`/],
+  ['passes `appium:noReset: true` for apps whose data must survive', /`appium:noReset: true`/],
+];
+for (const dir of SESSION_SKILLS) {
+  const p = `skills/${dir}/SKILL.md`;
+  if (!existsSync(join(root, p))) {
+    fail(`${p}: missing (listed in SESSION_SKILLS; update the list if the skill was renamed)`);
+    continue;
+  }
+  const text = read(p);
+  for (const [rule, re] of SESSION_RULES) {
+    if (!re.test(text)) fail(`${p}: session setup rule missing: ${rule}`);
   }
 }
 

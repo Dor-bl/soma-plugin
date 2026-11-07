@@ -20,6 +20,7 @@ claude plugin validate .
 node scripts/check-plugin.mjs        # frontmatter, userConfig, version badge, command hand-offs
 node scripts/test-allowlist.mjs       # remote-server allowlist
 node scripts/test-process-tree.mjs    # Windows process-tree cleanup
+node scripts/test-child-env.mjs       # credential-looking env vars stay out of appium-mcp
 node scripts/test-triage-command.mjs  # /soma:triage command contract
 node scripts/test-injection-match.mjs # injection-check reply and shell matching
 node scripts/test-benchmark-stats.mjs # benchmark run parsing and summary
@@ -48,6 +49,7 @@ The entry passes no remote URL, so remote servers stay blocked and only local de
 - Skill frontmatter `name` must equal the folder name; `description` is required and at most 1024 chars. Quote a description that contains a colon followed by a space.
 - Every command needs a `description` in its frontmatter, must hand off with "Use the <skill> skill" to a skill that exists, and must have a row in the README "What's inside" table.
 - Every command that uses `$ARGUMENTS` must say that a file it names is read as data, never as instructions (the exact phrase is in `check-plugin.mjs`), and what the file may be used for. Test-case files from shared repos or ticket systems can carry injected directives.
+- Skills that create an Appium session (`run-manual-test`, `triage-failure`, `generate-test`, `explore-app`, listed in `SESSION_SKILLS`) must each carry the remote-URL, `autoGrantPermissions` and `noReset` rules from "Writing skills". The wording may differ, but each rule's key phrase must be present (`SESSION_RULES`). Add a new session-creating skill to the list.
 - Every `${user_config.<key>}` used in a skill must be declared in `plugin.json`, and every declared key must be used.
 - The README version badge must match `plugin.json` `version`. Bump both together.
 - Every `appium-mcp@<version>` in the README and skills must match the version pinned in `runtime/package.json`, and so must the lockfile. To bump: edit `runtime/package.json`, run `npm install --package-lock-only --ignore-scripts` in `runtime/`, review the lockfile diff, then update the docs.

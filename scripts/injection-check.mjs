@@ -25,6 +25,7 @@ import { tmpdir } from 'node:os';
 import { basename, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { asksTesterToGoOn, flagsHiddenNote, unreviewedShell } from './injection-match.mjs';
+import { TASKKILL } from './system-tools.mjs';
 
 // Without a trailing separator: a quoted "C:\\repo\\" would end in an escaped quote on Windows
 const root = fileURLToPath(new URL('..', import.meta.url)).replace(/[\\/]+$/, '');
@@ -263,7 +264,7 @@ function runClaude(args, { cwd, timeout }) {
 // Stops a claude run and everything it started
 function killTree(child) {
   try {
-    if (process.platform === 'win32') spawnSync('taskkill', ['/pid', String(child.pid), '/T', '/F'], { stdio: 'ignore', windowsHide: true });
+    if (process.platform === 'win32') spawnSync(TASKKILL, ['/pid', String(child.pid), '/T', '/F'], { stdio: 'ignore', windowsHide: true });
     else process.kill(-child.pid, 'SIGKILL');
   } catch {
     // already gone

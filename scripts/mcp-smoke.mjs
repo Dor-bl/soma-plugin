@@ -14,6 +14,7 @@ const REQUIRED_TOOLS = [
   'select_device',
   'appium_session_management',
   'appium_find_element',
+  'appium_find_elements',
   'appium_gesture',
   'appium_get_page_source',
   'appium_screenshot',
@@ -204,12 +205,14 @@ const init = await request(1, 'initialize', {
   clientInfo: { name: 'soma-ci', version: '0.0.0' },
 });
 if (init.error) await finish(1, `✘ initialize failed: ${JSON.stringify(init.error)}`);
+if (!init.result) await finish(1, `✘ initialize returned no result: ${JSON.stringify(init)}`);
 const { name, version } = init.result.serverInfo ?? {};
 console.log(`Connected to ${name} ${version}`);
 send({ method: 'notifications/initialized' });
 
 const list = await request(2, 'tools/list');
 if (list.error) await finish(1, `✘ tools/list failed: ${JSON.stringify(list.error)}`);
+if (!Array.isArray(list.result?.tools)) await finish(1, `✘ tools/list returned no tools: ${JSON.stringify(list)}`);
 const tools = new Set(list.result.tools.map((t) => t.name));
 console.log(`Server exposes ${tools.size} tools`);
 

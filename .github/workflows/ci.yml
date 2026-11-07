@@ -23,12 +23,12 @@ jobs:
     name: Validate plugin
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v7
-      - uses: actions/setup-node@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
         with:
           node-version: 22
       - name: Install Claude Code CLI
-        run: npm install -g @anthropic-ai/claude-code
+        run: npm install -g @anthropic-ai/claude-code@2.1.319
       - name: claude plugin validate
         run: claude plugin validate .
       - name: Structure checks (frontmatter, userConfig, version badge)
@@ -41,6 +41,10 @@ jobs:
         run: node scripts/test-triage-command.mjs
       - name: Injection-check matching tests
         run: node scripts/test-injection-match.mjs
+      - name: Child environment filter tests
+        run: node scripts/test-child-env.mjs
+      - name: System tool path tests
+        run: node scripts/test-system-tools.mjs
       - name: Benchmark statistics tests
         run: node scripts/test-benchmark-stats.mjs
 
@@ -48,11 +52,11 @@ jobs:
     name: Markdown lint and links
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v7
-      - uses: DavidAnson/markdownlint-cli2-action@v24
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: DavidAnson/markdownlint-cli2-action@21c1be1b93ad9ed58fa840aacc3f279cde2a72ff # v24
         with:
           globs: "**/*.md"
-      - uses: lycheeverse/lychee-action@v2
+      - uses: lycheeverse/lychee-action@e7477775783ea5526144ba13e8db5eec57747ce8 # v2
         with:
           args: --no-progress --accept 200,429 "**/*.md"
           fail: true
@@ -66,8 +70,8 @@ jobs:
         # Linux only by default; the full OS matrix runs on the weekly schedule and manual runs.
         include: ${{ fromJSON((github.event.schedule == '17 3 * * 1' || github.event_name == 'workflow_dispatch') && '[{"os":"ubuntu-latest","node":22},{"os":"ubuntu-latest","node":24},{"os":"macos-latest","node":22},{"os":"windows-latest","node":22}]' || '[{"os":"ubuntu-latest","node":22},{"os":"ubuntu-latest","node":24}]') }}
     steps:
-      - uses: actions/checkout@v7
-      - uses: actions/setup-node@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
         with:
           node-version: ${{ matrix.node }}
       # Cache the folder the launcher installs appium-mcp into (CLAUDE_PLUGIN_DATA below),
@@ -75,7 +79,7 @@ jobs:
       # The key hashes the lockfile, so any change to the locked tree gets a fresh
       # cold install and a new cache.
       - name: Cache appium-mcp install
-        uses: actions/cache@v6
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
         with:
           path: ${{ runner.temp }}/soma-plugin-data
           key: appium-mcp-${{ runner.os }}-node${{ matrix.node }}-${{ hashFiles('runtime/package-lock.json') }}

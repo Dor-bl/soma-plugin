@@ -1,3 +1,5 @@
+import { POWERSHELL } from './system-tools.mjs';
+
 // Tracks a process tree by PID on Windows, where there are no process groups to signal.
 // Used by mcp-smoke.mjs to stop every process the server started.
 //
@@ -14,14 +16,14 @@ const SNAPSHOT =
   '"$($_.ProcessId) $($_.ParentProcessId) $c" }';
 
 // A single snapshot, for cleanup
-export const SNAPSHOT_COMMAND = ['powershell', ['-NoProfile', '-Command', SNAPSHOT]];
+export const SNAPSHOT_COMMAND = [POWERSHELL, ['-NoProfile', '-Command', SNAPSHOT]];
 
 // A long-running PowerShell that prints a snapshot every `intervalMs`: a "T <ms>" line
 // with the time it was taken, the process lines, then an END line. Starting PowerShell
 // costs far more CPU than the query, and that CPU competes with the npm install of
 // appium-mcp on small CI runners.
 export const watchCommand = (intervalMs) => [
-  'powershell',
+  POWERSHELL,
   ['-NoProfile', '-Command', `while ($true) { 'T ' + [DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds(); ${SNAPSHOT}; 'END'; Start-Sleep -Milliseconds ${intervalMs} }`],
 ];
 
@@ -35,7 +37,7 @@ export function killCommand(targets) {
   // make the loop treat the creation time as a PID
   const list = targets.map(({ pid, created }) => `'${Number(pid)}:${Number(created)}'`).join(',');
   return [
-    'powershell',
+    POWERSHELL,
     [
       '-NoProfile',
       '-Command',
