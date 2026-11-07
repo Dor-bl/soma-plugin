@@ -49,7 +49,9 @@ const launcher = join(root, 'scripts', 'start-appium-mcp.mjs');
 // server per run instead of reusing the warmed one
 const dataDir = process.env.CLAUDE_PLUGIN_DATA ? resolve(process.env.CLAUDE_PLUGIN_DATA) : join(root, '.runtime');
 const mcpConfig = JSON.stringify({
-  mcpServers: { 'appium-mcp': { command: 'node', args: [launcher], env: { SOMA_DATA_DIR: dataDir } } },
+  // NO_UI as in .mcp.json: without it every screenshot and session result carries an HTML viewer
+  // of 70 to 280 KB that overflows the tool-result limit and hides the saved file path
+  mcpServers: { 'appium-mcp': { command: 'node', args: [launcher], env: { SOMA_DATA_DIR: dataDir, NO_UI: '1' } } },
 });
 // The same for both arms. Bash is open because SOMA's skills may call adb or aapt; the plain
 // arm gets the same freedom, and any use of it is counted in tool calls.
