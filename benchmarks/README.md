@@ -25,7 +25,7 @@ Pass or fail is decided from the device state (or the reply, for the read-only t
 
 ## Running it
 
-You need Node 22+, the `claude` CLI (logged in), `adb`, and exactly one running Android emulator. The emulator must have **Screen lock set to None**: a PIN or password locks it once the screen sleeps, and every later run then fails at the lock screen. The runner keeps the screen on (`svc power stayon true`) and stops with a message if a lock screen is showing. Pin the image so results can be compared: record the system image and API level next to any numbers you publish.
+You need Node 22+, the `claude` CLI (logged in), `adb`, and exactly one running Android emulator. The emulator must have **Screen lock set to None**: a PIN or password locks it once the screen sleeps, and every later run then fails at the lock screen. The runner keeps the screen on (`svc power stayon true`) and stops with a message if a lock screen is showing. A credential that is merely unlocked is not "None": the device re-locks if the screen sleeps. Check with `adb shell dumpsys lock_settings | grep CredentialType` (must say `None`) and `adb shell dumpsys user | grep State` (`RUNNING_LOCKED` means a credential is set and not entered); `locksettings get-disabled` throws on any credential-protected device. Pin the image so results can be compared: record the system image and API level next to any numbers you publish. On a high-resolution AVD (1440x3120 at 560 dpi, for example) the screenshot tool's result is too large for the agent to read, so visual checks fall back to page source in both arms; a lower-resolution AVD gives the agent more to work with.
 
 ```bash
 node scripts/benchmark.mjs --dry-run             # print the prompts and run count, no model calls
@@ -46,4 +46,15 @@ This spends model calls and takes a while. Runs alternate between arms, so drift
 
 ## Results
 
-None committed yet. After a run, copy the summary table here with the emulator image, API level, `appium-mcp` version, model and date.
+Baseline, 2026-11-07. Android 13 (API 33) `google_apis` x86_64 system image, Pixel 6 Pro profile (1440x3120, 560 dpi, SwiftShader), emulator 34.2.13; `appium-mcp` 1.97.1; Claude Code CLI 2.1.319, model `claude-sonnet-5-5`; 3 runs per task and arm; 18 of 18 runs passed, every run with successful `appium-mcp` calls. Raw data: [`results/2026-11-07T17-21-43-593Z.json`](results/2026-11-07T17-21-43-593Z.json).
+
+| Task | Arm | Passed | Total tokens (median, range) | vs plain | Output tokens | Tool calls | Cost (USD) | Time (s) |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| dark-theme | plain | 3/3 | 574,873 (567,171–973,694) | – | 2,515 | 20 | 0.16 | 125 |
+| dark-theme | soma | 3/3 | 1,002,378 (715,532–1,027,696) | 74% | 2,998 | 23 | 0.26 | 77 |
+| screen-timeout | plain | 3/3 | 584,996 (561,835–682,874) | – | 2,557 | 20 | 0.17 | 64 |
+| screen-timeout | soma | 3/3 | 615,631 (538,001–1,110,528) | 5% | 2,911 | 19 | 0.19 | 70 |
+| read-android-version | plain | 3/3 | 381,206 (312,703–381,292) | – | 1,329 | 11 | 0.12 | 96 |
+| read-android-version | soma | 3/3 | 376,454 (373,874–617,744) | -1% | 1,880 | 12 | 0.16 | 77 |
+
+Whole run: 31.7 minutes, USD 1.41 for the plain arm and USD 1.87 for the SOMA arm. Reading: two tasks are within the noise band (+5%, -1%); on `dark-theme` SOMA used more tokens (two of three runs near 1.0M against two plain runs near 570k) while finishing faster (77 s against 125 s median). Cost was slightly higher for SOMA on every task, as expected from the added prompt text. Caveats: with 3 runs the ranges overlap heavily, and on this AVD screenshots were unreadable for both arms (see above), so both relied on page source. The very first run (`dark-theme`, plain, 973,694 tokens) also paid for a one-off workaround: the checkout sat in a long temp path, so Appium's push of its UiAutomator2 APKs failed on Windows' 260-character path limit and the agent installed them by hand through `adb`; later runs found them installed. Run the benchmark from a short path (or set `CLAUDE_PLUGIN_DATA` to one) to avoid this. Two runs reported they could not read the saved page-source file and worked from element attributes instead.
