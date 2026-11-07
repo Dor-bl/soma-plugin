@@ -21,7 +21,7 @@ The stock Android **Settings** app (`com.android.settings`): nothing to build, s
 | `screen-timeout` | Display, Screen timeout 1 minute | `adb shell settings get system screen_off_timeout` |
 | `read-android-version` | About phone, report the Android version | the reply contains `ro.build.version.release` |
 
-Pass or fail is decided from the device state (or the reply, for the read-only task), never from the agent saying it worked. A cheaper run that failed is not a saving, so the table always shows passes next to tokens. Each run starts from a reset state with Settings force-stopped (its data kept) and the Home screen, and the checks compare exact values.
+Pass or fail is decided from the device state (or the reply, for the read-only task), never from the agent saying it worked. A cheaper run that failed is not a saving, so the table always shows passes next to tokens. Each run starts from a reset state with Settings force-stopped (its data kept) and the Home screen, and the checks compare exact values. A run also counts as a pass only if at least one `appium-mcp` tool call succeeded: with Bash allowed, an agent could change the setting through `adb` directly and skip the UI work being measured. Such runs count as failures and show as `no Appium` in the Passed column.
 
 ## Running it
 
@@ -33,7 +33,7 @@ node scripts/benchmark.mjs --runs 3              # 3 tasks x 2 arms x 3 runs = 1
 node scripts/benchmark.mjs --tasks dark-theme --runs 1 --model <model-id>
 ```
 
-Install `appium-mcp` first, or the first runs fail with `CONNECT_TIMEOUT` before any tool is available (the install is about 370 MB and takes minutes): `CLAUDE_PLUGIN_DATA=$PWD/.runtime node scripts/mcp-smoke.mjs`. The runner uses `.runtime/` unless `CLAUDE_PLUGIN_DATA` is set, and gives `claude` a 120 s `MCP_TIMEOUT`. A missing server does not automatically fail a run; inspect the reply and tool calls.
+Install `appium-mcp` first, or the first runs fail with `CONNECT_TIMEOUT` before any tool is available (the install is about 370 MB and takes minutes): `CLAUDE_PLUGIN_DATA=$PWD/.runtime node scripts/mcp-smoke.mjs`. The runner uses `.runtime/` unless `CLAUDE_PLUGIN_DATA` is set, and gives `claude` a 120 s `MCP_TIMEOUT`. A run in which the server never answered a tool call cannot pass, so a missing server shows up as failures marked `no Appium`.
 
 This spends model calls and takes a while. Runs alternate between arms, so drift hits both alike. Results land in `benchmarks/results/<timestamp>.json` (every run, with the reply) and `.md` (the summary table).
 

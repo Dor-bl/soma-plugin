@@ -5,10 +5,12 @@ import { measure, median, parseEvents, summarise, toMarkdown } from './benchmark
 
 const stream = [
   { type: 'system', subtype: 'init', model: 'claude-test' },
-  { type: 'assistant', message: { content: [{ type: 'tool_use', id: 't1', name: 'a' }, { type: 'text', text: 'x' }] } },
+  { type: 'assistant', message: { content: [{ type: 'tool_use', id: 't1', name: 'mcp__appium-mcp__appium_find_element' }, { type: 'text', text: 'x' }] } },
   { type: 'user', message: { content: [{ type: 'tool_result', tool_use_id: 't1', is_error: true }] } },
-  { type: 'assistant', message: { content: [{ type: 'tool_use', id: 't2', name: 'b' }] } },
+  { type: 'assistant', message: { content: [{ type: 'tool_use', id: 't2', name: 'mcp__appium-mcp__appium_click' }] } },
   { type: 'user', message: { content: [{ type: 'tool_result', tool_use_id: 't2' }] } },
+  { type: 'assistant', message: { content: [{ type: 'tool_use', id: 't3', name: 'Bash' }] } },
+  { type: 'user', message: { content: [{ type: 'tool_result', tool_use_id: 't3' }] } },
   { type: 'result', is_error: false, result: 'done', num_turns: 3, duration_ms: 12500, total_cost_usd: 0.25,
     usage: { input_tokens: 10, cache_read_input_tokens: 100, cache_creation_input_tokens: 20, output_tokens: 5 } },
 ].map((e) => JSON.stringify(e)).join('\n');
@@ -27,8 +29,10 @@ const tests = [
     assert.equal(m.total, 135);
     assert.equal(m.cacheRead, 100);
     assert.equal(m.output, 5);
-    assert.equal(m.toolCalls, 2);
+    assert.equal(m.toolCalls, 3);
     assert.equal(m.toolErrors, 1);
+    assert.equal(m.appiumCalls, 2);
+    assert.equal(m.appiumOk, 1);
     assert.equal(m.turns, 3);
     assert.equal(m.durationSec, 12.5);
     assert.equal(m.model, 'claude-test');
@@ -60,6 +64,13 @@ const tests = [
     const md = toMarkdown(rows);
     assert.match(md, /\| t \| plain \| 1\/2 \| 200 \(100–300\) \| – \|/);
     assert.match(md, /\| t \| soma \| 1\/1 \| 100 \(100–100\) \| -50% \|/);
+  }],
+  ['a run that checked out without a successful appium-mcp call is listed as invalid, not passed', () => {
+    const run = (passed, invalid) => ({ task: 't', arm: 'plain', passed, invalid, total: 100, input: 0, cacheRead: 0, cacheWrite: 0, output: 1, costUsd: 1, turns: 1, toolCalls: 2, toolErrors: 0, durationSec: 3 });
+    const rows = summarise([run(true, false), run(false, true), run(false, false)]);
+    assert.equal(rows[0].passed, 1);
+    assert.equal(rows[0].invalid, 1);
+    assert.match(toMarkdown(rows), /\| t \| plain \| 1\/3 \(1 no Appium\) \|/);
   }],
 ];
 

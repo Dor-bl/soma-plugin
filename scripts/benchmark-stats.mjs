@@ -23,6 +23,8 @@ export function measure(events) {
   const toolUses = events.filter((e) => e.type === 'assistant').flatMap((e) => e.message?.content ?? []).filter((c) => c.type === 'tool_use');
   const results = events.filter((e) => e.type === 'user').flatMap((e) => e.message?.content ?? []).filter((c) => c?.type === 'tool_result');
   const failedIds = new Set(results.filter((r) => r.is_error).map((r) => r.tool_use_id));
+  // The device-server calls: a run that did its task without one bypassed the measured work
+  const appium = toolUses.filter((t) => typeof t.name === 'string' && t.name.startsWith('mcp__appium-mcp__'));
   // No result event (a timeout) means no usage was reported: null, never 0, so it stays out of
   // the medians. A run that ended in an error still reports its usage, which is kept.
   const field = (key) => (result.usage ? usage[key] ?? 0 : null);
@@ -40,6 +42,8 @@ export function measure(events) {
     durationSec: result.duration_ms == null ? null : result.duration_ms / 1000,
     toolCalls: toolUses.length,
     toolErrors: toolUses.filter((t) => failedIds.has(t.id)).length,
+    appiumCalls: appium.length,
+    appiumOk: appium.filter((t) => !failedIds.has(t.id)).length,
     isError: Boolean(result.is_error) || !result.type,
     reply: typeof result.result === 'string' ? result.result : '',
   };
@@ -47,7 +51,8 @@ export function measure(events) {
 
 const METRICS = ['total', 'input', 'cacheRead', 'cacheWrite', 'output', 'costUsd', 'turns', 'toolCalls', 'toolErrors', 'durationSec'];
 
-// runs: [{ task, arm, passed, ...measure() }] -> one row per task and arm
+// runs: [{ task, arm, passed, invalid, ...measure() }] -> one row per task and arm.
+// `invalid` marks a run whose outcome checked out without any successful appium-mcp call.
 export function summarise(runs) {
   const groups = new Map();
   for (const run of runs) {
@@ -56,7 +61,7 @@ export function summarise(runs) {
     groups.get(key).push(run);
   }
   return [...groups.values()].map((group) => {
-    const row = { task: group[0].task, arm: group[0].arm, runs: group.length, passed: group.filter((r) => r.passed).length };
+    const row = { task: group[0].task, arm: group[0].arm, runs: group.length, passed: group.filter((r) => r.passed).length, invalid: group.filter((r) => r.invalid).length };
     for (const m of METRICS) {
       const values = group.map((r) => r[m]).filter((v) => typeof v === 'number');
       row[m] = { median: median(values), min: values.length ? Math.min(...values) : null, max: values.length ? Math.max(...values) : null };
@@ -78,7 +83,7 @@ export function toMarkdown(rows, baselineArm = 'plain') {
     const base = rows.find((o) => o.task === r.task && o.arm === baselineArm);
     const change = r.total.median != null && base?.total.median && r.arm !== baselineArm ? `${((r.total.median / base.total.median - 1) * 100).toFixed(0)}%` : '–';
     lines.push(
-      `| ${r.task} | ${r.arm} | ${r.passed}/${r.runs} | ${fmt(r.total.median)} (${fmt(r.total.min)}–${fmt(r.total.max)}) | ${change} | ${fmt(r.output.median)} | ${fmt(r.toolCalls.median)} | ${fmt(r.costUsd.median, 2)} | ${fmt(r.durationSec.median)} |`,
+      `| ${r.task} | ${r.arm} | ${r.passed}/${r.runs}${r.invalid ? ` (${r.invalid} no Appium)` : ''} | ${fmt(r.total.median)} (${fmt(r.total.min)}–${fmt(r.total.max)}) | ${change} | ${fmt(r.output.median)} | ${fmt(r.toolCalls.median)} | ${fmt(r.costUsd.median, 2)} | ${fmt(r.durationSec.median)} |`,
     );
   }
   return lines.join('\n');

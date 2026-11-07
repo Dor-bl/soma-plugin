@@ -16,6 +16,7 @@ import { homedir, tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { measure, parseEvents, summarise, toMarkdown } from './benchmark-stats.mjs';
+import { TASKKILL } from './system-tools.mjs';
 
 const root = fileURLToPath(new URL('..', import.meta.url)).replace(/[\\/]+$/, '');
 const { app, tasks: allTasks } = JSON.parse(readFileSync(join(root, 'benchmarks', 'tasks.json'), 'utf8'));
@@ -75,19 +76,22 @@ if (dryRun) {
   process.exit(0);
 }
 
-const adb = (args) => spawnSync('adb', args.split(' '), { encoding: 'utf8' });
+// Discovery is unscoped; every later command is pinned to the validated serial with -s, so an
+// emulator that drops out mid-run makes the command fail instead of adb picking another device
+const adbAny = (args) => spawnSync('adb', args.split(' '), { encoding: 'utf8' });
+const devices = (adbAny('devices').stdout ?? '').split('\n').slice(1).filter((l) => /\tdevice$/.test(l.trim()));
+if (devices.length !== 1) fail(`need exactly one running device for adb, found ${devices.length}`);
+// The runs change settings and force-stop apps, so a physical phone is refused even when it
+// is the only device attached: emulator serials always look like emulator-5554
+const serial = devices[0].trim().split('\t')[0];
+if (!/^emulator-\d+$/.test(serial)) fail(`${serial} is not an emulator. The benchmark changes device settings, so it only runs on an emulator.`);
+const adb = (args) => adbAny(`-s ${serial} ${args}`);
 // For steps that must work for a run to mean anything: stop the whole benchmark otherwise
 const adbOrFail = (args) => {
   const r = adb(args);
   if (r.error || r.status !== 0) fail(`adb ${args} failed: ${r.error?.message ?? (r.stderr || `exit ${r.status}`).trim()}`);
   return r;
 };
-const devices = (adb('devices').stdout ?? '').split('\n').slice(1).filter((l) => /\tdevice$/.test(l.trim()));
-if (devices.length !== 1) fail(`need exactly one running device for adb, found ${devices.length}`);
-// The runs change settings and force-stop apps, so a physical phone is refused even when it
-// is the only device attached: emulator serials always look like emulator-5554
-const serial = devices[0].trim().split('\t')[0];
-if (!/^emulator-\d+$/.test(serial)) fail(`${serial} is not an emulator. The benchmark changes device settings, so it only runs on an emulator.`);
 
 // A locked or sleeping device makes every run fail the same way and say nothing about either
 // arm: the reset step shortens the screen timeout, and a device with a PIN then locks.
@@ -158,10 +162,14 @@ for (let n = 1; n <= runs; n++) {
       workspace = null;
       const m = measure(parseEvents(run.stdout ?? ''));
       const check = verify(task, m.reply);
-      const passed = !run.error && !m.isError && check.ok;
-      results.push({ task: task.id, arm, run: n, passed, checkError: check.error ?? null, ...m, wallSec: (Date.now() - started) / 1000, error: run.error?.message ?? null });
+      // With Bash allowed, an agent could change the setting through adb and skip the UI work
+      // being measured, so a pass also needs at least one appium-mcp tool call that succeeded
+      const outcomeOk = !run.error && !m.isError && check.ok;
+      const invalid = outcomeOk && m.appiumOk === 0;
+      const passed = outcomeOk && !invalid;
+      results.push({ task: task.id, arm, run: n, passed, invalid, checkError: check.error ?? null, ...m, wallSec: (Date.now() - started) / 1000, error: run.error?.message ?? null });
       writeReports();
-      console.log(`${passed ? '✔' : '✘'}${check.error ? ' (adb check failed: ' + check.error + ')' : ''} run ${n} ${task.id} [${arm}]: ${m.total == null ? 'no usage reported' : m.total.toLocaleString('en-US') + ' tokens'}, ${m.toolCalls} tool calls, ${m.durationSec?.toFixed(0) ?? '?'} s${run.error ? ` (${run.error.message})` : ''}`);
+      console.log(`${passed ? '✔' : '✘'}${check.error ? ' (adb check failed: ' + check.error + ')' : ''}${invalid ? ' (no successful appium-mcp call: not counted as a pass)' : ''} run ${n} ${task.id} [${arm}]: ${m.total == null ? 'no usage reported' : m.total.toLocaleString('en-US') + ' tokens'}, ${m.toolCalls} tool calls, ${m.durationSec?.toFixed(0) ?? '?'} s${run.error ? ` (${run.error.message})` : ''}`);
     }
   }
 }
@@ -250,7 +258,7 @@ function runClaude(args, { cwd, timeout }) {
 
 function killTree(child) {
   try {
-    if (process.platform === 'win32') spawnSync('taskkill', ['/pid', String(child.pid), '/T', '/F'], { stdio: 'ignore', windowsHide: true });
+    if (process.platform === 'win32') spawnSync(TASKKILL, ['/pid', String(child.pid), '/T', '/F'], { stdio: 'ignore', windowsHide: true });
     else process.kill(-child.pid, 'SIGKILL');
   } catch {
     // already gone
