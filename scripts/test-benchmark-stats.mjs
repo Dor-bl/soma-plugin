@@ -11,6 +11,8 @@ const stream = [
   { type: 'user', message: { content: [{ type: 'tool_result', tool_use_id: 't2' }] } },
   { type: 'assistant', message: { content: [{ type: 'tool_use', id: 't3', name: 'Bash' }] } },
   { type: 'user', message: { content: [{ type: 'tool_result', tool_use_id: 't3' }] } },
+  // A pending appium call with no result (the run was interrupted): counted, never ok
+  { type: 'assistant', message: { content: [{ type: 'tool_use', id: 't4', name: 'mcp__appium-mcp__appium_get_text' }] } },
   { type: 'result', is_error: false, result: 'done', num_turns: 3, duration_ms: 12500, total_cost_usd: 0.25,
     usage: { input_tokens: 10, cache_read_input_tokens: 100, cache_creation_input_tokens: 20, output_tokens: 5 } },
 ].map((e) => JSON.stringify(e)).join('\n');
@@ -29,9 +31,9 @@ const tests = [
     assert.equal(m.total, 135);
     assert.equal(m.cacheRead, 100);
     assert.equal(m.output, 5);
-    assert.equal(m.toolCalls, 3);
+    assert.equal(m.toolCalls, 4);
     assert.equal(m.toolErrors, 1);
-    assert.equal(m.appiumCalls, 2);
+    assert.equal(m.appiumCalls, 3);
     assert.equal(m.appiumOk, 1);
     assert.equal(m.turns, 3);
     assert.equal(m.durationSec, 12.5);

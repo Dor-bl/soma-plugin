@@ -59,7 +59,10 @@ const ALLOWED = ['Read', 'Bash', 'Skill', 'mcp__appium-mcp'];
 // folder named after the run's working directory. Reading them back is outside the workspace,
 // and `claude -p` cannot ask: a denied read blocked an arm in a trial. So each run may read
 // its own folder, and nothing else extra.
-const claudeProjects = join(process.env.CLAUDE_CONFIG_DIR ?? join(homedir(), '.claude'), 'projects');
+// Resolved here: a relative CLAUDE_CONFIG_DIR would point somewhere else from each run's
+// temporary working directory, and the child gets the resolved value too
+const claudeConfigDir = resolve(process.env.CLAUDE_CONFIG_DIR ?? join(homedir(), '.claude'));
+const claudeProjects = join(claudeConfigDir, 'projects');
 const savedResultsDir = (cwd) => join(claudeProjects, cwd.replace(/[^a-zA-Z0-9]/g, '-'));
 
 // What the tester says. Skills stop to confirm the plan, which -p cannot answer, so both arms
@@ -231,7 +234,7 @@ function runClaude(args, { cwd, timeout }) {
     }
   }
   return new Promise((resolve) => {
-    const child = spawn(file, argv, { cwd, stdio: ['ignore', 'pipe', 'pipe'], detached: !win, windowsHide: true, env: { ...process.env, MCP_TIMEOUT: process.env.MCP_TIMEOUT ?? '120000' }, ...extra });
+    const child = spawn(file, argv, { cwd, stdio: ['ignore', 'pipe', 'pipe'], detached: !win, windowsHide: true, env: { ...process.env, MCP_TIMEOUT: process.env.MCP_TIMEOUT ?? '120000', ...(process.env.CLAUDE_CONFIG_DIR ? { CLAUDE_CONFIG_DIR: claudeConfigDir } : {}) }, ...extra });
     running = child;
     let stdout = '';
     let stderr = '';

@@ -23,6 +23,9 @@ export function measure(events) {
   const toolUses = events.filter((e) => e.type === 'assistant').flatMap((e) => e.message?.content ?? []).filter((c) => c.type === 'tool_use');
   const results = events.filter((e) => e.type === 'user').flatMap((e) => e.message?.content ?? []).filter((c) => c?.type === 'tool_result');
   const failedIds = new Set(results.filter((r) => r.is_error).map((r) => r.tool_use_id));
+  // A call counts as answered only with a non-error result: an interrupted stream leaves a
+  // pending call with no result at all, which is not a success
+  const okIds = new Set(results.filter((r) => !r.is_error).map((r) => r.tool_use_id));
   // The device-server calls: a run that did its task without one bypassed the measured work
   const appium = toolUses.filter((t) => typeof t.name === 'string' && t.name.startsWith('mcp__appium-mcp__'));
   // No result event (a timeout) means no usage was reported: null, never 0, so it stays out of
@@ -43,7 +46,7 @@ export function measure(events) {
     toolCalls: toolUses.length,
     toolErrors: toolUses.filter((t) => failedIds.has(t.id)).length,
     appiumCalls: appium.length,
-    appiumOk: appium.filter((t) => !failedIds.has(t.id)).length,
+    appiumOk: appium.filter((t) => okIds.has(t.id)).length,
     isError: Boolean(result.is_error) || !result.type,
     reply: typeof result.result === 'string' ? result.result : '',
   };
