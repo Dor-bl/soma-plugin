@@ -135,11 +135,13 @@ Once SOMA is installed, try:
 
 To load your checkout as a plugin, use `--plugin-dir` from the folder above the clone (see [Install](#-install)).
 
-To work *inside* the repo, note that Claude Code loads `.mcp.json` as a project server, not as a plugin. `${CLAUDE_PLUGIN_ROOT}` and `${user_config.*}` are not substituted, so `appium-mcp` shows *failed to connect* (`Connection closed`). Plugin users are not affected. To get the device tools, run this from inside the clone (local scope applies only to the folder you run it in). It adds a server with the absolute path to the launcher and overrides the project entry for you only:
+To work *inside* the repo, note that Claude Code loads `.mcp.json` as a project server, not as a plugin. `${CLAUDE_PLUGIN_ROOT}` and `${user_config.*}` are not substituted, so `appium-mcp` shows *failed to connect* (`Connection closed`). Plugin users are not affected. To get the device tools, run this from the root folder of the clone, not a subfolder (`$PWD` must be the clone root, and local scope applies only to the folder you run it in). It adds a server with the absolute path to the launcher and overrides the project entry for you only:
 
 ```bash
-claude mcp add --scope local appium-mcp -- node "/absolute/path/to/soma-plugin/scripts/start-appium-mcp.mjs"
+claude mcp add --scope local appium-mcp -- node "$PWD/scripts/start-appium-mcp.mjs"
 ```
+
+`$PWD` works in bash, zsh and PowerShell. In Windows `cmd`, use `%CD%` instead.
 
 This entry passes no remote URL, so only local devices work, unless `SOMA_REMOTE_SERVER_URL` is exported in your shell (then that one URL is allowed). Do not edit `.mcp.json` to fix the error: its variables are what make the plugin work for users.
 
