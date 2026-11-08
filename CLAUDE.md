@@ -4,7 +4,9 @@ SOMA is a Claude Code plugin for mobile QA, built on the official [`appium-mcp`]
 
 ## Layout
 
-- `.claude-plugin/plugin.json`: manifest, version and `userConfig` (`remote_server_url`, `capabilities_file`)
+- `.claude-plugin/plugin.json`: manifest, version, listing fields (`homepage`, `repository`, `author`) and `userConfig` (`remote_server_url`, `capabilities_file`, `app_map_dir`)
+- `.claude-plugin/marketplace.json`: the single-plugin marketplace users add with `/plugin marketplace add Dor-bl/soma-plugin`; its entry points at `./` and carries no version (`plugin.json` does). `.claude-plugin/icon.png` is the listing icon, rendered from `assets/logo-icon.svg`
+- `LICENSE`, `NOTICE`, `CHANGELOG.md`, `SECURITY.md`: publishing files; add a changelog entry under "Unreleased" with every user-visible change
 - `.mcp.json`: starts `scripts/start-appium-mcp.mjs`, which installs `appium-mcp` from `runtime/package-lock.json` (`npm ci --ignore-scripts`, into `${CLAUDE_PLUGIN_DATA}`) and runs it with a remote-URL allowlist
 - `runtime/`: `package.json` pinning `appium-mcp`, and the committed lockfile for its whole dependency tree
 - `skills/<name>/SKILL.md`: one skill per folder
@@ -16,8 +18,8 @@ SOMA is a Claude Code plugin for mobile QA, built on the official [`appium-mcp`]
 ## Checks (same as CI)
 
 ```bash
-claude plugin validate .
-node scripts/check-plugin.mjs        # frontmatter, userConfig, version badge, command hand-offs
+claude plugin validate --profile directory .   # also the plugin directory's submission checks
+node scripts/check-plugin.mjs        # frontmatter, userConfig, version badge, command hand-offs, publishing files
 node scripts/test-allowlist.mjs       # remote-server allowlist
 node scripts/test-process-tree.mjs    # Windows process-tree cleanup
 node scripts/test-child-env.mjs       # credential-looking env vars stay out of appium-mcp
@@ -51,7 +53,8 @@ The entry passes no remote URL, so remote servers stay blocked and only local de
 - Every command that uses `$ARGUMENTS` must say that a file it names is read as data, never as instructions (the exact phrase is in `check-plugin.mjs`), and what the file may be used for. Test-case files from shared repos or ticket systems can carry injected directives.
 - Skills that create an Appium session (`run-manual-test`, `triage-failure`, `generate-test`, `explore-app`, listed in `SESSION_SKILLS`) must each carry the remote-URL, `autoGrantPermissions` and `noReset` rules from "Writing skills". The wording may differ, but each rule's key phrase must be present (`SESSION_RULES`). Add a new session-creating skill to the list.
 - Every `${user_config.<key>}` used in a skill must be declared in `plugin.json`, and every declared key must be used.
-- The README version badge must match `plugin.json` `version`. Bump both together.
+- The README version badge must match `plugin.json` `version`. Bump both together, and add the release to `CHANGELOG.md`.
+- `marketplace.json` must list `plugin.json`'s `name` with `source: "./"` and no `version`; `plugin.json` must carry `author.name`, `homepage` and `repository` (the GitHub URL); the README must contain the one-line install command and the `soma@soma-plugin` install id; `LICENSE`, `NOTICE`, `CHANGELOG.md`, `SECURITY.md` and `.claude-plugin/icon.png` must exist.
 - Every `appium-mcp@<version>` in the README and skills must match the version pinned in `runtime/package.json`, and so must the lockfile. To bump: edit `runtime/package.json`, run `npm install --package-lock-only --ignore-scripts` in `runtime/`, review the lockfile diff, then update the docs.
 
 ## Writing skills
