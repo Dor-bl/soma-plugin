@@ -2,7 +2,7 @@
 // Code driving the same appium-mcp server? Not run in CI: it needs the `claude` CLI (logged
 // in), Node 22+, `adb` and ONE running Android emulator, and it spends model calls.
 //   node scripts/benchmark.mjs [--runs 3] [--tasks id,id] [--arms plain,soma] [--model <id>]
-//                              [--timeout-min 15] [--out <folder>] [--dry-run]
+//                              [--timeout-min 15] [--out <folder>] [--keep-streams] [--dry-run]
 // See benchmarks/README.md for the method and how to read the results.
 //
 // Both arms get the same appium-mcp launch (this repo's launcher, and --strict-mcp-config so
@@ -15,7 +15,7 @@ import { mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSy
 import { homedir, tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { measure, parseEvents, summarise, toMarkdown } from './benchmark-stats.mjs';
+import { measure, parseEvents, streamFileName, summarise, toMarkdown } from './benchmark-stats.mjs';
 import { TASKKILL } from './system-tools.mjs';
 
 const root = fileURLToPath(new URL('..', import.meta.url)).replace(/[\\/]+$/, '');
@@ -34,6 +34,8 @@ const model = flag('model', '');
 const timeoutMs = Number(flag('timeout-min', 15)) * 60_000;
 const outDir = flag('out', join(root, 'benchmarks', 'results'));
 const dryRun = process.argv.includes('--dry-run');
+// Saves each run's raw stream-json, so tool-result errors can be read after the run
+const keepStreams = process.argv.includes('--keep-streams');
 
 const tasks = taskIds.map((id) => allTasks.find((t) => t.id === id) ?? fail(`unknown task: ${id}`));
 for (const arm of arms) if (!['plain', 'soma'].includes(arm)) fail(`unknown arm: ${arm}`);
@@ -75,7 +77,7 @@ const promptFor = (arm, task) =>
 
 if (dryRun) {
   for (const task of tasks) for (const arm of arms) console.log(`[${arm}] ${task.id}: ${promptFor(arm, task)}`);
-  console.log(`${tasks.length * arms.length * runs} runs planned (${runs} per task and arm)`);
+  console.log(`${tasks.length * arms.length * runs} runs planned (${runs} per task and arm)${keepStreams ? '; streams kept under <out>/<timestamp>/' : ''}`);
   process.exit(0);
 }
 
@@ -123,6 +125,8 @@ for (const signal of ['SIGINT', 'SIGTERM']) {
 mkdirSync(outDir, { recursive: true });
 const results = [];
 const stamp = new Date().toISOString().replace(/[:.]/g, '-');
+const streamsDir = join(outDir, stamp);
+if (keepStreams) mkdirSync(streamsDir, { recursive: true });
 // Written after every run, so an interrupted benchmark keeps the runs it already paid for
 function writeReports() {
   const models = [...new Set(results.map((r) => r.model).filter(Boolean))];
@@ -163,6 +167,18 @@ for (let n = 1; n <= runs; n++) {
       cleanUp(cwd);
       cleanUp(saved);
       workspace = null;
+      // Recorded relative to --out, so a committed results file carries no local path
+      let stream = null;
+      if (keepStreams) {
+        const name = streamFileName(task.id, arm, n);
+        // A stream that cannot be written must not lose the run's numbers
+        try {
+          writeFileSync(join(streamsDir, name), run.stdout ?? '');
+          stream = `${stamp}/${name}`;
+        } catch (error) {
+          console.error(`⚠ could not save ${join(streamsDir, name)}: ${error.code ?? error.message}`);
+        }
+      }
       const m = measure(parseEvents(run.stdout ?? ''));
       const check = verify(task, m.reply);
       // With Bash allowed, an agent could change the setting through adb and skip the UI work
@@ -170,7 +186,7 @@ for (let n = 1; n <= runs; n++) {
       const outcomeOk = !run.error && !m.isError && check.ok;
       const invalid = outcomeOk && m.appiumOk === 0;
       const passed = outcomeOk && !invalid;
-      results.push({ task: task.id, arm, run: n, passed, invalid, checkError: check.error ?? null, ...m, wallSec: (Date.now() - started) / 1000, error: run.error?.message ?? null });
+      results.push({ task: task.id, arm, run: n, passed, invalid, checkError: check.error ?? null, ...m, wallSec: (Date.now() - started) / 1000, error: run.error?.message ?? null, stream });
       writeReports();
       console.log(`${passed ? '✔' : '✘'}${check.error ? ' (adb check failed: ' + check.error + ')' : ''}${invalid ? ' (no successful appium-mcp call: not counted as a pass)' : ''} run ${n} ${task.id} [${arm}]: ${m.total == null ? 'no usage reported' : m.total.toLocaleString('en-US') + ' tokens'}, ${m.toolCalls} tool calls, ${m.durationSec?.toFixed(0) ?? '?'} s${run.error ? ` (${run.error.message})` : ''}`);
     }
@@ -178,7 +194,7 @@ for (let n = 1; n <= runs; n++) {
 }
 
 const table = writeReports();
-console.log(`\n${table}\n\nSaved to ${join(outDir, stamp)}.{json,md}`);
+console.log(`\n${table}\n\nSaved to ${join(outDir, stamp)}.{json,md}${keepStreams ? `, streams in ${streamsDir}` : ''}`);
 
 // The outcome as the device and the reply show it, never the reply alone for state changes
 // Returns { ok } or { ok: false, error } when adb itself failed, which says nothing about the task
