@@ -7,7 +7,7 @@
 // compromised transitive release cannot be picked up silently.
 import { spawn, spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
-import { closeSync, copyFileSync, existsSync, mkdirSync, openSync, readdirSync, readFileSync, renameSync, rmSync, statSync, writeFileSync } from 'node:fs';
+import { chmodSync, closeSync, copyFileSync, existsSync, lstatSync, mkdirSync, openSync, readdirSync, readFileSync, renameSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { basename, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { allowRegexFor } from './allowlist.mjs';
@@ -359,6 +359,22 @@ const env = {
   REMOTE_SERVER_URL_ALLOW_REGEX: allowRegexFor(process.env.SOMA_REMOTE_SERVER_URL),
 };
 delete env.SOMA_REMOTE_SERVER_URL;
+// Screenshots and saved page sources go to the OS temp folder unless these are set, where
+// other local users can read screenshots on a shared host. Default to private folders in
+// the data dir; a value the tester set is kept.
+for (const [name, folder] of [['SCREENSHOTS_DIR', 'screenshots'], ['PAGE_SOURCES_DIR', 'page-sources']]) {
+  if (env[name]) continue;
+  const dir = join(dataDir, folder);
+  try {
+    // mkdir leaves an existing folder's mode alone and follows a symlink, so check both
+    mkdirSync(dir, { recursive: true, mode: 0o700 });
+    if (lstatSync(dir).isSymbolicLink()) throw new Error('is a symbolic link');
+    if (process.platform !== 'win32') chmodSync(dir, 0o700);
+    env[name] = dir;
+  } catch (err) {
+    log(`not using ${dir} for ${folder} (${err.message}); appium-mcp saves them in the temp folder instead`);
+  }
+}
 delete env.SOMA_DATA_DIR;
 
 // Run the entry point with this same node, so no shell is involved on any platform.

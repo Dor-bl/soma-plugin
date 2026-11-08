@@ -48,8 +48,13 @@ const launcher = join(root, 'scripts', 'start-appium-mcp.mjs');
 // CLAUDE_PLUGIN_DATA (".runtime", as the README's warm-up uses) would install a fresh
 // server per run instead of reusing the warmed one
 const dataDir = process.env.CLAUDE_PLUGIN_DATA ? resolve(process.env.CLAUDE_PLUGIN_DATA) : join(root, '.runtime');
-const mcpConfig = JSON.stringify({
-  mcpServers: { 'appium-mcp': { command: 'node', args: [launcher], env: { SOMA_DATA_DIR: dataDir } } },
+// Per run: screenshots and saved page sources go into the run's own workspace, which the
+// session may read (the launcher's default folders under the data dir would be outside the
+// permitted roots). NO_UI as in .mcp.json: without it every screenshot and session result
+// carries an HTML viewer of 70 to 280 KB that overflows the tool-result limit and hides the
+// saved file path.
+const mcpConfigFor = (cwd) => JSON.stringify({
+  mcpServers: { 'appium-mcp': { command: 'node', args: [launcher], env: { SOMA_DATA_DIR: dataDir, NO_UI: '1', SCREENSHOTS_DIR: join(cwd, 'artifacts'), PAGE_SOURCES_DIR: join(cwd, 'artifacts') } } },
 });
 // The same for both arms. Bash is open because SOMA's skills may call adb or aapt; the plain
 // arm gets the same freedom, and any use of it is counted in tool calls.
@@ -148,7 +153,7 @@ for (let n = 1; n <= runs; n++) {
       mkdirSync(saved, { recursive: true });
       const args = [
         '-p', promptFor(arm, task),
-        '--strict-mcp-config', '--mcp-config', mcpConfig,
+        '--strict-mcp-config', '--mcp-config', mcpConfigFor(cwd),
         // Skip the caller's user settings, so a SOMA already enabled there cannot leak into the plain arm
         '--setting-sources', 'project,local',
         '--allowedTools', ...ALLOWED,

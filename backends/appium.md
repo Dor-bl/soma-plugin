@@ -12,7 +12,7 @@ Server: `appium-mcp`, bundled in `.mcp.json`. Platforms: Android and iOS. Claude
 | Tap, swipe, scroll | `appium_gesture` (`action=scroll_to_element` for off-screen elements) |
 | Type text | `appium_set_value` |
 | Read the screen | `appium_get_page_source` (assertions), `appium_get_text` |
-| Screenshot | `appium_screenshot` |
+| Screenshot | `appium_screenshot` with `maxWidth` (about 400 for a check, 720 for evidence). It saves a PNG and returns its path: look at it with the Read tool on that path, and quote the full path exactly as returned (folder and extension included) as the evidence reference. Never rebuild an image from this session's own saved tool results |
 | App install / launch / stop | `appium_app_lifecycle` |
 | Pick a local iOS simulator (macOS only) | `select_device` with `platform: ios`, `iosDeviceType: simulator`, `deviceUdid`. It does not show iOS versions; list those with `xcrun simctl list devices available` |
 | Prepare an iOS simulator (macOS only) | `prepare_ios_simulator` with the `udid`. It returns `wdaAppPath` and a `capabilitiesHint` with `appium:webDriverAgentUrl`. Forced WDA refresh: `forceRefreshWda: true` (re-downloads only; it does not reinstall WDA already on the simulator) |
@@ -31,4 +31,7 @@ The calling skill's session setup is authoritative; in short:
 - Prefer accessibility id and id locators; use xpath only when nothing else works.
 - Assert from page source where possible; say when a check was judged only from a screenshot.
 - `appium_get_page_source` returns the XML inline by default. `saveToFile=true` saves it on the MCP server and returns a path and byte size; add `selector` (XPath) or `pattern` (case-sensitive substring of a tag name or attribute value, not of text content) to also get summaries of the matching nodes (both are rejected without `saveToFile=true`). A summary is good for finding and checking what it shows. It is not proof of absence, a count or a missing attribute: it stops at 100 nodes (`truncated`), `pattern` can miss, and it carries only `type` (which falls back to `class`, then the tag name, so it does not show the attribute exists), `class`, `name`, `label`, `value`, `text`, `resource-id`, `content-desc`, `visible`, `displayed`, `bounds`, `x`, `y`, `width`, `height`. For those assertions read the full XML. A path alone is not a result: never judge a screen from it.
-- Page source is large (about 37 KB for one screen), like `generate_locators`. Read the elements you need; do not paste or summarize the whole tree. Prefer `appium_find_element` for a single check.
+- Page source is large (about 37 KB for one screen), like `generate_locators`. Read the elements you need; do not paste or summarize the whole tree. Prefer `appium_find_element` for a single check, and `saveToFile=true` with a `selector` over `pattern` (`pattern` misses rows that are off screen).
+- Files appium-mcp saved on this machine (page-source XML, screenshot PNG) are read with the Read tool on the returned path, never with shell commands.
+- `.mcp.json` sets `NO_UI=1` for the server. Without it, every screenshot and session result carries an HTML viewer of 70 to 280 KB that overflows the tool-result limit and hides the saved path.
+- Right after an action, a find by text can miss once while the screen settles: retry once before concluding. Element ids go stale after the screen re-renders (a toggle, a dialog): find the element again instead of reusing the id. A page source read right after navigation can come back empty: read it again.
