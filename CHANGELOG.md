@@ -12,7 +12,7 @@ Notable changes to SOMA, newest first. The format follows [Keep a Changelog](htt
 
 ### Changed
 
-- README: install from the marketplace instead of a checkout, a note on the first start, and a section on what SOMA runs, sends and fetches
+- README: install from the marketplace instead of a checkout, a note on the first start, a section on what SOMA runs, sends and fetches, and a "Developing SOMA" section on loading `appium-mcp` inside the repo
 
 ## [0.1.0] - not tagged
 

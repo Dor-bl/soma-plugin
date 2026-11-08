@@ -131,6 +131,20 @@ Once SOMA is installed, try:
 - 🌐 The remote URL policy covers the URL you configure only. Redirects and direct-connect endpoints chosen by the server aren't re-checked, so only point SOMA at servers you trust.
 - 🔓 SOMA can't add authentication to a self-hosted Appium server. Put it behind an authenticating reverse proxy or VPN; never expose it unauthenticated on a shared network.
 
+## 🧑‍💻 Developing SOMA
+
+To load your checkout as a plugin, use `--plugin-dir` from the folder above the clone (see [Install](#-install)).
+
+To work *inside* the repo, note that Claude Code loads `.mcp.json` as a project server, not as a plugin. `${CLAUDE_PLUGIN_ROOT}` and `${user_config.*}` are not substituted, so `appium-mcp` shows *failed to connect* (`Connection closed`). Plugin users are not affected. To get the device tools, add a local-scope server with the absolute path to the launcher. It overrides the project entry for you only:
+
+```bash
+claude mcp add --scope local appium-mcp -- node "/absolute/path/to/soma-plugin/scripts/start-appium-mcp.mjs"
+```
+
+This entry passes no remote URL, so only local devices work, unless `SOMA_REMOTE_SERVER_URL` is exported in your shell (then that one URL is allowed). Do not edit `.mcp.json` to fix the error: its variables are what make the plugin work for users.
+
+The checks CI runs, and the conventions they enforce, are in [`CLAUDE.md`](CLAUDE.md).
+
 ## 📄 License
 
 Released under the [Apache License 2.0](https://www.apache.org/licenses/LICENSE-2.0).
