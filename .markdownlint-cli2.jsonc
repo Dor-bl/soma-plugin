@@ -5,6 +5,7 @@
     "default": true,
     "MD013": false, // line length
     "MD022": false, // blank lines around headings
+    "MD024": { "siblings_only": true }, // CHANGELOG repeats "Added" under each version
     "MD032": false, // blank lines around lists
     "MD033": false, // inline HTML (README header)
     "MD036": false, // emphasis used as a heading

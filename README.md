@@ -79,20 +79,31 @@ Without Artemis installed, SOMA behaves exactly as before. Artemis is an autonom
 | 🤖 Android | Android SDK, `adb`, an emulator or physical device |
 | 🍎 iOS | macOS with Xcode and a simulator *(iOS isn't available locally on Windows/Linux)* |
 
-## 🚀 Quick start
+## 🚀 Install
 
-```bash
-# Validate the plugin
-claude plugin validate ./soma
+In Claude Code 2.1.275 or newer:
 
-# Launch Claude with SOMA loaded
-claude --plugin-dir ./soma
+```text
+/plugin install soma --marketplace Dor-bl/soma-plugin
 ```
 
-> [!TIP]
-> Run `/soma:setup` (the `check-setup` skill) first to make sure your environment is ready. Add a focus such as `android`, `ios` or `artemis` to check one area.
+Or in two steps: `/plugin marketplace add Dor-bl/soma-plugin`, then `/plugin install soma@soma-plugin`. To pick up a new version later, run `/plugin marketplace update soma-plugin`.
 
-Then try:
+> [!IMPORTANT]
+> The first start installs `appium-mcp` and its locked dependencies (about 370 MB) from `registry.npmjs.org`, which can take minutes. Claude Code waits 30 seconds for an MCP server, so `appium-mcp` may show as *failed to connect* at first. The install keeps running in the background: reconnect with `/mcp` once it has finished, or run `/soma:setup` first and let it install the server before your first test.
+
+`/soma:setup` (the `check-setup` skill) checks Node, the SDKs and your devices and explains how to fix what is missing. Add a focus such as `android`, `ios` or `artemis` to check one area.
+
+To try a checkout without installing it, start Claude from the folder *above* the clone (inside it, `.mcp.json` loads as a project server and cannot start):
+
+```bash
+claude plugin validate ./soma-plugin
+claude --plugin-dir ./soma-plugin
+```
+
+## 🏁 Quick start
+
+Once SOMA is installed, try:
 
 ```text
 /soma:run-test android "Open the app, log in with test user, verify the home screen"
@@ -101,6 +112,13 @@ Then try:
 /soma:explore android "checkout with a coupon code"
 /soma:test-case "Users can apply one coupon code per order at checkout"
 ```
+
+## 🔐 What SOMA runs, sends and fetches
+
+- **Fetches** `appium-mcp` and its locked dependencies on first start and after a pin change, into the plugin's data folder: from `registry.npmjs.org`, plus two dependencies the lockfile pins to GitHub commits, so GitHub must be reachable too. Beyond that, downloads happen only in the cases you choose: preparing an iOS simulator downloads WebDriverAgent from GitHub through `appium-mcp` (unless you point it at a WebDriverAgent you already run), and the optional Artemis setup clones Artemis from GitHub and installs its Python dependencies.
+- **Runs locally** `node` for the launcher and `appium-mcp`; `adb` and the Android emulator for Android; `xcrun simctl` on macOS for iOS; and the test clients you run yourself for generated scripts. Appium's drivers install their device-side agents (UiAutomator2 server, WebDriverAgent) on the emulator or simulator when a session starts, as any Appium setup does. Skills ask before installing an app or changing anything on your machine.
+- **Sends** device commands to local devices, or to the one remote server you configure. SOMA itself opens no other connections and sends no telemetry. What the tools return (on-screen text, page source, screenshots) enters your Claude Code conversation like any tool result, so it reaches the model provider your Claude Code is configured with before the skills' redaction, which applies to reports and chat output. With the optional Artemis engine there is a second recipient: Artemis sends screenshots and screen text, including notifications, to the LLM provider behind its own API key, which need not be the same provider; the skills ask for your consent before each Artemis run. Device-cloud credentials stay in your capabilities file and reach only that server.
+- **Reads** on-screen text, page source and screenshots from the device during a test. The skills treat them as untrusted data, never follow instructions found in them, and redact secrets before quoting them in reports.
 
 ## ⚠️ Known limitations (v0.1)
 

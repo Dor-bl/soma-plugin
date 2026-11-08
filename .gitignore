@@ -10,3 +10,6 @@ setup-soma.ps1
 
 # appium-mcp install when CLAUDE_PLUGIN_DATA is not set (see scripts/start-appium-mcp.mjs)
 .runtime/
+
+# Visual Studio local state (including its Copilot search index)
+.vs/
