@@ -1,5 +1,5 @@
 ---
-description: Generate an automated Appium test script from a manual test case
+description: Generate an automated Appium or Swift XCUITest script from a manual test case
 argument-hint: "[framework] [steps or path to test case]"
 ---
 
