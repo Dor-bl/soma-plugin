@@ -1,0 +1,126 @@
+#!/usr/bin/env node
+// Prepares a release: bumps the version in plugin.json and the README badge,
+// and moves the changelog's Unreleased entries under a dated version heading.
+//
+//   node scripts/release.mjs 0.3.0               # today's date (UTC)
+//   node scripts/release.mjs 0.3.0 --date 2026-12-01
+//   node scripts/release.mjs --notes 0.3.0       # print that version's changelog section
+//
+// Run with the version already in plugin.json to date a heading that was
+// prepared earlier (e.g. "## [0.2.0] - not yet tagged"). The release itself
+// (tag and GitHub release) is made by .github/workflows/release.yml when the
+// version change lands on main.
+import { readFileSync, writeFileSync } from 'node:fs';
+import { spawnSync } from 'node:child_process';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+const SEMVER = /^\d+\.\d+\.\d+(-[\w.]+)?$/;
+const DATE = /^\d{4}-\d{2}-\d{2}$/;
+
+const escape = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+// Runs fn on the text with LF line endings and restores CRLF if the text used it
+// (Windows checkouts with core.autocrlf).
+export function keepEol(text, fn) {
+  const crlf = text.includes('\r\n');
+  const out = fn(crlf ? text.replace(/\r\n/g, '\n') : text);
+  return crlf ? out.replace(/\n/g, '\r\n') : out;
+}
+
+// Compares release versions only; a prerelease suffix sorts before its release.
+export function compareVersions(a, b) {
+  const [ca, pa = ''] = a.split('-', 2);
+  const [cb, pb = ''] = b.split('-', 2);
+  const na = ca.split('.').map(Number);
+  const nb = cb.split('.').map(Number);
+  for (let i = 0; i < 3; i++) if (na[i] !== nb[i]) return na[i] - nb[i];
+  if (pa === pb) return 0;
+  if (!pa) return 1;
+  if (!pb) return -1;
+  return pa < pb ? -1 : 1;
+}
+
+export function bumpManifest(text, version) {
+  const re = /("version"\s*:\s*")[^"]*(")/;
+  if (!re.test(text)) throw new Error('plugin.json: "version" not found');
+  return text.replace(re, `$1${version}$2`);
+}
+
+export function bumpBadge(text, version) {
+  const re = /(badge\/version-)[\w.-]+?(-\w+\.svg)/;
+  if (!re.test(text)) throw new Error('README.md: version badge not found');
+  return text.replace(re, `$1${version}$2`);
+}
+
+const heading = (version) => new RegExp(`^## \\[${escape(version)}\\][^\\n]*$`, 'm');
+
+// Returns the changelog with the version's heading dated. If the heading does
+// not exist yet, it is created from the Unreleased entries, which must not be empty.
+export function cutChangelog(text, version, date) {
+  const dated = `## [${version}] - ${date}`;
+  if (heading(version).test(text)) return text.replace(heading(version), dated);
+  const unreleased = /^## \[Unreleased\][^\n]*\n/m.exec(text);
+  if (!unreleased) throw new Error('CHANGELOG.md: "## [Unreleased]" heading not found');
+  const start = unreleased.index + unreleased[0].length;
+  const next = text.slice(start).search(/^## \[/m);
+  const body = next === -1 ? text.slice(start) : text.slice(start, start + next);
+  if (!body.trim()) throw new Error('CHANGELOG.md: nothing under Unreleased to release');
+  return `${text.slice(0, start)}\n${dated}\n${body.startsWith('\n') ? '' : '\n'}${text.slice(start)}`;
+}
+
+// The section's text under its heading, and the heading's date (null if undated).
+export function changelogSection(text, version) {
+  const m = heading(version).exec(text);
+  if (!m) return null;
+  const start = m.index + m[0].length;
+  const next = text.slice(start).search(/^## \[/m);
+  const body = (next === -1 ? text.slice(start) : text.slice(start, start + next)).trim();
+  const date = m[0].match(/ - (\d{4}-\d{2}-\d{2})\s*$/)?.[1] ?? null;
+  return { body, date };
+}
+
+function main(argv) {
+  const root = join(dirname(fileURLToPath(import.meta.url)), '..');
+  const path = (f) => join(root, f);
+  const fail = (msg) => {
+    console.error(`✘ ${msg}`);
+    process.exit(1);
+  };
+
+  if (argv[0] === '--notes') {
+    const version = argv[1];
+    if (!SEMVER.test(version ?? '')) fail('usage: release.mjs --notes <version>');
+    const section = changelogSection(readFileSync(path('CHANGELOG.md'), 'utf8').replace(/\r\n/g, '\n'), version);
+    if (!section) fail(`CHANGELOG.md: no section for ${version}`);
+    if (!section.date) fail(`CHANGELOG.md: the ${version} heading has no date; run release.mjs ${version} first`);
+    if (!section.body) fail(`CHANGELOG.md: the ${version} section is empty`);
+    process.stdout.write(`${section.body}\n`);
+    return;
+  }
+
+  const version = argv[0];
+  const dateIdx = argv.indexOf('--date');
+  const date = dateIdx === -1 ? new Date().toISOString().slice(0, 10) : argv[dateIdx + 1];
+  if (!SEMVER.test(version ?? '')) fail('usage: release.mjs <version> [--date YYYY-MM-DD]');
+  if (!DATE.test(date ?? '')) fail(`--date must be YYYY-MM-DD, got ${date}`);
+
+  const manifestPath = path('.claude-plugin/plugin.json');
+  const manifest = readFileSync(manifestPath, 'utf8');
+  const current = JSON.parse(manifest).version;
+  if (compareVersions(version, current) < 0) fail(`${version} is lower than the current version ${current}`);
+
+  const files = {
+    [manifestPath]: keepEol(manifest, (t) => bumpManifest(t, version)),
+    [path('README.md')]: keepEol(readFileSync(path('README.md'), 'utf8'), (t) => bumpBadge(t, version)),
+    [path('CHANGELOG.md')]: keepEol(readFileSync(path('CHANGELOG.md'), 'utf8'), (t) => cutChangelog(t, version, date)),
+  };
+  for (const [f, text] of Object.entries(files)) writeFileSync(f, text);
+  console.log(`✔ ${current} → ${version}, changelog dated ${date}`);
+
+  const check = spawnSync(process.execPath, [path('scripts/check-plugin.mjs')], { stdio: 'inherit' });
+  if (check.status !== 0) process.exit(check.status ?? 1);
+  console.log('Next: review the diff, open a PR, and merge it; the release workflow tags and publishes v' + version);
+}
+
+if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) main(process.argv.slice(2));
