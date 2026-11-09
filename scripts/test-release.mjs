@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // Tests for scripts/release.mjs: version bump, badge, changelog cut and release notes.
 import assert from 'node:assert/strict';
-import { bumpBadge, bumpManifest, changelogSection, compareVersions, cutChangelog, keepEol } from './release.mjs';
+import { bumpBadge, bumpManifest, changelogSection, compareVersions, cutChangelog, isValidDate, keepEol } from './release.mjs';
 
 let passed = 0;
 const test = (name, fn) => {
@@ -33,6 +33,18 @@ test('compareVersions orders releases and prereleases', () => {
   assert.equal(compareVersions('0.2.0', '0.2.0'), 0);
   assert.ok(compareVersions('1.0.0-beta.1', '1.0.0') < 0);
   assert.ok(compareVersions('0.1.0', '0.2.0') < 0);
+  assert.ok(compareVersions('0.2.0-rc.10', '0.2.0-rc.2') > 0);
+  assert.ok(compareVersions('1.0.0-alpha', '1.0.0-alpha.1') < 0);
+  assert.ok(compareVersions('1.0.0-1', '1.0.0-alpha') < 0);
+  assert.ok(compareVersions('1.0.0-beta', '1.0.0-alpha.9') > 0);
+});
+
+test('isValidDate accepts real dates only', () => {
+  assert.ok(isValidDate('2026-11-20'));
+  assert.ok(isValidDate('2028-02-29'));
+  for (const bad of ['2026-02-30', '2026-13-45', '2027-02-29', '2026-1-5', '', undefined]) {
+    assert.equal(isValidDate(bad), false, String(bad));
+  }
 });
 
 test('bumpManifest changes only the version and keeps formatting', () => {

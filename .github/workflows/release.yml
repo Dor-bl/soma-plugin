@@ -26,18 +26,24 @@ jobs:
       contents: write
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-        with:
-          fetch-depth: 2
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
         with:
           node-version: 22
       - name: Read the version
         id: version
+        env:
+          # The branch tip before the push (not HEAD^, which is wrong for a
+          # multi-commit push); empty for workflow_dispatch.
+          BEFORE_SHA: ${{ github.event.before }}
         run: |
           version=$(node -p "require('./.claude-plugin/plugin.json').version")
           echo "version=$version" >> "$GITHUB_OUTPUT"
           echo "tag=v$version" >> "$GITHUB_OUTPUT"
-          before=$(git show HEAD^:.claude-plugin/plugin.json 2>/dev/null | node -e "let s='';process.stdin.on('data',d=>s+=d).on('end',()=>{try{console.log(JSON.parse(s).version)}catch{console.log('')}})")
+          before=""
+          if [ -n "$BEFORE_SHA" ] && [ "$BEFORE_SHA" != "0000000000000000000000000000000000000000" ]; then
+            git fetch --quiet --depth=1 origin "$BEFORE_SHA"
+            before=$(git show "$BEFORE_SHA:.claude-plugin/plugin.json" | node -e "let s='';process.stdin.on('data',d=>s+=d).on('end',()=>console.log(JSON.parse(s).version))")
+          fi
           echo "before=$before" >> "$GITHUB_OUTPUT"
       - name: Skip if the version did not change or the release exists
         id: exists
@@ -54,10 +60,17 @@ jobs:
           elif gh release view "$TAG" > /dev/null 2>&1; then
             echo "Release $TAG exists; nothing to do."
             echo "skip=true" >> "$GITHUB_OUTPUT"
-          elif git ls-remote --exit-code --tags origin "refs/tags/$TAG" > /dev/null; then
-            echo "::error::Tag $TAG exists without a release. Publish it by hand or delete the tag."
-            exit 1
           else
+            # --exit-code: 0 = tag found, 2 = no such tag, anything else = the lookup failed
+            status=0
+            git ls-remote --exit-code --tags origin "refs/tags/$TAG" > /dev/null || status=$?
+            if [ "$status" -eq 0 ]; then
+              echo "::error::Tag $TAG exists without a release. Publish it by hand or delete the tag."
+              exit 1
+            elif [ "$status" -ne 2 ]; then
+              echo "::error::Could not check whether tag $TAG exists (git exit $status)."
+              exit "$status"
+            fi
             echo "skip=false" >> "$GITHUB_OUTPUT"
           fi
       - name: Check the plugin

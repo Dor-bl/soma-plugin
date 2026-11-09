@@ -28,17 +28,41 @@ export function keepEol(text, fn) {
   return crlf ? out.replace(/\n/g, '\r\n') : out;
 }
 
-// Compares release versions only; a prerelease suffix sorts before its release.
+// SemVer precedence: core numbers first; a prerelease sorts before its release;
+// prerelease identifiers compare numerically when both are numeric, numeric
+// before alphanumeric, otherwise as text; a shorter identifier list sorts first.
 export function compareVersions(a, b) {
-  const [ca, pa = ''] = a.split('-', 2);
-  const [cb, pb = ''] = b.split('-', 2);
+  const split = (v) => {
+    const i = v.indexOf('-');
+    return i === -1 ? [v, ''] : [v.slice(0, i), v.slice(i + 1)];
+  };
+  const [ca, pa] = split(a);
+  const [cb, pb] = split(b);
   const na = ca.split('.').map(Number);
   const nb = cb.split('.').map(Number);
   for (let i = 0; i < 3; i++) if (na[i] !== nb[i]) return na[i] - nb[i];
   if (pa === pb) return 0;
   if (!pa) return 1;
   if (!pb) return -1;
-  return pa < pb ? -1 : 1;
+  const ia = pa.split('.');
+  const ib = pb.split('.');
+  for (let i = 0; i < Math.max(ia.length, ib.length); i++) {
+    if (ia[i] === undefined) return -1;
+    if (ib[i] === undefined) return 1;
+    const da = /^\d+$/.test(ia[i]);
+    const db = /^\d+$/.test(ib[i]);
+    if (da && db && Number(ia[i]) !== Number(ib[i])) return Number(ia[i]) - Number(ib[i]);
+    if (da !== db) return da ? -1 : 1;
+    if (ia[i] !== ib[i]) return ia[i] < ib[i] ? -1 : 1;
+  }
+  return 0;
+}
+
+// True for a real calendar date in YYYY-MM-DD form.
+export function isValidDate(date) {
+  if (!DATE.test(date ?? '')) return false;
+  const d = new Date(`${date}T00:00:00Z`);
+  return !Number.isNaN(d.getTime()) && d.toISOString().slice(0, 10) === date;
 }
 
 export function bumpManifest(text, version) {
@@ -103,7 +127,7 @@ function main(argv) {
   const dateIdx = argv.indexOf('--date');
   const date = dateIdx === -1 ? new Date().toISOString().slice(0, 10) : argv[dateIdx + 1];
   if (!SEMVER.test(version ?? '')) fail('usage: release.mjs <version> [--date YYYY-MM-DD]');
-  if (!DATE.test(date ?? '')) fail(`--date must be YYYY-MM-DD, got ${date}`);
+  if (!isValidDate(date)) fail(`--date must be a real date in YYYY-MM-DD form, got ${date}`);
 
   const manifestPath = path('.claude-plugin/plugin.json');
   const manifest = readFileSync(manifestPath, 'utf8');
