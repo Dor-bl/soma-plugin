@@ -126,9 +126,8 @@ Once SOMA is installed, try:
 > SOMA is in beta. Expect rough edges, and please report them.
 
 - 🧪 Lightly tested on devices: every skill has completed at least one run on an Android 13 emulator through Appium (headless, 2026-11-07), `explore-app` has run once through Artemis, and on iOS only `start-device` and `run-manual-test` have run, on a simulator. Physical devices, remote servers and app maps haven't been run yet.
-- 🍎 iOS 18.2 simulators: with `appium-mcp` 1.99.3 the first WebDriverAgent install fails ([appium/appium-mcp#608](https://github.com/appium/appium-mcp/issues/608)). `/soma:device` prepares the simulator again, which works. Intel Macs are untested.
 - 🛡️ Protection against prompt injection from app or device content (e.g. on-screen text telling Claude to run a command) relies on skill instructions, not tool restrictions. Tool-level limits are tracked in issue #8.
-- 📌 `appium-mcp` is pinned to an exact version (`1.99.3`), and its whole dependency tree is locked with integrity hashes in `runtime/package-lock.json`. Bump them together, deliberately, after testing. Install scripts are skipped, so packages that need one (e.g. browser driver downloads) are not set up.
+- 📌 `appium-mcp` is pinned to an exact version (`1.97.1`), and its whole dependency tree is locked with integrity hashes in `runtime/package-lock.json`. Bump them together, deliberately, after testing. Install scripts are skipped, so packages that need one (e.g. browser driver downloads) are not set up.
 - 🌐 The remote URL policy covers the URL you configure only. Redirects and direct-connect endpoints chosen by the server aren't re-checked, so only point SOMA at servers you trust.
 - 🔓 SOMA can't add authentication to a self-hosted Appium server. Put it behind an authenticating reverse proxy or VPN; never expose it unauthenticated on a shared network.
 
