@@ -14,13 +14,17 @@ on:
 permissions:
   contents: read
 
+# One group per commit: GitHub keeps only one pending run per group, so a shared
+# group could let a later push replace a pending version bump's run.
 concurrency:
-  group: release
+  group: release-${{ github.sha }}
   cancel-in-progress: false
 
 jobs:
   release:
     name: Tag and publish
+    # workflow_dispatch can target any branch; publish from main only
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     permissions:
       contents: write

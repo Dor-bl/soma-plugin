@@ -74,7 +74,8 @@ export function bumpManifest(text, version) {
 export function bumpBadge(text, version) {
   const re = /(badge\/version-)[\w.-]+?(-\w+\.svg)/;
   if (!re.test(text)) throw new Error('README.md: version badge not found');
-  return text.replace(re, `$1${version}$2`);
+  // shields.io reads a single hyphen as a field separator; "--" is a literal one
+  return text.replace(re, `$1${version.replaceAll('-', '--')}$2`);
 }
 
 const heading = (version) => new RegExp(`^## \\[${escape(version)}\\][^\\n]*$`, 'm');

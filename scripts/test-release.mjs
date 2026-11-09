@@ -59,6 +59,9 @@ test('bumpBadge rewrites the version badge only', () => {
   assert.match(out, /badge\/version-0\.2\.0-blue\.svg/);
   assert.match(out, /status-beta-yellow/);
   assert.throws(() => bumpBadge('no badge', '0.2.0'), /badge/);
+  const rc = bumpBadge(text, '1.0.0-rc.1');
+  assert.match(rc, /badge\/version-1\.0\.0--rc\.1-blue\.svg/);
+  assert.match(bumpBadge(rc, '1.0.0'), /badge\/version-1\.0\.0-blue\.svg/);
 });
 
 test('cutChangelog moves Unreleased entries under a dated heading', () => {

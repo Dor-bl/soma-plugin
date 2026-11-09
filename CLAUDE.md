@@ -39,7 +39,7 @@ Not in CI: `node scripts/injection-check.mjs` runs live Claude Code sessions (ne
 
 1. `node scripts/release.mjs <version>` bumps `plugin.json` and the README badge, moves the "Unreleased" changelog entries under `## [<version>] - <today>`, and runs `check-plugin.mjs`. With the version already in `plugin.json`, it only dates that version's heading. `--date YYYY-MM-DD` sets another date.
 2. Review the diff, open a PR, merge it.
-3. On main, `.github/workflows/release.yml` sees the version change, tags `v<version>` on the merge commit and publishes a GitHub release with that changelog section as notes. It skips a push that leaves the version unchanged or a version that already has a release, and fails if the heading has no date. A version with a suffix (`1.0.0-rc.1`) is published as a prerelease. Run it by hand from the Actions tab to retry.
+3. On main, `.github/workflows/release.yml` sees the version change, tags `v<version>` on the merge commit and publishes a GitHub release with that changelog section as notes. It skips a push that leaves the version unchanged or a version that already has a release, and fails if the heading has no date. A version with a suffix (`1.0.0-rc.1`) is published as a prerelease. Run it by hand from the Actions tab (on main) to retry.
 
 ## Running appium-mcp while working in this repo
 

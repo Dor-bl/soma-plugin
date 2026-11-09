@@ -50,9 +50,11 @@ for (const [name, server] of Object.entries(mcp?.mcpServers ?? {})) {
 // README version badge must match the manifest
 if (plugin?.version) {
   const badge = read('README.md').match(/badge\/version-([\w.-]+?)-\w+\.svg/);
+  // shields.io writes a literal hyphen as "--" (a single one separates fields)
+  const shown = badge?.[1].replaceAll('--', '-');
   if (!badge) fail('README.md: version badge not found');
-  else if (badge[1] !== plugin.version) {
-    fail(`README.md: version badge ${badge[1]} != plugin.json ${plugin.version}`);
+  else if (shown !== plugin.version) {
+    fail(`README.md: version badge ${shown} != plugin.json ${plugin.version}`);
   }
 }
 
