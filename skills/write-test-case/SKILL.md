@@ -10,7 +10,7 @@ This skill only drafts text. It does not touch a device: to run the result, hand
 ## Inputs (ask one short question if something essential is missing)
 - Source: a feature description, user story, acceptance criteria, a bug report (e.g. from `bug-report` in this conversation), or a file path the tester gives you
 - Platform: Android, iOS or both
-- App under test, and the test account or data the tester will use, if known
+- App under test, and the test account or data the tester will use, if known. When the source names a system app (Settings, Contacts, the launcher), default to that platform's app with its package or bundle ID and no account, and say so
 - Scope: one happy-path case by default. Add negative and edge cases only if the tester asks, or list them as suggestions at the end
 
 ## Template

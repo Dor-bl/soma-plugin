@@ -4,6 +4,7 @@
       "command": "node",
       "args": ["${CLAUDE_PLUGIN_ROOT}/scripts/start-appium-mcp.mjs"],
       "env": {
+        "NO_UI": "1",
         "SOMA_REMOTE_SERVER_URL": "${user_config.remote_server_url}",
         "SOMA_DATA_DIR": "${CLAUDE_PLUGIN_DATA}",
         "CAPABILITIES_CONFIG": "${user_config.capabilities_file}"

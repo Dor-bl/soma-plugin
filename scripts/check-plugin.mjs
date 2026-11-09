@@ -56,6 +56,35 @@ if (plugin?.version) {
   }
 }
 
+// Publishing: the marketplace entry, the manifest's listing fields, the README install
+// line and the files the plugin directory looks for
+const marketplace = existsSync(join(root, '.claude-plugin/marketplace.json')) ? readJson('.claude-plugin/marketplace.json') : fail('.claude-plugin/marketplace.json: missing');
+if (marketplace && plugin) {
+  if (!marketplace.name) fail('marketplace.json: missing "name"');
+  if (!marketplace.owner?.name) fail('marketplace.json: missing "owner.name"');
+  const entry = (marketplace.plugins ?? []).find((p) => p.name === plugin.name);
+  if (!entry) fail(`marketplace.json: no plugin entry named "${plugin.name}"`);
+  else {
+    if (entry.source !== './') fail(`marketplace.json: entry "${plugin.name}" must use source "./" (the plugin is this repo)`);
+    if ('version' in entry) fail('marketplace.json: leave "version" out of the entry; plugin.json carries it and wins');
+  }
+  const repoUrl = /^https:\/\/github\.com\/([\w.-]+\/[\w.-]+)$/;
+  for (const key of ['homepage', 'repository']) {
+    if (!repoUrl.test(plugin[key] ?? '')) fail(`plugin.json: "${key}" must be the GitHub repository URL`);
+  }
+  if (!plugin.author?.name) fail('plugin.json: missing "author.name"');
+  const repo = plugin.repository?.match(repoUrl)?.[1];
+  if (repo && marketplace.name) {
+    const readme = read('README.md');
+    for (const line of [`/plugin install ${plugin.name} --marketplace ${repo}`, `${plugin.name}@${marketplace.name}`]) {
+      if (!readme.includes(line)) fail(`README.md: missing the install text "${line}"`);
+    }
+  }
+}
+for (const f of ['LICENSE', 'NOTICE', 'CHANGELOG.md', 'SECURITY.md', '.claude-plugin/icon.png']) {
+  if (!existsSync(join(root, f))) fail(`${f}: missing (needed for publishing)`);
+}
+
 // appium-mcp is pinned in runtime/package.json and locked in runtime/package-lock.json.
 // Every version mentioned in docs and skills, and the lockfile, must match that pin.
 const runtimePkg = JSON.parse(read('runtime/package.json'));

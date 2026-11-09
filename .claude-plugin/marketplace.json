@@ -1,0 +1,16 @@
+{
+  "name": "soma-plugin",
+  "owner": {
+    "name": "Dor Blayzer",
+    "url": "https://github.com/Dor-bl"
+  },
+  "description": "SOMA: mobile QA skills and slash commands for Claude Code, built on the official appium-mcp server. Run manual test cases on Android and iOS devices, triage failures and write bug reports.",
+  "plugins": [
+    {
+      "name": "soma",
+      "source": "./",
+      "category": "testing",
+      "tags": ["appium", "mobile", "qa", "testing", "android", "ios"]
+    }
+  ]
+}
