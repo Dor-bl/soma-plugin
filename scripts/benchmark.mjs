@@ -11,7 +11,7 @@
 // task through /soma:run-test; "plain" sends it as a bare prompt. Each run starts from a reset
 // device state, and the outcome is checked with adb, not by trusting the reply.
 import { spawn, spawnSync } from 'node:child_process';
-import { mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
+import { closeSync, mkdirSync, mkdtempSync, openSync, readFileSync, realpathSync, rmSync, unlinkSync, writeFileSync } from 'node:fs';
 import { homedir, tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -35,7 +35,7 @@ const timeoutMs = Number(flag('timeout-min', 15)) * 60_000;
 const outDir = flag('out', join(root, 'benchmarks', 'results'));
 const dryRun = process.argv.includes('--dry-run');
 // Saves each run's raw stream-json, so tool-result errors can be read after the run
-const keepStreams = process.argv.includes('--keep-streams');
+let keepStreams = process.argv.includes('--keep-streams');
 
 const tasks = taskIds.map((id) => allTasks.find((t) => t.id === id) ?? fail(`unknown task: ${id}`));
 for (const arm of arms) if (!['plain', 'soma'].includes(arm)) fail(`unknown arm: ${arm}`);
@@ -126,7 +126,15 @@ mkdirSync(outDir, { recursive: true });
 const results = [];
 const stamp = new Date().toISOString().replace(/[:.]/g, '-');
 const streamsDir = join(outDir, stamp);
-if (keepStreams) mkdirSync(streamsDir, { recursive: true });
+// Streams are optional: a folder that cannot be made turns them off, not the benchmark
+if (keepStreams) {
+  try {
+    mkdirSync(streamsDir, { recursive: true });
+  } catch (error) {
+    keepStreams = false;
+    console.error(`⚠ could not create ${streamsDir}: ${error.code ?? error.message}; streams will not be saved`);
+  }
+}
 // Written after every run, so an interrupted benchmark keeps the runs it already paid for
 function writeReports() {
   const models = [...new Set(results.map((r) => r.model).filter(Boolean))];
@@ -171,12 +179,27 @@ for (let n = 1; n <= runs; n++) {
       let stream = null;
       if (keepStreams) {
         const name = streamFileName(task.id, arm, n);
-        // A stream that cannot be written must not lose the run's numbers
+        const file = join(streamsDir, name);
+        // A stream that cannot be written must not lose the run's numbers. 'wx' never opens an
+        // existing file, so only a partial file this write created is removed (freeing the disk
+        // space the reports need)
+        let fd = null;
         try {
-          writeFileSync(join(streamsDir, name), run.stdout ?? '');
+          fd = openSync(file, 'wx');
+          writeFileSync(fd, run.stdout ?? '');
+          closeSync(fd);
+          fd = null;
           stream = `${stamp}/${name}`;
         } catch (error) {
-          console.error(`⚠ could not save ${join(streamsDir, name)}: ${error.code ?? error.message}`);
+          console.error(`⚠ could not save ${file}: ${error.code ?? error.message}`);
+          if (fd !== null) {
+            try { closeSync(fd); } catch { /* already reported the write failure */ }
+            try {
+              unlinkSync(file);
+            } catch (cleanup) {
+              console.error(`⚠ could not remove the partial ${file}: ${cleanup.code ?? cleanup.message}`);
+            }
+          }
         }
       }
       const m = measure(parseEvents(run.stdout ?? ''));
