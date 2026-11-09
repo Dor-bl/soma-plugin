@@ -12,6 +12,7 @@ Notable changes to SOMA, newest first. The format follows [Keep a Changelog](htt
 
 ### Changed
 
+- `appium-mcp` 1.97.1 to 1.99.3, with the lockfile regenerated. Known issue: on iOS 18.2 simulators the first WDA install fails ([appium/appium-mcp#608](https://github.com/appium/appium-mcp/issues/608)); `start-device` prepares the simulator a second time, which works
 - README: install from the marketplace instead of a checkout, a note on the first start, a section on what SOMA runs, sends and fetches, and a "Developing SOMA" section on loading `appium-mcp` inside the repo
 - `appium-mcp` runs with `NO_UI=1`: screenshot and session results no longer carry an HTML viewer, so they fit the tool-result limit and show the saved file path
 - Screenshots and saved page sources go to `screenshots/` and `page-sources/` under the plugin data folder (mode 0700, no symlinks) instead of the OS temp folder; `SCREENSHOTS_DIR` and `PAGE_SOURCES_DIR` still override
