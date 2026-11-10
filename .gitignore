@@ -13,3 +13,6 @@ setup-soma.ps1
 
 # Visual Studio local state (including its Copilot search index)
 .vs/
+
+# Raw benchmark streams (--keep-streams): full tool results, large; review before sharing
+benchmarks/results/*/
