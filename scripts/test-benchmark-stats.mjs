@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // Unit tests for the benchmark's run parsing and summary (scripts/benchmark-stats.mjs).
 import assert from 'node:assert/strict';
-import { measure, median, parseEvents, summarise, toMarkdown } from './benchmark-stats.mjs';
+import { measure, median, parseEvents, streamFileName, summarise, toMarkdown } from './benchmark-stats.mjs';
 
 const stream = [
   { type: 'system', subtype: 'init', model: 'claude-test' },
@@ -36,6 +36,8 @@ const tests = [
     assert.equal(m.appiumCalls, 3);
     assert.equal(m.appiumOk, 1);
     assert.equal(m.turns, 3);
+    assert.equal(m.bashCalls, 1);
+    assert.equal(m.contextPerTurn, 100 / 3);
     assert.equal(m.durationSec, 12.5);
     assert.equal(m.model, 'claude-test');
     assert.equal(m.reply, 'done');
@@ -73,6 +75,30 @@ const tests = [
     assert.equal(rows[0].passed, 1);
     assert.equal(rows[0].invalid, 1);
     assert.match(toMarkdown(rows), /\| t \| plain \| 1\/3 \(1 no Appium\) \|/);
+  }],
+  ['context per turn is null without usage or turns, and Bash calls are 0 without Bash', () => {
+    const none = measure(parseEvents('{"type":"system","subtype":"init"}'));
+    assert.equal(none.contextPerTurn, null);
+    assert.equal(none.bashCalls, 0);
+    const noTurns = measure(parseEvents(JSON.stringify({ type: 'result', num_turns: 0, usage: { cache_read_input_tokens: 50 } })));
+    assert.equal(noTurns.contextPerTurn, null);
+  }],
+  ['the table shows median context per turn, turns and Bash calls per arm', () => {
+    const run = (arm, contextPerTurn, turns, bashCalls) => ({ task: 't', arm, passed: true, total: 100, input: 0, cacheRead: 0, cacheWrite: 0, output: 1, costUsd: 1, turns, contextPerTurn, toolCalls: 2, bashCalls, toolErrors: 0, durationSec: 3 });
+    const rows = summarise([run('plain', 28_700, 18, 2), run('plain', 28_900, 20, 4), run('soma', 31_300, 22, 0)]);
+    assert.equal(rows[0].contextPerTurn.median, 28_800);
+    assert.equal(rows[0].bashCalls.median, 3);
+    const md = toMarkdown(rows);
+    assert.match(md, /\| Context per turn \| Turns \| Output tokens \| Tool calls \| Bash calls \|/);
+    assert.match(md, /\| t \| plain \| 2\/2 \| 100 \(100–100\) \| – \| 28,800 \| 19 \| 1 \| 2 \| 3 \|/);
+    assert.match(md, /\| t \| soma \| 1\/1 \| 100 \(100–100\) \| 0% \| 31,300 \| 22 \| 1 \| 2 \| 0 \|/);
+    // Header and rows keep the same column count
+    const cells = md.split('\n').map((l) => l.split('|').length);
+    assert.ok(cells.every((c) => c === cells[0]));
+  }],
+  ['stream file names are <task>-<arm>-<run>.jsonl and cannot leave the folder', () => {
+    assert.equal(streamFileName('dark-theme', 'soma', 2), 'dark-theme-soma-2.jsonl');
+    assert.equal(streamFileName('../x/y', 'plain', 1), '___x_y-plain-1.jsonl');
   }],
 ];
 
