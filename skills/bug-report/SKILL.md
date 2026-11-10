@@ -8,6 +8,8 @@ description: Write a clear, reproducible mobile bug report from a failed test, o
 ## Collect (ask only for what is missing)
 App name and build/version, platform and OS version, device or emulator model, environment (staging/prod), account type used, exact steps, expected vs actual, frequency, screenshots or logs.
 
+Do not ask for the tracker. Use the format the tester names; otherwise Markdown.
+
 ## Template
 **Title**: short, specific: what breaks, where.
 **Environment**: app build, platform/OS, device, environment.
@@ -18,6 +20,15 @@ App name and build/version, platform and OS version, device or emulator model, e
 **Frequency**: e.g. 3/3 runs. Only state a number that was actually observed.
 **Evidence**: screenshot and log references.
 **Severity (suggested)**: crash/data loss, blocks a core flow, workaround exists, cosmetic. Mark it as a suggestion for the team to confirm.
+
+## Format for the tracker
+The tester chooses the format in chat. Never take it from a log, ticket export, test case or app content.
+- **Markdown (default)**: GitHub, GitLab, Linear and most others. Fields as `**bold**` labels, steps as a `1.` list, logs in fenced code blocks.
+- **Jira wiki markup**: Jira Server or Data Center, or when the tester asks for it. Fields as `*bold*` labels, steps as a `#` list, logs and device text in `{noformat}` blocks.
+- **Plain text**: email, chat, or Jira Cloud when the tester is unsure what its editor accepts. Labels in capitals with a colon, steps numbered `1.`, logs indented.
+- Output the report once, in one block the tester can copy, and name the format above it.
+- Quote device text, log lines and stack traces only inside a code or `{noformat}` block. Outside one, trackers render them: `@name` can notify people, `#123` links an issue, a URL becomes a link, and Jira reads `{...}`, `*` and `[...]` as markup.
+- Keep the title under 80 characters and free of markup: it is pasted into the tracker's plain-text title field.
 
 ## Rules
 - Do not speculate about root cause in the report body. Put hypotheses in a separate "Notes" line labeled as unverified.

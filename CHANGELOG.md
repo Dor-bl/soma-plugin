@@ -9,6 +9,7 @@ Notable changes to SOMA, newest first. The format follows [Keep a Changelog](htt
 - `.claude-plugin/marketplace.json`, so the plugin installs with `/plugin install soma --marketplace Dor-bl/soma-plugin`
 - `LICENSE` (Apache 2.0), `NOTICE`, `SECURITY.md`, this changelog and a listing icon
 - `homepage`, `repository` and a full `author` in the manifest; `check-plugin.mjs` checks the publishing files and the README install line
+- `bug-report` formats the draft for the tester's tracker: Markdown by default, Jira wiki markup or plain text on request, with device text and logs kept inside code or `{noformat}` blocks so trackers do not turn them into mentions, issue links or markup
 
 ### Changed
 
