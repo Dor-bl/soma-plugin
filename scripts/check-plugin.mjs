@@ -153,6 +153,30 @@ for (const dir of REDACTING_SKILLS) {
   }
 }
 
+// The skills that quote device output (screenshots, logs, page source) must carry the same
+// redaction wording, so a fix in one reaches all of them (see CLAUDE.md "Writing skills").
+// write-test-case is left out: it quotes stories and tickets, not device output.
+const REDACTION_SYNC = ['bug-report', 'run-manual-test', 'explore-app', 'triage-failure'];
+function section(text, heading) {
+  const lines = text.replace(/\r\n/g, '\n').split('\n');
+  const start = lines.indexOf(heading);
+  if (start === -1) return null;
+  const end = lines.findIndex((l, i) => i > start && /^#{1,2} /.test(l));
+  return lines.slice(start + 1, end === -1 ? undefined : end).join('\n').trim().split('\n');
+}
+const redaction = REDACTION_SYNC.filter((d) => existsSync(join(root, `skills/${d}/SKILL.md`))).map((d) => [
+  `skills/${d}/SKILL.md`,
+  section(read(`skills/${d}/SKILL.md`), '## Sensitive data (redaction)'),
+]);
+const [refPath, refLines] = redaction.find(([, s]) => s) ?? [];
+for (const [p, lines] of redaction) {
+  if (!lines || p === refPath) continue; // a missing section is reported above
+  const i = Array.from({ length: Math.max(lines.length, refLines.length) }).findIndex((_, n) => lines[n] !== refLines[n]);
+  if (i !== -1) {
+    fail(`${p}: "Sensitive data (redaction)" differs from ${refPath} at section line ${i + 1}; keep the wording in sync across ${REDACTION_SYNC.join(', ')}`);
+  }
+}
+
 // Skills that create an Appium session must carry the same remote-URL, autoGrantPermissions
 // and noReset rules (see CLAUDE.md "Writing skills"). Each pattern is one rule; the wording
 // may differ per skill, but the rule must be there.

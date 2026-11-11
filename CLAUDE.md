@@ -63,7 +63,7 @@ The entry passes no remote URL, so remote servers stay blocked and only local de
 - If a skill starts relying on a new `appium-mcp` tool, add it to `REQUIRED_TOOLS` in `scripts/mcp-smoke.mjs` so upstream removals are caught.
 - Session setup reads `${user_config.remote_server_url}`: empty or a literal `${user_config...}` placeholder means local mode (no `remoteServerUrl`), set means pass exactly that value as `remoteServerUrl`. Every skill that creates a session with Appium (`run-manual-test`, `triage-failure`, `generate-test`, `explore-app`) must carry the same remote-URL, `autoGrantPermissions` and `noReset` rules.
 - Anything that runs local tools (`adb`, `appium`, test clients) must say whether it applies to remote sessions too. Local `adb` can hit the wrong device when the server is remote.
-- Skills that quote screenshots, logs or page source back to the tester (`bug-report`, `run-manual-test`, `explore-app`, `triage-failure`) carry the same "Sensitive data (redaction)" section; `check-plugin.mjs` checks it is present. Keep the wording in sync across them.
+- Skills that quote screenshots, logs or page source back to the tester (`bug-report`, `run-manual-test`, `explore-app`, `triage-failure`) carry the same "Sensitive data (redaction)" section; `check-plugin.mjs` checks that the section is word-for-word the same in all four (`REDACTION_SYNC`), so change it in every one at once. `write-test-case` has its own variant for stories and tickets and is only checked for presence.
 - Keep skills short and imperative. Markdownlint is relaxed for prompts (see `.markdownlint-cli2.jsonc`); structural rules like closed code fences and valid tables still apply.
 - When adding a skill or command, add it to the "What's inside" table in `README.md`.
 
