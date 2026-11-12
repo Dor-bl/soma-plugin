@@ -25,6 +25,7 @@ The first marketplace release. Status moves from experimental to beta.
 - `run-manual-test` lists the Appium tools it needs inline and reads `backends/README.md` and `backends/appium.md` only when they apply (another engine, iOS, a remote server, a tool not listed), instead of on every run (#54)
 - Benchmark: a pass needs at least one successful `appium-mcp` call, every adb call is pinned to the validated emulator serial, and each run keeps its evidence inside its own workspace; first baseline published in `benchmarks/README.md`
 - `bug-report` no longer writes that a screenshot "is masked": it can redact text but not image files, so the draft's Evidence line tells the tester what to crop or mask before attaching (found on the iOS gate run, #64)
+- `/soma:setup-artemis` is now `/soma:artemis`. The command shared its name with the `setup-artemis` skill, so the plugin listed `setup-artemis` twice; the skill keeps its name (found on the macOS clean install, #64)
 - README known limitations: results of the iOS simulator pass and the macOS clean install from the release gate (#64), remote mode labelled untested, and why `appium-mcp` stays at 1.97.1
 
 ## [0.1.0] - not tagged
