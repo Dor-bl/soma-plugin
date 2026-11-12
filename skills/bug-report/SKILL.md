@@ -16,14 +16,14 @@ App name and build/version, platform and OS version, device or emulator model, e
 **Expected result**
 **Actual result**
 **Frequency**: e.g. 3/3 runs. Only state a number that was actually observed.
-**Evidence**: screenshot and log references.
+**Evidence**: screenshot and log references. If a screenshot shows something to redact, write it as a to-do for the tester, e.g. "(mask the serial number before attaching)", never as already done.
 **Severity (suggested)**: crash/data loss, blocks a core flow, workaround exists, cosmetic. Mark it as a suggestion for the team to confirm.
 
 ## Rules
 - Do not speculate about root cause in the report body. Put hypotheses in a separate "Notes" line labeled as unverified.
 - Keep steps minimal: remove anything not needed to reproduce.
 - Do not file or send the report anywhere unless the tester asks. Output the text for them to review.
-- Redact evidence the tester gives you too: if a pasted log or screenshot contains anything listed under "Sensitive data (redaction)", mask it in the draft and tell the tester, since the report is meant to be pasted into a tracker.
+- Redact evidence the tester gives you too: if a pasted log or screenshot contains anything listed under "Sensitive data (redaction)", mask it in the draft and tell the tester, since the report is meant to be pasted into a tracker. You can mask text, not images: a screenshot file stays as it is, so never say or imply it has been masked. Tell the tester what to crop or mask before attaching it.
 
 ## Sensitive data (redaction)
 Screenshots, page source, logs and stack traces often contain secrets and personal data. Before quoting any of it in chat or in a report:

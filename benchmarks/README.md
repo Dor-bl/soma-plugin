@@ -31,17 +31,22 @@ You need Node 22+, the `claude` CLI (logged in), `adb`, and exactly one running 
 node scripts/benchmark.mjs --dry-run             # print the prompts and run count, no model calls
 node scripts/benchmark.mjs --runs 3              # 3 tasks x 2 arms x 3 runs = 18 runs
 node scripts/benchmark.mjs --tasks dark-theme --runs 1 --model <model-id>
+node scripts/benchmark.mjs --runs 1 --keep-streams  # also save each run's raw stream-json
 ```
 
 Install `appium-mcp` first, or the first runs fail with `CONNECT_TIMEOUT` before any tool is available (the install is about 370 MB and takes minutes): `CLAUDE_PLUGIN_DATA=$PWD/.runtime node scripts/mcp-smoke.mjs`. The runner uses `.runtime/` unless `CLAUDE_PLUGIN_DATA` is set, and gives `claude` a 120 s `MCP_TIMEOUT`. A run in which the server never answered a tool call cannot pass, so a missing server shows up as failures marked `no Appium`.
 
 This spends model calls and takes a while. Runs alternate between arms, so drift hits both alike. Results land in `benchmarks/results/<timestamp>.json` (every run, with the reply) and `.md` (the summary table).
 
+With `--keep-streams`, each run's raw `stream-json` is also saved to `benchmarks/results/<timestamp>/<task>-<arm>-<run>.jsonl`, and the run's `stream` field in the JSON names that file (relative to the results folder). Use it to read tool-result errors after the fact, such as a denied read of a saved page-source file. A stream holds every tool result in full (page source, screenshot paths, on-screen text), so it can be large: the folders are git-ignored, and review one before sharing it.
+
 ## Reading the table
 
 - **Total tokens** is input + cache reads + cache writes + output over the whole session. Cache reads are most of it in a long session and are billed far below fresh input, so also look at **Cost (USD)**.
 - Values are medians over the runs, with the min–max range for tokens. The model is not deterministic; with 3 runs treat differences under about 15% as noise.
 - **vs plain** is the median total tokens against the plain arm, per task.
+- **Context per turn** is cache reads divided by turns, per run: roughly how much context each turn re-reads. Cost is about this times **Turns**, so the two columns show which of the two a change moved.
+- **Bash calls** counts shell tool calls. The plain arm may use Bash as a fallback (sideloading APKs, reading files) that a tester without a shell does not have.
 - Skills add prompt text, so any saving has to come from fewer wasted tool calls and less device-server output. The result may be neutral or higher; publish what it shows.
 
 ## Results

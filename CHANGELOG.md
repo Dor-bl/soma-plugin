@@ -13,6 +13,7 @@ The first marketplace release. Status moves from experimental to beta.
 - `.claude-plugin/marketplace.json`, so the plugin installs with `/plugin install soma --marketplace Dor-bl/soma-plugin`
 - `LICENSE` (Apache 2.0), `NOTICE`, `SECURITY.md`, this changelog and a listing icon
 - `homepage`, `repository` and a full `author` in the manifest; `check-plugin.mjs` checks the publishing files and the README install line
+- Benchmark: context per turn, turns and Bash calls per arm in the summary table, and `--keep-streams` to save each run's raw stream (#57)
 
 ### Changed
 
@@ -23,6 +24,7 @@ The first marketplace release. Status moves from experimental to beta.
 - Artemis: the setup skill makes the clone private and the consent gate checks the clone and the trace directory before a run
 - `run-manual-test` lists the Appium tools it needs inline and reads `backends/README.md` and `backends/appium.md` only when they apply (another engine, iOS, a remote server, a tool not listed), instead of on every run (#54)
 - Benchmark: a pass needs at least one successful `appium-mcp` call, every adb call is pinned to the validated emulator serial, and each run keeps its evidence inside its own workspace; first baseline published in `benchmarks/README.md`
+- `bug-report` no longer writes that a screenshot "is masked": it can redact text but not image files, so the draft's Evidence line tells the tester what to crop or mask before attaching (found on the iOS gate run, #64)
 - README known limitations: results of the iOS simulator pass and the macOS clean install from the release gate (#64), remote mode labelled untested, and why `appium-mcp` stays at 1.97.1
 
 ## [0.1.0] - not tagged
