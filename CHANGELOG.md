@@ -10,6 +10,7 @@ Notable changes to SOMA, newest first. The format follows [Keep a Changelog](htt
 - `LICENSE` (Apache 2.0), `NOTICE`, `SECURITY.md`, this changelog and a listing icon
 - `homepage`, `repository` and a full `author` in the manifest; `check-plugin.mjs` checks the publishing files and the README install line
 - Benchmark: context per turn, turns and Bash calls per arm in the summary table, and `--keep-streams` to save each run's raw stream (#57)
+- `check-plugin.mjs` fails when a skill, command or backend file points at a `${CLAUDE_PLUGIN_ROOT}/` path that does not exist, so a renamed or split backend file or script is caught in CI instead of on a device run
 
 ### Changed
 
