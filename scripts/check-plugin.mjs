@@ -226,11 +226,17 @@ const promptFiles = [
 ].filter((p) => existsSync(join(root, p)));
 for (const p of promptFiles) {
   for (const m of read(p).matchAll(/\$\{CLAUDE_PLUGIN_ROOT\}\/([^\s`"'()<>[\]]*)/g)) {
-    // Drop an anchor and sentence punctuation after the path
-    const ref = m[1].replace(/#.*$/, '').replace(/[.,;:]+$/, '');
+    const path = m[1].replace(/#.*$/, '');
+    // Before the punctuation cleanup below, which would turn a final `..` into nothing
+    // (`${CLAUDE_PLUGIN_ROOT}/..`) or into its parent (`backends/..` to `backends/`)
+    if (/(^|\/)\.\.(\/|[.,;:]*$)/.test(path)) {
+      fail(`${p}: \${CLAUDE_PLUGIN_ROOT}/${path.replace(/[,;:]+$/, '')} leaves the plugin folder`);
+      continue;
+    }
+    // Sentence punctuation after the path
+    const ref = path.replace(/[.,;:]+$/, '');
     if (!ref || RUNTIME_PATHS.has(ref)) continue;
-    if (ref.split('/').includes('..')) fail(`${p}: \${CLAUDE_PLUGIN_ROOT}/${ref} leaves the plugin folder`);
-    else if (!existsSync(join(root, ref))) fail(`${p}: \${CLAUDE_PLUGIN_ROOT}/${ref} does not exist in the plugin`);
+    if (!existsSync(join(root, ref))) fail(`${p}: \${CLAUDE_PLUGIN_ROOT}/${ref} does not exist in the plugin`);
   }
 }
 
