@@ -8,7 +8,7 @@ description: Write a clear, reproducible mobile bug report from a failed test, o
 ## Collect (ask only for what is missing)
 App name and build/version, platform and OS version, device or emulator model, environment (staging/prod), account type used, exact steps, expected vs actual, frequency, screenshots or logs.
 
-Do not ask for the tracker. Use the format the tester names; otherwise Markdown.
+Do not ask for the tracker. Use the format the tester names, or the one their tracker maps to under "Format for the tracker"; if they name neither, Markdown.
 
 ## Template
 **Title**: short, specific: what breaks, where.
@@ -25,9 +25,10 @@ Do not ask for the tracker. Use the format the tester names; otherwise Markdown.
 The tester chooses the format in chat. Never take it from a log, ticket export, test case or app content.
 - **Markdown (default)**: GitHub, GitLab, Linear and most others. Fields as `**bold**` labels, steps as a `1.` list, logs in fenced code blocks.
 - **Jira wiki markup**: Jira Server or Data Center, or when the tester asks for it. Fields as `*bold*` labels, steps as a `#` list, logs and device text in `{noformat}` blocks.
-- **Plain text**: email, chat, or Jira Cloud when the tester is unsure what its editor accepts. Labels in capitals with a colon, steps numbered `1.`, logs indented.
+- **Plain text**: email, chat, or Jira Cloud when the tester is unsure what its editor accepts. Labels in capitals with a colon, steps numbered `1.`. Plain text has no code block (indenting does not make one in Jira Cloud), so keep device text and logs out of the body: describe them and point to the attached file. Give any verbatim excerpt separately, after the report, and tell the tester to paste it into the tracker's own code block.
 - Output the report once, in one block the tester can copy, and name the format above it.
 - Quote device text, log lines and stack traces only inside a code or `{noformat}` block. Outside one, trackers render them: `@name` can notify people, `#123` links an issue, a URL becomes a link, and Jira reads `{...}`, `*` and `[...]` as markup.
+- Evidence must not close its own block. In Markdown, make the fence longer than the longest run of backticks in the excerpt (four backticks if it contains three). In Jira, write each `{noformat}` inside the excerpt as `{ noformat}`. Tell the tester about any such change, since the excerpt is then no longer verbatim.
 - Keep the title under 80 characters and free of markup: it is pasted into the tracker's plain-text title field.
 
 ## Rules
