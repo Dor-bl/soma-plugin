@@ -34,10 +34,11 @@ function frontmatter(p) {
 }
 
 // Manifest
+const SEMVER = /^(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)(?:-(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\.(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*)?$/;
 const plugin = readJson('.claude-plugin/plugin.json');
 if (plugin) {
   if (!plugin.name) fail('plugin.json: missing "name"');
-  if (!/^\d+\.\d+\.\d+(-[\w.]+)?$/.test(plugin.version ?? '')) {
+  if (!SEMVER.test(plugin.version ?? '')) {
     fail(`plugin.json: "version" is not semver (${plugin.version})`);
   }
 }
@@ -50,9 +51,11 @@ for (const [name, server] of Object.entries(mcp?.mcpServers ?? {})) {
 // README version badge must match the manifest
 if (plugin?.version) {
   const badge = read('README.md').match(/badge\/version-([\w.-]+?)-\w+\.svg/);
+  // shields.io writes a literal hyphen as "--" (a single one separates fields)
+  const shown = badge?.[1].replaceAll('--', '-');
   if (!badge) fail('README.md: version badge not found');
-  else if (badge[1] !== plugin.version) {
-    fail(`README.md: version badge ${badge[1]} != plugin.json ${plugin.version}`);
+  else if (shown !== plugin.version) {
+    fail(`README.md: version badge ${shown} != plugin.json ${plugin.version}`);
   }
 }
 

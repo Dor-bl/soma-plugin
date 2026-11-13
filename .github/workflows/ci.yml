@@ -47,6 +47,8 @@ jobs:
         run: node scripts/test-system-tools.mjs
       - name: Benchmark statistics tests
         run: node scripts/test-benchmark-stats.mjs
+      - name: Release script tests
+        run: node scripts/test-release.mjs
 
   docs:
     name: Markdown lint and links

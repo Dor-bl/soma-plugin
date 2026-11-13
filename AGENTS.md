@@ -27,6 +27,7 @@ node scripts/test-system-tools.mjs    # Windows system tool path resolution
 node scripts/test-triage-command.mjs  # /soma:triage command contract
 node scripts/test-injection-match.mjs # injection-check reply and shell matching
 node scripts/test-benchmark-stats.mjs # benchmark run parsing and summary
+node scripts/test-release.mjs         # release script: version bump, changelog cut, notes
 npx markdownlint-cli2 "**/*.md"
 node scripts/mcp-smoke.mjs           # first run installs ~370 MB; SMOKE_TIMEOUT_MS overrides, CLAUDE_PLUGIN_DATA sets the install folder
 ```
@@ -34,6 +35,12 @@ node scripts/mcp-smoke.mjs           # first run installs ~370 MB; SMOKE_TIMEOUT
 CI also runs a link check (lychee) on all Markdown, so links must resolve.
 
 Not in CI: `node scripts/injection-check.mjs` runs live Claude Code sessions (needs the `claude` CLI, logged in, and uses model calls) to check that `run-test`, `gen-test` and `bug` ignore and flag instructions hidden in a test-case file. Run it after changing `commands/` or a skill's untrusted-content rules. `node scripts/benchmark.mjs` is also live-only (emulator, `adb`, model calls); see `benchmarks/README.md`. It fails only on what the session did (canary created, blocked tools used, files written); its checks on the reply's wording only warn, so read any reply it prints with a ⚠.
+
+## Releasing
+
+1. `node scripts/release.mjs <version>` bumps `plugin.json` and the README badge, moves the "Unreleased" changelog entries under `## [<version>] - <today>`, and runs `check-plugin.mjs`. With the version already in `plugin.json`, it only dates that version's heading. `--date YYYY-MM-DD` sets another date.
+2. Review the diff, open a PR, merge it.
+3. On main, `.github/workflows/release.yml` sees the version change, tags `v<version>` on the merge commit and publishes a GitHub release with that changelog section as notes. It skips a push that leaves the version unchanged or a version that already has a release, and fails if the heading has no date. A version with a suffix (`1.0.0-rc.1`) is published as a prerelease. If it failed on something transient (network, a GitHub outage), use "Re-run jobs" on that run: it keeps the version-bump commit. If the fix needs a commit (e.g. an undated heading), merge the fix, then start the workflow by hand from the Actions tab on main: a changelog-only push does not trigger it, and the tag then goes on the current tip of main, so it includes every commit since the bump.
 
 ## Running appium-mcp while working in this repo
 
@@ -55,7 +62,7 @@ The entry passes no remote URL, so remote servers stay blocked and only local de
 - Skills that create an Appium session (`run-manual-test`, `triage-failure`, `generate-test`, `explore-app`, listed in `SESSION_SKILLS`) must each carry the remote-URL, `autoGrantPermissions` and `noReset` rules from "Writing skills". The wording may differ, but each rule's key phrase must be present (`SESSION_RULES`). Add a new session-creating skill to the list.
 - Every `${user_config.<key>}` used in a skill must be declared in `plugin.json`, and every declared key must be used.
 - Every `${CLAUDE_PLUGIN_ROOT}/<path>` in a skill, command or backend file must exist in the repo (an `#anchor` is ignored; `..` is rejected). Folders the plugin creates at run time, such as `.runtime/`, are listed in `RUNTIME_PATHS`. When you rename, move or split a backend file or script, update every reference in the same change.
-- The README version badge must match `plugin.json` `version`. Bump both together, and add the release to `CHANGELOG.md`.
+- The README version badge must match `plugin.json` `version`. `scripts/release.mjs` bumps both and dates the changelog (see "Releasing").
 - `marketplace.json` must list `plugin.json`'s `name` with `source: "./"` and no `version`; `plugin.json` must carry `author.name`, `homepage` and `repository` (the GitHub URL); the README must contain the one-line install command and the `soma@soma-plugin` install id; `LICENSE`, `NOTICE`, `CHANGELOG.md`, `SECURITY.md` and `.claude-plugin/icon.png` must exist.
 - Every `appium-mcp@<version>` in the README and skills must match the version pinned in `runtime/package.json`, and so must the lockfile. To bump: edit `runtime/package.json`, run `npm install --package-lock-only --ignore-scripts` in `runtime/`, review the lockfile diff, then update the docs.
 
