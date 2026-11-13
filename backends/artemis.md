@@ -5,7 +5,7 @@ Server: [Google Artemis](https://github.com/google/artemis) MCP server. Not bund
 Platforms: **Android only**. Artemis runs its own agent: it receives a goal in plain language and decides the taps itself.
 
 ## Install
-Do not use `start.bat` / `start.sh` or `artemis mcp --install`: they install system packages and write Artemis's MCP config and rules into every supported AI client, not just this project. Register Artemis's MCP server for the SOMA project only, and let the tester add the API key to Artemis's `.env` themselves. The `setup-artemis` skill (`/soma:setup-artemis`) does this step by step with the tester's consent.
+Do not use `start.bat` / `start.sh` or `artemis mcp --install`: they install system packages and write Artemis's MCP config and rules into every supported AI client, not just this project. Register Artemis's MCP server for the SOMA project only, and let the tester add the API key to Artemis's `.env` themselves. The `setup-artemis` skill (`/soma:artemis`) does this step by step with the tester's consent.
 
 ## Operations
 
