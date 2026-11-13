@@ -154,7 +154,7 @@ for (const dir of REDACTING_SKILLS) {
 }
 
 // The skills that quote device output (screenshots, logs, page source) must carry the same
-// redaction wording, so a fix in one reaches all of them (see CLAUDE.md "Writing skills").
+// redaction wording, so a fix in one reaches all of them (see AGENTS.md "Writing skills").
 // write-test-case is left out: it quotes stories and tickets, not device output.
 const REDACTION_SYNC = ['bug-report', 'run-manual-test', 'explore-app', 'triage-failure'];
 function section(text, heading) {
@@ -191,7 +191,7 @@ for (const [p, lines] of redaction) {
 }
 
 // Skills that create an Appium session must carry the same remote-URL, autoGrantPermissions
-// and noReset rules (see CLAUDE.md "Writing skills"). Each pattern is one rule; the wording
+// and noReset rules (see AGENTS.md "Writing skills"). Each pattern is one rule; the wording
 // may differ per skill, but the rule must be there.
 const SESSION_SKILLS = ['run-manual-test', 'triage-failure', 'generate-test', 'explore-app'];
 const SESSION_RULES = [
