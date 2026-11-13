@@ -215,6 +215,33 @@ for (const file of readdirSync(join(root, 'commands')).filter((f) => f.endsWith(
   }
 }
 
+// Every `${CLAUDE_PLUGIN_ROOT}/<path>` in a skill, command or backend file must exist in
+// the plugin. These are read or run at session time (backend files, scripts), and the
+// Markdown link check does not see paths inside inline code, so a renamed or split file
+// would otherwise only show up as a failed read on a tester's device run.
+// Folders the plugin creates at run time are listed in RUNTIME_PATHS.
+const RUNTIME_PATHS = new Set(['.runtime/']);
+const promptFiles = [
+  ...readdirSync(join(root, 'skills')).map((d) => `skills/${d}/SKILL.md`),
+  ...readdirSync(join(root, 'commands')).filter((f) => f.endsWith('.md')).map((f) => `commands/${f}`),
+  ...readdirSync(join(root, 'backends')).filter((f) => f.endsWith('.md')).map((f) => `backends/${f}`),
+].filter((p) => existsSync(join(root, p)));
+for (const p of promptFiles) {
+  for (const m of read(p).matchAll(/\$\{CLAUDE_PLUGIN_ROOT\}\/([^\s`"'()<>[\]]*)/g)) {
+    const path = m[1].replace(/#.*$/, '');
+    // Before the punctuation cleanup below, which would turn a final `..` into nothing
+    // (`${CLAUDE_PLUGIN_ROOT}/..`) or into its parent (`backends/..` to `backends/`)
+    if (/(^|\/)\.\.(\/|[.,;:]*$)/.test(path)) {
+      fail(`${p}: \${CLAUDE_PLUGIN_ROOT}/${path.replace(/[,;:]+$/, '')} leaves the plugin folder`);
+      continue;
+    }
+    // Sentence punctuation after the path
+    const ref = path.replace(/[.,;:]+$/, '');
+    if (!ref || RUNTIME_PATHS.has(ref)) continue;
+    if (!existsSync(join(root, ref))) fail(`${p}: \${CLAUDE_PLUGIN_ROOT}/${ref} does not exist in the plugin`);
+  }
+}
+
 if (errors.length) {
   console.error(errors.map((e) => `✘ ${e}`).join('\n'));
   process.exit(1);
