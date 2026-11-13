@@ -159,10 +159,23 @@ for (const dir of REDACTING_SKILLS) {
 const REDACTION_SYNC = ['bug-report', 'run-manual-test', 'explore-app', 'triage-failure'];
 function section(text, heading) {
   const lines = text.replace(/\r\n/g, '\n').split('\n');
-  const start = lines.indexOf(heading);
-  if (start === -1) return null;
-  const end = lines.findIndex((l, i) => i > start && /^#{1,2} /.test(l));
-  return lines.slice(start + 1, end === -1 ? undefined : end).join('\n').trim().split('\n');
+  let fence = null;
+  let start = -1;
+  for (let i = 0; i < lines.length; i++) {
+    const m = lines[i].match(/^ {0,3}(`{3,}|~{3,})/);
+    if (m) {
+      if (!fence) fence = m[1];
+      else if (m[1][0] === fence[0] && m[1].length >= fence.length && /^ {0,3}(`{3,}|~{3,})\s*$/.test(lines[i])) fence = null;
+      continue;
+    }
+    if (fence) continue;
+    if (start === -1) {
+      if (lines[i] === heading) start = i;
+    } else if (/^#{1,2} /.test(lines[i])) {
+      return lines.slice(start + 1, i).join('\n').trim().split('\n');
+    }
+  }
+  return start === -1 ? null : lines.slice(start + 1).join('\n').trim().split('\n');
 }
 const redaction = REDACTION_SYNC.filter((d) => existsSync(join(root, `skills/${d}/SKILL.md`))).map((d) => [
   `skills/${d}/SKILL.md`,
