@@ -7,6 +7,14 @@ Notable changes to SOMA, newest first. The format follows [Keep a Changelog](htt
 ### Added
 
 - `device-runner` subagent: `run-manual-test` hands a confirmed Appium run to it, so screenshots, page source and element lookups stay in the agent's context and the conversation gets only the per-step report. It can use only the Read tool and the `appium-mcp` tools the run needs (no shell), cannot ask the tester, and marks a step BLOCKED when it needs something the confirmation did not cover. Artemis runs, and Claude surfaces without subagents, run in the conversation as before. `check-plugin.mjs` checks agent frontmatter, the README row, the redaction section and that every `appium-mcp` tool an agent lists is in the smoke test's `REQUIRED_TOOLS`
+- `plugin.json` links for the Claude directory listing: documentation (the README), support (this repository's issues) and privacy (the README section on what SOMA runs, sends and fetches). The listing description no longer repeats the name
+
+## [0.2.0] - 2026-11-13
+
+The first marketplace release. Status moves from experimental to beta.
+
+### Added
+
 - `.claude-plugin/marketplace.json`, so the plugin installs with `/plugin install soma --marketplace Dor-bl/soma-plugin`
 - `LICENSE` (Apache 2.0), `NOTICE`, `SECURITY.md`, this changelog and a listing icon
 - `homepage`, `repository` and a full `author` in the manifest; `check-plugin.mjs` checks the publishing files and the README install line
@@ -27,6 +35,7 @@ Notable changes to SOMA, newest first. The format follows [Keep a Changelog](htt
 - `bug-report` no longer writes that a screenshot "is masked": it can redact text but not image files, so the draft's Evidence line tells the tester what to crop or mask before attaching (found on the iOS gate run, #64)
 - `triage-failure` captures reproduction evidence the way `run-manual-test` does: the failing step is checked from an element or page source saved with a selector rather than the full tree, one screenshot (`maxWidth` about 720) is taken when the check is visual or when the step fails, and saved files are read with the Read tool, not a shell (#56)
 - `/soma:setup-artemis` is now `/soma:artemis`. The command shared its name with the `setup-artemis` skill, so the plugin listed `setup-artemis` twice; the skill keeps its name (found on the macOS clean install, #64)
+- README known limitations: results of the iOS simulator pass and the Windows and macOS clean installs from the release gate (#64), remote mode labelled untested, and why `appium-mcp` stays at 1.97.1
 
 ## [0.1.0] - not tagged
 

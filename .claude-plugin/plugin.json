@@ -1,14 +1,17 @@
 {
   "name": "soma",
   "displayName": "SOMA",
-  "version": "0.1.0",
-  "description": "SOMA: mobile QA workflows on top of the official appium-mcp server: run manual test cases on a device, triage failures, write bug reports.",
+  "version": "0.2.0",
+  "description": "Mobile QA workflows on top of the official appium-mcp server: run manual test cases on a device, triage failures, write bug reports.",
   "author": {
     "name": "Dor Blayzer",
     "url": "https://github.com/Dor-bl"
   },
   "homepage": "https://github.com/Dor-bl/soma-plugin",
   "repository": "https://github.com/Dor-bl/soma-plugin",
+  "documentationUrl": "https://github.com/Dor-bl/soma-plugin#readme",
+  "supportUrl": "https://github.com/Dor-bl/soma-plugin/issues",
+  "privacyPolicyUrl": "https://github.com/Dor-bl/soma-plugin#-what-soma-runs-sends-and-fetches",
   "license": "Apache-2.0",
   "keywords": ["appium", "qa", "mobile", "testing", "android", "ios"],
   "userConfig": {
