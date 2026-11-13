@@ -34,10 +34,11 @@ function frontmatter(p) {
 }
 
 // Manifest
+const SEMVER = /^(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)(?:-(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\.(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*)?$/;
 const plugin = readJson('.claude-plugin/plugin.json');
 if (plugin) {
   if (!plugin.name) fail('plugin.json: missing "name"');
-  if (!/^\d+\.\d+\.\d+(-[\w.]+)?$/.test(plugin.version ?? '')) {
+  if (!SEMVER.test(plugin.version ?? '')) {
     fail(`plugin.json: "version" is not semver (${plugin.version})`);
   }
 }
@@ -50,9 +51,11 @@ for (const [name, server] of Object.entries(mcp?.mcpServers ?? {})) {
 // README version badge must match the manifest
 if (plugin?.version) {
   const badge = read('README.md').match(/badge\/version-([\w.-]+?)-\w+\.svg/);
+  // shields.io writes a literal hyphen as "--" (a single one separates fields)
+  const shown = badge?.[1].replaceAll('--', '-');
   if (!badge) fail('README.md: version badge not found');
-  else if (badge[1] !== plugin.version) {
-    fail(`README.md: version badge ${badge[1]} != plugin.json ${plugin.version}`);
+  else if (shown !== plugin.version) {
+    fail(`README.md: version badge ${shown} != plugin.json ${plugin.version}`);
   }
 }
 
@@ -153,8 +156,45 @@ for (const dir of REDACTING_SKILLS) {
   }
 }
 
+// The skills that quote device output (screenshots, logs, page source) must carry the same
+// redaction wording, so a fix in one reaches all of them (see AGENTS.md "Writing skills").
+// write-test-case is left out: it quotes stories and tickets, not device output.
+const REDACTION_SYNC = ['bug-report', 'run-manual-test', 'explore-app', 'triage-failure'];
+function section(text, heading) {
+  const lines = text.replace(/\r\n/g, '\n').split('\n');
+  let fence = null;
+  let start = -1;
+  for (let i = 0; i < lines.length; i++) {
+    const m = lines[i].match(/^ {0,3}(`{3,}|~{3,})/);
+    if (m) {
+      if (!fence) fence = m[1];
+      else if (m[1][0] === fence[0] && m[1].length >= fence.length && /^ {0,3}(`{3,}|~{3,})\s*$/.test(lines[i])) fence = null;
+      continue;
+    }
+    if (fence) continue;
+    if (start === -1) {
+      if (lines[i] === heading) start = i;
+    } else if (/^#{1,2} /.test(lines[i])) {
+      return lines.slice(start + 1, i).join('\n').trim().split('\n');
+    }
+  }
+  return start === -1 ? null : lines.slice(start + 1).join('\n').trim().split('\n');
+}
+const redaction = REDACTION_SYNC.filter((d) => existsSync(join(root, `skills/${d}/SKILL.md`))).map((d) => [
+  `skills/${d}/SKILL.md`,
+  section(read(`skills/${d}/SKILL.md`), '## Sensitive data (redaction)'),
+]);
+const [refPath, refLines] = redaction.find(([, s]) => s) ?? [];
+for (const [p, lines] of redaction) {
+  if (!lines || p === refPath) continue; // a missing section is reported above
+  const i = Array.from({ length: Math.max(lines.length, refLines.length) }).findIndex((_, n) => lines[n] !== refLines[n]);
+  if (i !== -1) {
+    fail(`${p}: "Sensitive data (redaction)" differs from ${refPath} at section line ${i + 1}; keep the wording in sync across ${REDACTION_SYNC.join(', ')}`);
+  }
+}
+
 // Skills that create an Appium session must carry the same remote-URL, autoGrantPermissions
-// and noReset rules (see CLAUDE.md "Writing skills"). Each pattern is one rule; the wording
+// and noReset rules (see AGENTS.md "Writing skills"). Each pattern is one rule; the wording
 // may differ per skill, but the rule must be there.
 const SESSION_SKILLS = ['run-manual-test', 'triage-failure', 'generate-test', 'explore-app'];
 const SESSION_RULES = [

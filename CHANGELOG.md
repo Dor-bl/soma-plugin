@@ -14,6 +14,7 @@ The first marketplace release. Status moves from experimental to beta.
 - `LICENSE` (Apache 2.0), `NOTICE`, `SECURITY.md`, this changelog and a listing icon
 - `homepage`, `repository` and a full `author` in the manifest; `check-plugin.mjs` checks the publishing files and the README install line
 - Benchmark: context per turn, turns and Bash calls per arm in the summary table, and `--keep-streams` to save each run's raw stream (#57)
+- `check-plugin.mjs` fails when the "Sensitive data (redaction)" section of `bug-report`, `run-manual-test`, `explore-app` and `triage-failure` drifts apart, and names the first line that differs
 - `bug-report` formats the draft for the tester's tracker: Markdown by default, Jira wiki markup or plain text on request, with device text and logs kept inside code or `{noformat}` blocks so trackers do not turn them into mentions, issue links or markup. An excerpt cannot close its own block, and plain text keeps them out of the body
 - `check-plugin.mjs` fails when a skill, command or backend file points at a `${CLAUDE_PLUGIN_ROOT}/` path that does not exist, so a renamed or split backend file or script is caught in CI instead of on a device run
 
@@ -27,6 +28,7 @@ The first marketplace release. Status moves from experimental to beta.
 - `run-manual-test` lists the Appium tools it needs inline and reads `backends/README.md` and `backends/appium.md` only when they apply (another engine, iOS, a remote server, a tool not listed), instead of on every run (#54)
 - Benchmark: a pass needs at least one successful `appium-mcp` call, every adb call is pinned to the validated emulator serial, and each run keeps its evidence inside its own workspace; first baseline published in `benchmarks/README.md`
 - `bug-report` no longer writes that a screenshot "is masked": it can redact text but not image files, so the draft's Evidence line tells the tester what to crop or mask before attaching (found on the iOS gate run, #64)
+- `triage-failure` captures reproduction evidence the way `run-manual-test` does: the failing step is checked from an element or page source saved with a selector rather than the full tree, one screenshot (`maxWidth` about 720) is taken when the check is visual or when the step fails, and saved files are read with the Read tool, not a shell (#56)
 - `/soma:setup-artemis` is now `/soma:artemis`. The command shared its name with the `setup-artemis` skill, so the plugin listed `setup-artemis` twice; the skill keeps its name (found on the macOS clean install, #64)
 - README known limitations: results of the iOS simulator pass and the Windows and macOS clean installs from the release gate (#64), remote mode labelled untested, and why `appium-mcp` stays at 1.97.1
 

@@ -146,7 +146,7 @@ claude mcp add --scope local appium-mcp -- node "$PWD/scripts/start-appium-mcp.m
 
 This entry passes no remote URL, so only local devices work, unless `SOMA_REMOTE_SERVER_URL` is exported in your shell (then that one URL is allowed). Do not edit `.mcp.json` to fix the error: its variables are what make the plugin work for users.
 
-The checks CI runs, and the conventions they enforce, are in [`CLAUDE.md`](CLAUDE.md).
+The checks CI runs, and the conventions they enforce, are in [`AGENTS.md`](AGENTS.md).
 
 ## 📄 License
 
