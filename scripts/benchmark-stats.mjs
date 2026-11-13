@@ -104,3 +104,14 @@ export function streamFileName(task, arm, run) {
   const safe = (v) => String(v).replace(/[^A-Za-z0-9_-]/g, '_');
   return `${safe(task)}-${safe(arm)}-${safe(run)}.jsonl`;
 }
+
+// Replies quote evidence paths (screenshots under the temp folder), which carry the local
+// user name. The results JSON is committed, so the home folder becomes "~" before saving.
+// Either slash direction and any letter case match, as Windows paths come in both.
+export function redactHome(text, home) {
+  if (typeof text !== 'string' || !home) return text;
+  const trimmed = home.replace(/[\\/]+$/, '');
+  if (!trimmed) return text;
+  const pattern = trimmed.split(/[\\/]+/).map((part) => part.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('[\\\\/]+');
+  return text.replace(new RegExp(pattern, 'gi'), '~');
+}

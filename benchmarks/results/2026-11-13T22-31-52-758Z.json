@@ -58,7 +58,7 @@
       "appiumOk": 15,
       "bashCalls": 0,
       "isError": false,
-      "reply": "**PASS** (Appium, Android emulator-5554): I opened Settings, tapped Display, then Dark theme, and switched \"Use Dark theme\" on. The Switch reports `checked=true`, and the screenshot (`C:\\Users\\Dor-B\\AppData\\Local\\Temp\\soma-bench-5KzrHr\\artifacts\\screenshot_1794609302158.png`) shows the toggle on and the screen in dark mode.\n\n- **Extra tap:** Dark theme is its own page, so the first tap only opened it. The toggle was still off in that first screenshot, so I tapped \"Use Dark theme\" as a second action.\n- **Left on:** I didn't run any cleanup, so Dark theme is still on.",
+      "reply": "**PASS** (Appium, Android emulator-5554): I opened Settings, tapped Display, then Dark theme, and switched \"Use Dark theme\" on. The Switch reports `checked=true`, and the screenshot (`~\\AppData\\Local\\Temp\\soma-bench-5KzrHr\\artifacts\\screenshot_1794609302158.png`) shows the toggle on and the screen in dark mode.\n\n- **Extra tap:** Dark theme is its own page, so the first tap only opened it. The toggle was still off in that first screenshot, so I tapped \"Use Dark theme\" as a second action.\n- **Left on:** I didn't run any cleanup, so Dark theme is still on.",
       "wallSec": 76.134,
       "error": null,
       "stream": "2026-11-13T22-31-52-758Z/dark-theme-soma-1.jsonl"
@@ -114,7 +114,7 @@
       "appiumOk": 14,
       "bashCalls": 0,
       "isError": false,
-      "reply": "**PASS**: In Settings > Display > Screen timeout on emulator-5554, \"1 minute\" shows as selected (radio filled). I judged that from the screenshot at `C:\\Users\\Dor-B\\AppData\\Local\\Temp\\soma-bench-rJo23b\\artifacts\\screenshot_1794609445729.png`, not from structured state. The `checked` attribute on the text label read false, which is the label and not the radio button. The session is closed.",
+      "reply": "**PASS**: In Settings > Display > Screen timeout on emulator-5554, \"1 minute\" shows as selected (radio filled). I judged that from the screenshot at `~\\AppData\\Local\\Temp\\soma-bench-rJo23b\\artifacts\\screenshot_1794609445729.png`, not from structured state. The `checked` attribute on the text label read false, which is the label and not the radio button. The session is closed.",
       "wallSec": 74.708,
       "error": null,
       "stream": "2026-11-13T22-31-52-758Z/screen-timeout-soma-1.jsonl"
@@ -170,7 +170,7 @@
       "appiumOk": 10,
       "bashCalls": 0,
       "isError": false,
-      "reply": "**Engine:** Appium, local, emulator-5554, Settings (`com.android.settings`), `noReset`, no permissions auto-granted.\n\n| # | Action | Expected | Observed | Status |\n|---|---|---|---|---|\n| 1 | Open Settings | Settings opens | Session launched Settings | PASS |\n| 2 | Scroll to About phone / About emulated device | Entry found | Found after 5 scrolls and tapped | PASS |\n| 3 | Find Android version | Value shown | \"Android version\" row reads `13` | PASS |\n\nI confirmed step 3 from the element text. I didn't open the screenshot afterwards, so I haven't checked it visually. It's saved at `C:\\Users\\Dor-B\\AppData\\Local\\Temp\\soma-bench-V4LaYB\\artifacts\\screenshot_1794609612667.png`. I closed the session.\n\n**Result: PASS. Android version is shown exactly as \"13\".**",
+      "reply": "**Engine:** Appium, local, emulator-5554, Settings (`com.android.settings`), `noReset`, no permissions auto-granted.\n\n| # | Action | Expected | Observed | Status |\n|---|---|---|---|---|\n| 1 | Open Settings | Settings opens | Session launched Settings | PASS |\n| 2 | Scroll to About phone / About emulated device | Entry found | Found after 5 scrolls and tapped | PASS |\n| 3 | Find Android version | Value shown | \"Android version\" row reads `13` | PASS |\n\nI confirmed step 3 from the element text. I didn't open the screenshot afterwards, so I haven't checked it visually. It's saved at `~\\AppData\\Local\\Temp\\soma-bench-V4LaYB\\artifacts\\screenshot_1794609612667.png`. I closed the session.\n\n**Result: PASS. Android version is shown exactly as \"13\".**",
       "wallSec": 86.814,
       "error": null,
       "stream": "2026-11-13T22-31-52-758Z/read-android-version-soma-1.jsonl"
@@ -226,7 +226,7 @@
       "appiumOk": 15,
       "bashCalls": 0,
       "isError": false,
-      "reply": "**Engine:** Appium, Android emulator-5554, Settings (`com.android.settings`), `noReset=true`, auto-grant permissions off.\n\n| # | Action | Expected | Observed | Status |\n|---|---|---|---|---|\n| 1 | Open Settings | Settings main screen | Session launched Settings | PASS |\n| 2 | Tap Display | Display screen opens | Found \"Display\" after one scroll and tapped it. \"Dark theme\" was listed. | PASS |\n| 3 | Switch Dark theme on | Toggle turns on | Tapping \"Dark theme\" opened its sub-page, where the switch was still off (`checked=false`). Tapping `android:id/switch_widget` turned it on. | PASS |\n| 4 | Confirm it is on | Toggle shows on | `checked=true` from the element attribute. The screenshot (`C:\\Users\\Dor-B\\AppData\\Local\\Temp\\soma-bench-y9mjr8\\artifacts\\screenshot_1794609782287.png`) shows the switch on and the screen in dark colors. | PASS |\n\nI did not restore the original setting, because the test had no Cleanup section. Dark theme is still on, and the session is closed.\n\n**Result: PASS.** Dark theme is on, confirmed by `checked=true` and visually by the dark screen. Nothing was redacted.",
+      "reply": "**Engine:** Appium, Android emulator-5554, Settings (`com.android.settings`), `noReset=true`, auto-grant permissions off.\n\n| # | Action | Expected | Observed | Status |\n|---|---|---|---|---|\n| 1 | Open Settings | Settings main screen | Session launched Settings | PASS |\n| 2 | Tap Display | Display screen opens | Found \"Display\" after one scroll and tapped it. \"Dark theme\" was listed. | PASS |\n| 3 | Switch Dark theme on | Toggle turns on | Tapping \"Dark theme\" opened its sub-page, where the switch was still off (`checked=false`). Tapping `android:id/switch_widget` turned it on. | PASS |\n| 4 | Confirm it is on | Toggle shows on | `checked=true` from the element attribute. The screenshot (`~\\AppData\\Local\\Temp\\soma-bench-y9mjr8\\artifacts\\screenshot_1794609782287.png`) shows the switch on and the screen in dark colors. | PASS |\n\nI did not restore the original setting, because the test had no Cleanup section. Dark theme is still on, and the session is closed.\n\n**Result: PASS.** Dark theme is on, confirmed by `checked=true` and visually by the dark screen. Nothing was redacted.",
       "wallSec": 87.791,
       "error": null,
       "stream": "2026-11-13T22-31-52-758Z/dark-theme-soma-2.jsonl"
@@ -282,7 +282,7 @@
       "appiumOk": 13,
       "bashCalls": 0,
       "isError": false,
-      "reply": "**PASS** (Appium, Android emulator-5554): I opened Settings, then Display, then Screen timeout, and chose \"1 minute\". The page source shows its radio button checked and every other option unchecked. The screenshot is at `C:\\Users\\Dor-B\\AppData\\Local\\Temp\\soma-bench-gtwyVo\\artifacts\\screenshot_1794609932728.png`. I didn't open or view it.\n\nThe Screen timeout dialog was still open after the tap, so I confirmed the selection in that dialog and didn't reopen the setting to check it persisted.",
+      "reply": "**PASS** (Appium, Android emulator-5554): I opened Settings, then Display, then Screen timeout, and chose \"1 minute\". The page source shows its radio button checked and every other option unchecked. The screenshot is at `~\\AppData\\Local\\Temp\\soma-bench-gtwyVo\\artifacts\\screenshot_1794609932728.png`. I didn't open or view it.\n\nThe Screen timeout dialog was still open after the tap, so I confirmed the selection in that dialog and didn't reopen the setting to check it persisted.",
       "wallSec": 80.765,
       "error": null,
       "stream": "2026-11-13T22-31-52-758Z/screen-timeout-soma-2.jsonl"
@@ -338,7 +338,7 @@
       "appiumOk": 10,
       "bashCalls": 0,
       "isError": false,
-      "reply": "**Engine:** Appium, local session on emulator-5554, Settings (com.android.settings), `noReset` on, auto-grant permissions off.\n\n| # | Action | Expected | Observed | Status |\n|---|--------|----------|----------|--------|\n| 1 | Open Settings | Settings opens | Session launched Settings | PASS |\n| 2 | Scroll to About phone / About emulated device | Entry visible | Found after 5 scrolls and tapped | PASS |\n| 3 | Find Android version | Value shown | `Android version` summary text is `13` (read from the element text) | PASS |\n\nThe screenshot is saved at `C:\\Users\\Dor-B\\AppData\\Local\\Temp\\soma-bench-rGwD4y\\artifacts\\screenshot_1794610103374.png`. I didn't open or view it, so the result rests on the element text. The session is closed.\n\n**Result: PASS. Android version is shown exactly as \"13\".**",
+      "reply": "**Engine:** Appium, local session on emulator-5554, Settings (com.android.settings), `noReset` on, auto-grant permissions off.\n\n| # | Action | Expected | Observed | Status |\n|---|--------|----------|----------|--------|\n| 1 | Open Settings | Settings opens | Session launched Settings | PASS |\n| 2 | Scroll to About phone / About emulated device | Entry visible | Found after 5 scrolls and tapped | PASS |\n| 3 | Find Android version | Value shown | `Android version` summary text is `13` (read from the element text) | PASS |\n\nThe screenshot is saved at `~\\AppData\\Local\\Temp\\soma-bench-rGwD4y\\artifacts\\screenshot_1794610103374.png`. I didn't open or view it, so the result rests on the element text. The session is closed.\n\n**Result: PASS. Android version is shown exactly as \"13\".**",
       "wallSec": 84.848,
       "error": null,
       "stream": "2026-11-13T22-31-52-758Z/read-android-version-soma-2.jsonl"
@@ -394,7 +394,7 @@
       "appiumOk": 16,
       "bashCalls": 0,
       "isError": false,
-      "reply": "**PASS** (Appium): in Settings I tapped Display, then Dark theme, then \"Use Dark theme\". The switch reports checked=true and the screen turned dark. Evidence: `C:\\Users\\Dor-B\\AppData\\Local\\Temp\\soma-bench-EOoF7o\\artifacts\\screenshot_1794610261766.png`. The emulator's dark theme is still on, because the test had no cleanup step.",
+      "reply": "**PASS** (Appium): in Settings I tapped Display, then Dark theme, then \"Use Dark theme\". The switch reports checked=true and the screen turned dark. Evidence: `~\\AppData\\Local\\Temp\\soma-bench-EOoF7o\\artifacts\\screenshot_1794610261766.png`. The emulator's dark theme is still on, because the test had no cleanup step.",
       "wallSec": 74.74,
       "error": null,
       "stream": "2026-11-13T22-31-52-758Z/dark-theme-soma-3.jsonl"
@@ -506,7 +506,7 @@
       "appiumOk": 9,
       "bashCalls": 0,
       "isError": false,
-      "reply": "Engine: Appium, on emulator-5554, with `com.android.settings` and `noReset`. Auto-granting permissions was off.\n\n| # | Action | Expected | Observed | Status |\n|---|---|---|---|---|\n| 1 | Open Settings | Settings opens | Session launched Settings | PASS |\n| 2 | Scroll to \"About emulated device\" or \"About phone\" and open it | The entry is found and opens | The entry matched and was tapped | PASS |\n| 3 | Read the Android version | A version is shown | \"Android version\" shows `13` (page source). I also took a screenshot at `C:\\Users\\Dor-B\\AppData\\Local\\Temp\\soma-bench-Eb8Ne0\\artifacts\\screenshot_1794610615687.png` but didn't open it. | PASS |\n\nI confirmed the value from the page source, not by judging the screenshot. I closed the session.\n\n**Result: PASS. The Android version is shown as `13`.**",
+      "reply": "Engine: Appium, on emulator-5554, with `com.android.settings` and `noReset`. Auto-granting permissions was off.\n\n| # | Action | Expected | Observed | Status |\n|---|---|---|---|---|\n| 1 | Open Settings | Settings opens | Session launched Settings | PASS |\n| 2 | Scroll to \"About emulated device\" or \"About phone\" and open it | The entry is found and opens | The entry matched and was tapped | PASS |\n| 3 | Read the Android version | A version is shown | \"Android version\" shows `13` (page source). I also took a screenshot at `~\\AppData\\Local\\Temp\\soma-bench-Eb8Ne0\\artifacts\\screenshot_1794610615687.png` but didn't open it. | PASS |\n\nI confirmed the value from the page source, not by judging the screenshot. I closed the session.\n\n**Result: PASS. The Android version is shown as `13`.**",
       "wallSec": 88.22,
       "error": null,
       "stream": "2026-11-13T22-31-52-758Z/read-android-version-soma-3.jsonl"

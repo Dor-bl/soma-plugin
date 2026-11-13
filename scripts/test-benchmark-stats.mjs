@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // Unit tests for the benchmark's run parsing and summary (scripts/benchmark-stats.mjs).
 import assert from 'node:assert/strict';
-import { measure, median, parseEvents, streamFileName, summarise, toMarkdown } from './benchmark-stats.mjs';
+import { measure, median, parseEvents, redactHome, streamFileName, summarise, toMarkdown } from './benchmark-stats.mjs';
 
 const stream = [
   { type: 'system', subtype: 'init', model: 'claude-test' },
@@ -99,6 +99,16 @@ const tests = [
   ['stream file names are <task>-<arm>-<run>.jsonl and cannot leave the folder', () => {
     assert.equal(streamFileName('dark-theme', 'soma', 2), 'dark-theme-soma-2.jsonl');
     assert.equal(streamFileName('../x/y', 'plain', 1), '___x_y-plain-1.jsonl');
+  }],
+  ['the home folder is redacted from replies in either slash direction and any case', () => {
+    const home = 'C:\\Users\\Some.User';
+    assert.equal(redactHome('Saved C:\\Users\\Some.User\\AppData\\Local\\Temp\\a.png', home), 'Saved ~\\AppData\\Local\\Temp\\a.png');
+    assert.equal(redactHome('c:/users/some.user/x and C:\\Users\\Some.User\\y', home), '~/x and ~\\y');
+    assert.equal(redactHome('/home/u/x', '/home/u/'), '~/x');
+    // A dot in the name is literal, not "any character"
+    assert.equal(redactHome('C:\\Users\\SomexUser\\x', home), 'C:\\Users\\SomexUser\\x');
+    assert.equal(redactHome(null, home), null);
+    assert.equal(redactHome('no paths', ''), 'no paths');
   }],
 ];
 

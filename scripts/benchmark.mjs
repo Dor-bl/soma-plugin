@@ -15,7 +15,7 @@ import { closeSync, mkdirSync, mkdtempSync, openSync, readFileSync, realpathSync
 import { homedir, tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { measure, parseEvents, streamFileName, summarise, toMarkdown } from './benchmark-stats.mjs';
+import { measure, parseEvents, redactHome, streamFileName, summarise, toMarkdown } from './benchmark-stats.mjs';
 import { TASKKILL } from './system-tools.mjs';
 
 const root = fileURLToPath(new URL('..', import.meta.url)).replace(/[\\/]+$/, '');
@@ -214,7 +214,8 @@ for (let n = 1; n <= runs; n++) {
       const outcomeOk = !run.error && !m.isError && check.ok;
       const invalid = outcomeOk && m.appiumOk === 0;
       const passed = outcomeOk && !invalid;
-      results.push({ task: task.id, arm, run: n, passed, invalid, checkError: check.error ?? null, ...m, wallSec: (Date.now() - started) / 1000, error: run.error?.message ?? null, stream });
+      // The reply and error are saved without the local home folder; the check above used the raw reply
+      results.push({ task: task.id, arm, run: n, passed, invalid, checkError: check.error ?? null, ...m, reply: redactHome(m.reply, homedir()), wallSec: (Date.now() - started) / 1000, error: redactHome(run.error?.message ?? null, homedir()), stream });
       writeReports();
       console.log(`${passed ? '✔' : '✘'}${check.error ? ' (adb check failed: ' + check.error + ')' : ''}${invalid ? ' (no successful appium-mcp call: not counted as a pass)' : ''} run ${n} ${task.id} [${arm}]: ${m.total == null ? 'no usage reported' : m.total.toLocaleString('en-US') + ' tokens'}, ${m.toolCalls} tool calls, ${m.durationSec?.toFixed(0) ?? '?'} s${run.error ? ` (${run.error.message})` : ''}`);
     }
