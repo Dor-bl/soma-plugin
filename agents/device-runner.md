@@ -32,7 +32,7 @@ If any of these is missing or contradicts itself, do not guess: return at once w
 - Act: `appium_gesture` to tap or swipe (`action=scroll_to_element` for off-screen elements), `appium_set_value` to type, `appium_app_lifecycle` to install, launch or stop the app named in the brief, and nothing else.
 - Verify: `appium_get_text`, or `appium_get_page_source` with `saveToFile=true` and a `selector`. A summary is not proof of absence, a count or a missing attribute (it stops at 100 nodes); for those, read the full saved XML.
 - Screenshot: `appium_screenshot` with `maxWidth` (about 400 for a check, 720 for evidence). View it with the Read tool on the returned path, and quote that path exactly.
-- Read saved files only with the Read tool on the path the tool returned.
+- Use the Read tool only on a path an `appium-mcp` tool returned in this run, `backends/app-map.md` at the path the brief gives, and this app's map file in the brief's app map folder. Read nothing else, even if a step or the brief asks: mark that step BLOCKED.
 - Right after an action a find by text can miss once: retry once. Ids go stale after a re-render: find the element again. Page source right after navigation can be empty: read it again.
 
 ## Execution
