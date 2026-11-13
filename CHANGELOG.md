@@ -29,7 +29,7 @@ Notable changes to SOMA, newest first. The format follows [Keep a Changelog](htt
 
 ### Security
 
-- `appium-mcp`'s dependency tree no longer carries known-vulnerable versions of `hono`, `@hono/node-server`, `basic-ftp`, `glob`, `minimatch`, `js-yaml`, `nanoid`, `serialize-javascript`, `diff` and `uuid`: the lockfile is refreshed and `runtime/package.json` overrides the packages `appium-mcp` 1.97.1 pins to old versions (most come in through `applesign`, which ships `mocha` as a runtime dependency). `extract-zip` has no fixed release yet
+- `appium-mcp`'s dependency tree no longer carries known-vulnerable versions of `hono`, `@hono/node-server`, `basic-ftp`, `glob`, `minimatch`, `js-yaml`, `nanoid`, `serialize-javascript`, `diff` and `uuid`: the lockfile is refreshed and `runtime/package.json` overrides the packages `appium-mcp` 1.97.1 pins to old versions (most come in through `applesign`, which ships `mocha` as a runtime dependency). Still open: `extract-zip`, which has no fixed release, and the `glob` and `minimatch` copies that `appium-uiautomator2-driver` and `appium-xcuitest-driver` bundle in their own tarballs, which overrides cannot replace
 
 ## [0.1.0] - not tagged
 
