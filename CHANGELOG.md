@@ -6,6 +6,7 @@ Notable changes to SOMA, newest first. The format follows [Keep a Changelog](htt
 
 ### Added
 
+- README: a "Stores" line under "What SOMA runs, sends and fetches", saying where screenshots, page source, Artemis captures and app maps are kept, including the folder overrides and the temp-folder fallback, and that they stay on your machine
 - `plugin.json` links for the Claude directory listing: documentation (the README), support (this repository's issues) and privacy (the README section on what SOMA runs, sends and fetches). The listing description no longer repeats the name
 
 ## [0.2.0] - 2026-11-13
