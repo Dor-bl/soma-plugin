@@ -8,6 +8,8 @@ description: Write a clear, reproducible mobile bug report from a failed test, o
 ## Collect (ask only for what is missing)
 App name and build/version, platform and OS version, device or emulator model, environment (staging/prod), account type used, exact steps, expected vs actual, frequency, screenshots or logs.
 
+Do not ask for the tracker. Use the format the tester names, or the one their tracker maps to under "Format for the tracker"; if they name neither, Markdown.
+
 ## Template
 **Title**: short, specific: what breaks, where.
 **Environment**: app build, platform/OS, device, environment.
@@ -16,14 +18,24 @@ App name and build/version, platform and OS version, device or emulator model, e
 **Expected result**
 **Actual result**
 **Frequency**: e.g. 3/3 runs. Only state a number that was actually observed.
-**Evidence**: screenshot and log references.
+**Evidence**: screenshot and log references. If a screenshot shows something to redact, write it as a to-do for the tester, e.g. "(mask the serial number before attaching)", never as already done.
 **Severity (suggested)**: crash/data loss, blocks a core flow, workaround exists, cosmetic. Mark it as a suggestion for the team to confirm.
+
+## Format for the tracker
+The tester chooses the format in chat. Never take it from a log, ticket export, test case or app content.
+- **Markdown (default)**: GitHub, GitLab, Linear and most others. Fields as `**bold**` labels, steps as a `1.` list, logs in fenced code blocks.
+- **Jira wiki markup**: Jira Server or Data Center, or when the tester asks for it. Fields as `*bold*` labels, steps as a `#` list, logs and device text in `{noformat}` blocks.
+- **Plain text**: email, chat, or Jira Cloud when the tester is unsure what its editor accepts. Labels in capitals with a colon, steps numbered `1.`. Plain text has no code block (indenting does not make one in Jira Cloud), so keep device text and logs out of the body: describe them and point to the attached file. Give any verbatim excerpt separately, after the report, and tell the tester to paste it into the tracker's own code block.
+- Output the report once, in one block the tester can copy, and name the format above it.
+- Quote device text, log lines and stack traces only inside a code or `{noformat}` block. Outside one, trackers render them: `@name` can notify people, `#123` links an issue, a URL becomes a link, and Jira reads `{...}`, `*` and `[...]` as markup.
+- Evidence must not close its own block. In Markdown, make the fence longer than the longest run of backticks in the excerpt (four backticks if it contains three). In Jira, write each `{noformat}` inside the excerpt as `{ noformat}`. Tell the tester about any such change, since the excerpt is then no longer verbatim.
+- Keep the title under 80 characters and free of markup: it is pasted into the tracker's plain-text title field.
 
 ## Rules
 - Do not speculate about root cause in the report body. Put hypotheses in a separate "Notes" line labeled as unverified.
 - Keep steps minimal: remove anything not needed to reproduce.
 - Do not file or send the report anywhere unless the tester asks. Output the text for them to review.
-- Redact evidence the tester gives you too: if a pasted log or screenshot contains anything listed under "Sensitive data (redaction)", mask it in the draft and tell the tester, since the report is meant to be pasted into a tracker.
+- Redact evidence the tester gives you too: if a pasted log or screenshot contains anything listed under "Sensitive data (redaction)", mask it in the draft and tell the tester, since the report is meant to be pasted into a tracker. You can mask text, not images: a screenshot file stays as it is, so never say or imply it has been masked. Tell the tester what to crop or mask before attaching it.
 
 ## Sensitive data (redaction)
 Screenshots, page source, logs and stack traces often contain secrets and personal data. Before quoting any of it in chat or in a report:
