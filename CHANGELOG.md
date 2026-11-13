@@ -6,6 +6,7 @@ Notable changes to SOMA, newest first. The format follows [Keep a Changelog](htt
 
 ### Added
 
+- `device-runner` subagent: `run-manual-test` hands a confirmed Appium run to it, so screenshots, page source and element lookups stay in the agent's context and the conversation gets only the per-step report. It can use only the Read tool and the `appium-mcp` tools the run needs (no shell), cannot ask the tester, and marks a step BLOCKED when it needs something the confirmation did not cover. Artemis runs, and Claude surfaces without subagents, run in the conversation as before. `check-plugin.mjs` checks agent frontmatter, the README row, the redaction section and that every `appium-mcp` tool an agent lists is in the smoke test's `REQUIRED_TOOLS`
 - `.claude-plugin/marketplace.json`, so the plugin installs with `/plugin install soma --marketplace Dor-bl/soma-plugin`
 - `LICENSE` (Apache 2.0), `NOTICE`, `SECURITY.md`, this changelog and a listing icon
 - `homepage`, `repository` and a full `author` in the manifest; `check-plugin.mjs` checks the publishing files and the README install line
