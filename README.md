@@ -5,11 +5,11 @@
 *A Claude plugin for mobile QA testers: run manual test cases on real devices, triage failures, and write bug reports.*
 
 [![CI](https://github.com/Dor-bl/soma-plugin/actions/workflows/ci.yml/badge.svg)](https://github.com/Dor-bl/soma-plugin/actions/workflows/ci.yml)
-[![Version](https://img.shields.io/badge/version-0.1.0-blue.svg)](.claude-plugin/plugin.json)
+[![Version](https://img.shields.io/badge/version-0.2.0-blue.svg)](.claude-plugin/plugin.json)
 [![License](https://img.shields.io/badge/license-Apache%202.0-green.svg)](https://www.apache.org/licenses/LICENSE-2.0)
 [![Claude Plugin](https://img.shields.io/badge/Claude-plugin-D97757?logo=anthropic&logoColor=white)](https://docs.claude.com/en/docs/claude-code/plugins)
 [![Powered by appium-mcp](https://img.shields.io/badge/powered%20by-appium--mcp-662d91?logo=appium&logoColor=white)](https://github.com/appium/appium-mcp)
-![Status](https://img.shields.io/badge/status-experimental-orange.svg)
+![Status](https://img.shields.io/badge/status-beta-yellow.svg)
 
 ![Android](https://img.shields.io/badge/Android-3DDC84?logo=android&logoColor=white)
 ![iOS](https://img.shields.io/badge/iOS-000000?logo=apple&logoColor=white)
@@ -120,14 +120,15 @@ Once SOMA is installed, try:
 - **Sends** device commands to local devices, or to the one remote server you configure. SOMA itself opens no other connections and sends no telemetry. What the tools return (on-screen text, page source, screenshots) enters your Claude Code conversation like any tool result, so it reaches the model provider your Claude Code is configured with before the skills' redaction, which applies to reports and chat output. With the optional Artemis engine there is a second recipient: Artemis sends screenshots and screen text, including notifications, to the LLM provider behind its own API key, which need not be the same provider; the skills ask for your consent before each Artemis run. Device-cloud credentials stay in your capabilities file and reach only that server.
 - **Reads** on-screen text, page source and screenshots from the device during a test. The skills treat them as untrusted data, never follow instructions found in them, and redact secrets before quoting them in reports.
 
-## ⚠️ Known limitations (v0.1)
+## ⚠️ Known limitations (v0.2)
 
 > [!WARNING]
-> SOMA is an early scaffold. Expect rough edges.
+> SOMA is in beta. Expect rough edges, and please report them.
 
-- 🧪 Lightly tested on devices: every skill has completed at least one run on an Android 13 emulator through Appium (headless, 2026-11-07), `explore-app` has run once through Artemis, and on iOS only `start-device` and `run-manual-test` have run, on a simulator. Physical devices, remote servers and app maps haven't been run yet.
+- 🧪 Lightly tested on devices: every skill has completed at least one run on an Android 13 emulator through Appium (headless, 2026-11-07), and `explore-app` has run once through Artemis. On iOS, `start-device`, `run-manual-test`, `triage-failure` and `bug-report` have run on an iOS 18.6 simulator on an Apple silicon Mac (headless, 2026-11-12); `generate-test` and `explore-app` haven't run on iOS yet. A clean install from the marketplace has been checked on Windows and macOS, followed by `/soma:setup` and one `/soma:run-test`. Physical devices and app maps haven't been run yet.
+- 🌐 Remote mode is untested: no run has gone through a remote Appium server or device cloud yet. The allowlist that blocks every other host is covered by CI.
 - 🛡️ Protection against prompt injection from app or device content (e.g. on-screen text telling Claude to run a command) relies on skill instructions, not tool restrictions. Tool-level limits are tracked in issue #8.
-- 📌 `appium-mcp` is pinned to an exact version (`1.97.1`), and its whole dependency tree is locked with integrity hashes in `runtime/package-lock.json`. Bump them together, deliberately, after testing. Install scripts are skipped, so packages that need one (e.g. browser driver downloads) are not set up.
+- 📌 `appium-mcp` is pinned to an exact version (`1.97.1`), and its whole dependency tree is locked with integrity hashes in `runtime/package-lock.json`. Bump them together, deliberately, after testing. 0.2.0 holds 1.97.1 on purpose: newer releases fail the first WebDriverAgent install on iOS 18.2 simulators ([appium/appium-mcp#608](https://github.com/appium/appium-mcp/issues/608)), and iOS on Intel Macs is untested with them. Install scripts are skipped, so packages that need one (e.g. browser driver downloads) are not set up.
 - 🌐 The remote URL policy covers the URL you configure only. Redirects and direct-connect endpoints chosen by the server aren't re-checked, so only point SOMA at servers you trust.
 - 🔓 SOMA can't add authentication to a self-hosted Appium server. Put it behind an authenticating reverse proxy or VPN; never expose it unauthenticated on a shared network.
 
