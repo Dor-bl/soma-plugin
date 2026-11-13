@@ -4,7 +4,7 @@ Notable changes to SOMA, newest first. The format follows [Keep a Changelog](htt
 
 ## [Unreleased]
 
-## [0.2.0] - not yet tagged
+## [0.2.0] - 2026-11-13
 
 The first marketplace release. Status moves from experimental to beta.
 
