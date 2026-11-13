@@ -32,6 +32,10 @@ The first marketplace release. Status moves from experimental to beta.
 - `/soma:setup-artemis` is now `/soma:artemis`. The command shared its name with the `setup-artemis` skill, so the plugin listed `setup-artemis` twice; the skill keeps its name (found on the macOS clean install, #64)
 - README known limitations: results of the iOS simulator pass and the Windows and macOS clean installs from the release gate (#64), remote mode labelled untested, and why `appium-mcp` stays at 1.97.1
 
+### Security
+
+- `appium-mcp`'s dependency tree no longer carries known-vulnerable versions of `hono`, `@hono/node-server`, `basic-ftp`, `glob`, `minimatch`, `js-yaml`, `nanoid`, `serialize-javascript`, `diff` and `uuid`: the lockfile is refreshed and `runtime/package.json` overrides the packages `appium-mcp` 1.97.1 pins to old versions (most come in through `applesign`, which ships `mocha` as a runtime dependency). Still open: `extract-zip`, which has no fixed release, and the `glob` and `minimatch` copies that `appium-uiautomator2-driver` and `appium-xcuitest-driver` bundle in their own tarballs, which overrides cannot replace
+
 ## [0.1.0] - not tagged
 
 The scaffold that `main` carried before the first marketplace release.
