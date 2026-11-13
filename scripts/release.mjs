@@ -15,10 +15,14 @@ import { spawnSync } from 'node:child_process';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-const SEMVER = /^\d+\.\d+\.\d+(-[\w.]+)?$/;
+const SEMVER = /^(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)(?:-(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\.(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*)?$/;
 const DATE = /^\d{4}-\d{2}-\d{2}$/;
 
 const escape = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+export function isValidSemver(version) {
+  return SEMVER.test(version ?? '');
+}
 
 // Runs fn on the text with LF line endings and restores CRLF if the text used it
 // (Windows checkouts with core.autocrlf).
@@ -94,14 +98,15 @@ export function cutChangelog(text, version, date) {
   return `${text.slice(0, start)}\n${dated}\n${body.startsWith('\n') ? '' : '\n'}${text.slice(start)}`;
 }
 
-// The section's text under its heading, and the heading's date (null if undated).
+// The section's text under its heading, and the heading's date (null if undated or invalid).
 export function changelogSection(text, version) {
   const m = heading(version).exec(text);
   if (!m) return null;
   const start = m.index + m[0].length;
   const next = text.slice(start).search(/^## \[/m);
   const body = (next === -1 ? text.slice(start) : text.slice(start, start + next)).trim();
-  const date = m[0].match(/ - (\d{4}-\d{2}-\d{2})\s*$/)?.[1] ?? null;
+  const rawDate = m[0].match(/ - (\d{4}-\d{2}-\d{2})\s*$/)?.[1] ?? null;
+  const date = isValidDate(rawDate) ? rawDate : null;
   return { body, date };
 }
 
@@ -115,10 +120,10 @@ function main(argv) {
 
   if (argv[0] === '--notes') {
     const version = argv[1];
-    if (!SEMVER.test(version ?? '')) fail('usage: release.mjs --notes <version>');
+    if (!isValidSemver(version)) fail('usage: release.mjs --notes <version>');
     const section = changelogSection(readFileSync(path('CHANGELOG.md'), 'utf8').replace(/\r\n/g, '\n'), version);
     if (!section) fail(`CHANGELOG.md: no section for ${version}`);
-    if (!section.date) fail(`CHANGELOG.md: the ${version} heading has no date; run release.mjs ${version} first`);
+    if (!isValidDate(section.date)) fail(`CHANGELOG.md: the ${version} heading has no date; run release.mjs ${version} first`);
     if (!section.body) fail(`CHANGELOG.md: the ${version} section is empty`);
     process.stdout.write(`${section.body}\n`);
     return;
@@ -127,12 +132,13 @@ function main(argv) {
   const version = argv[0];
   const dateIdx = argv.indexOf('--date');
   const date = dateIdx === -1 ? new Date().toISOString().slice(0, 10) : argv[dateIdx + 1];
-  if (!SEMVER.test(version ?? '')) fail('usage: release.mjs <version> [--date YYYY-MM-DD]');
+  if (!isValidSemver(version)) fail('usage: release.mjs <version> [--date YYYY-MM-DD]');
   if (!isValidDate(date)) fail(`--date must be a real date in YYYY-MM-DD form, got ${date}`);
 
   const manifestPath = path('.claude-plugin/plugin.json');
   const manifest = readFileSync(manifestPath, 'utf8');
   const current = JSON.parse(manifest).version;
+  if (!isValidSemver(current)) fail(`plugin.json: current version is not semver (${current})`);
   if (compareVersions(version, current) < 0) fail(`${version} is lower than the current version ${current}`);
 
   const files = {

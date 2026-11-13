@@ -34,10 +34,11 @@ function frontmatter(p) {
 }
 
 // Manifest
+const SEMVER = /^(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)(?:-(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\.(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*)?$/;
 const plugin = readJson('.claude-plugin/plugin.json');
 if (plugin) {
   if (!plugin.name) fail('plugin.json: missing "name"');
-  if (!/^\d+\.\d+\.\d+(-[\w.]+)?$/.test(plugin.version ?? '')) {
+  if (!SEMVER.test(plugin.version ?? '')) {
     fail(`plugin.json: "version" is not semver (${plugin.version})`);
   }
 }
@@ -156,7 +157,7 @@ for (const dir of REDACTING_SKILLS) {
 }
 
 // Skills that create an Appium session must carry the same remote-URL, autoGrantPermissions
-// and noReset rules (see CLAUDE.md "Writing skills"). Each pattern is one rule; the wording
+// and noReset rules (see AGENTS.md "Writing skills"). Each pattern is one rule; the wording
 // may differ per skill, but the rule must be there.
 const SESSION_SKILLS = ['run-manual-test', 'triage-failure', 'generate-test', 'explore-app'];
 const SESSION_RULES = [

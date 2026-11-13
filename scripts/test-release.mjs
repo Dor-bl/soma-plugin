@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // Tests for scripts/release.mjs: version bump, badge, changelog cut and release notes.
 import assert from 'node:assert/strict';
-import { bumpBadge, bumpManifest, changelogSection, compareVersions, cutChangelog, isValidDate, keepEol } from './release.mjs';
+import { bumpBadge, bumpManifest, changelogSection, compareVersions, cutChangelog, isValidDate, isValidSemver, keepEol } from './release.mjs';
 
 let passed = 0;
 const test = (name, fn) => {
@@ -37,6 +37,15 @@ test('compareVersions orders releases and prereleases', () => {
   assert.ok(compareVersions('1.0.0-alpha', '1.0.0-alpha.1') < 0);
   assert.ok(compareVersions('1.0.0-1', '1.0.0-alpha') < 0);
   assert.ok(compareVersions('1.0.0-beta', '1.0.0-alpha.9') > 0);
+});
+
+test('isValidSemver accepts strict SemVer and rejects malformed versions', () => {
+  for (const good of ['0.1.0', '0.2.0', '1.10.20', '1.0.0-alpha', '1.0.0-alpha.1', '0.2.0-rc.1', '1.0.0-0a']) {
+    assert.ok(isValidSemver(good), good);
+  }
+  for (const bad of ['00.2.0', '0.02.0', '0.2.00', '0.2.0-rc..1', '0.2.0-rc_1', '0.2.0-01', '0.2.0-rc.01', '0.2.0-', '0.2.0-.rc', '0.2.0-rc.', '', undefined]) {
+    assert.equal(isValidSemver(bad), false, String(bad));
+  }
 });
 
 test('isValidDate accepts real dates only', () => {
@@ -82,8 +91,9 @@ test('cutChangelog refuses an empty Unreleased section', () => {
   assert.throws(() => cutChangelog(empty, '0.2.0', '2026-11-20'), /nothing under Unreleased/);
 });
 
-test('changelogSection reports undated headings and missing versions', () => {
+test('changelogSection reports undated headings, invalid dates and missing versions', () => {
   assert.equal(changelogSection(CHANGELOG, '0.1.0').date, null);
+  assert.equal(changelogSection(CHANGELOG.replace('not tagged', '2026-02-30'), '0.1.0').date, null);
   assert.equal(changelogSection(CHANGELOG, '9.9.9'), null);
   assert.equal(changelogSection(CHANGELOG, '0.1.0').body, '### Added\n\n- First thing');
 });
