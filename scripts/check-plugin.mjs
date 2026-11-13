@@ -154,7 +154,7 @@ for (const dir of REDACTING_SKILLS) {
 }
 
 // The skills that quote device output (screenshots, logs, page source) must carry the same
-// redaction wording, so a fix in one reaches all of them (see CLAUDE.md "Writing skills").
+// redaction wording, so a fix in one reaches all of them (see AGENTS.md "Writing skills").
 // write-test-case is left out: it quotes stories and tickets, not device output.
 const REDACTION_SYNC = ['bug-report', 'run-manual-test', 'explore-app', 'triage-failure'];
 function section(text, heading) {
