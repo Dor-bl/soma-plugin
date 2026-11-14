@@ -159,7 +159,8 @@ for (const dir of REDACTING_SKILLS) {
 // The skills that quote device output (screenshots, logs, page source) must carry the same
 // redaction wording, so a fix in one reaches all of them (see AGENTS.md "Writing skills").
 // write-test-case is left out: it quotes stories and tickets, not device output.
-const REDACTION_SYNC = ['bug-report', 'run-manual-test', 'explore-app', 'triage-failure'];
+// The device-runner agent quotes the same device output for run-manual-test, so it is in the set too.
+const REDACTION_SYNC = ['skills/bug-report/SKILL.md', 'skills/run-manual-test/SKILL.md', 'skills/explore-app/SKILL.md', 'skills/triage-failure/SKILL.md', 'agents/device-runner.md'];
 function section(text, heading) {
   const lines = text.replace(/\r\n/g, '\n').split('\n');
   let fence = null;
@@ -180,13 +181,14 @@ function section(text, heading) {
   }
   return start === -1 ? null : lines.slice(start + 1).join('\n').trim().split('\n');
 }
-const redaction = REDACTION_SYNC.filter((d) => existsSync(join(root, `skills/${d}/SKILL.md`))).map((d) => [
-  `skills/${d}/SKILL.md`,
-  section(read(`skills/${d}/SKILL.md`), '## Sensitive data (redaction)'),
-]);
+for (const p of REDACTION_SYNC.filter((p) => p.startsWith('agents/') && !existsSync(join(root, p)))) {
+  fail(`${p}: missing (listed in REDACTION_SYNC; update the list if the agent was renamed)`);
+}
+const redaction = REDACTION_SYNC.filter((p) => existsSync(join(root, p))).map((p) => [p, section(read(p), '## Sensitive data (redaction)')]);
 const [refPath, refLines] = redaction.find(([, s]) => s) ?? [];
 for (const [p, lines] of redaction) {
-  if (!lines || p === refPath) continue; // a missing section is reported above
+  if (!lines && p.startsWith('agents/')) fail(`${p}: missing "## Sensitive data (redaction)" section`);
+  if (!lines || p === refPath) continue; // a missing skill section is reported above
   const i = Array.from({ length: Math.max(lines.length, refLines.length) }).findIndex((_, n) => lines[n] !== refLines[n]);
   if (i !== -1) {
     fail(`${p}: "Sensitive data (redaction)" differs from ${refPath} at section line ${i + 1}; keep the wording in sync across ${REDACTION_SYNC.join(', ')}`);
@@ -250,6 +252,40 @@ for (const file of readdirSync(join(root, 'commands')).filter((f) => f.endsWith(
   const name = `/soma:${file.replace(/\.md$/, '')}`;
   if (!new RegExp(`^\\|[^|]*Command[^|]*\\|\\s*\`${name}[\\s\`]`, 'm').test(readme)) {
     fail(`README.md: "What's inside" table has no row for ${name}`);
+  }
+}
+
+// Agents: name matches the file, a description, a README row, and every appium-mcp tool they
+// list must be one the smoke test requires, so an upstream rename fails CI instead of leaving
+// the agent without the tool. Plugin MCP tools are named mcp__plugin_<plugin>_<server>__<tool>.
+const agentFiles = existsSync(join(root, 'agents')) ? readdirSync(join(root, 'agents')).filter((f) => f.endsWith('.md')) : [];
+const smokeTools = new Set(
+  [...(read('scripts/mcp-smoke.mjs').match(/const REQUIRED_TOOLS = \[([\s\S]*?)\];/)?.[1] ?? '').matchAll(/'([\w-]+)'/g)].map((m) => m[1]),
+);
+const mcpServers = Object.keys(mcp?.mcpServers ?? {});
+for (const file of agentFiles) {
+  const p = `agents/${file}`;
+  const fm = frontmatter(p);
+  if (!fm) {
+    fail(`${p}: no frontmatter`);
+    continue;
+  }
+  const name = file.replace(/\.md$/, '');
+  if (fm.name !== name) fail(`${p}: name "${fm.name}" does not match file "${name}"`);
+  if (!fm.description) fail(`${p}: missing description`);
+  if (!new RegExp(`^\\|[^|]*Agent[^|]*\\|\\s*\`${name}\``, 'm').test(read('README.md'))) {
+    fail(`README.md: "What's inside" table has no row for agent ${name}`);
+  }
+  for (const tool of (fm.tools ?? '').split(',').map((t) => t.trim()).filter((t) => t.startsWith('mcp__'))) {
+    const m = tool.match(/^mcp__plugin_([\w-]+?)_([\w-]+)__([\w-]+)$/);
+    if (!m || m[1] !== plugin?.name || !mcpServers.includes(m[2])) {
+      fail(`${p}: tool ${tool} is not mcp__plugin_${plugin?.name}_<server in .mcp.json>__<tool>`);
+    } else if (!smokeTools.has(m[3])) {
+      fail(`${p}: tool ${m[3]} is not in REQUIRED_TOOLS in scripts/mcp-smoke.mjs`);
+    }
+  }
+  for (const m of read(p).matchAll(/\$\{(user_config\.\w+|CLAUDE_PLUGIN_ROOT)\}/g)) {
+    fail(`${p}: \${${m[1]}} is not guaranteed to be substituted in agent files; have the calling skill pass the value in the brief`);
   }
 }
 

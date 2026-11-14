@@ -40,6 +40,7 @@ SOMA wraps the official [`appium-mcp`](https://github.com/appium/appium-mcp) ser
 | 🧠 Skill | `generate-test` | Turn a manual test case into an automated Appium test script |
 | 🧠 Skill | `explore-app` | Exploratory testing of an app area; reports suspected issues with evidence |
 | 🧠 Skill | `write-test-case` | Draft a manual test case from a feature, user story or bug report, ready for `run-manual-test` |
+| 🤖 Agent | `device-runner` | Runs a confirmed test case on the device for `run-manual-test` (Appium), so screenshots and page source stay out of your conversation |
 | ⚡ Command | `/soma:setup [focus]` | Check your environment is ready and explain how to fix what is missing |
 | ⚡ Command | `/soma:artemis [folder]` | Install the optional Artemis engine for this project, asking before each step |
 | ⚡ Command | `/soma:device [avd or simulator name]` | Start an emulator or simulator and wait until it is ready |
