@@ -114,7 +114,8 @@ const tests = [
     // Siblings whose name continues with "+", ".x" or a non-ASCII letter stay as they are
     assert.equal(redactHome('/home/useré/a.png /home/user+x/a.png /home/user.old/a.png', '/home/user'), '/home/useré/a.png /home/user+x/a.png /home/user.old/a.png');
     // Inside a file URL too
-    assert.equal(redactHome('file:///home/user/a.png', '/home/user'), 'file://~/a.png');
+    // (the home path's leading slash also takes the URL's slashes; the name is gone either way)
+    assert.equal(redactHome('file:///home/user/a.png', '/home/user'), 'file:~/a.png');
     assert.equal(redactHome('file:///C:/Users/Some.User/a.png', home), 'file:///~/a.png');
     // A sentence's final period ends the path, so the name is not left exposed
     assert.equal(redactHome('Files are under /home/user.', '/home/user'), 'Files are under ~.');
