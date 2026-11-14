@@ -9,6 +9,10 @@ Notable changes to SOMA, newest first. The format follows [Keep a Changelog](htt
 - README: a "Stores" line under "What SOMA runs, sends and fetches", saying where screenshots, page source, Artemis captures and app maps are kept, including the folder overrides and the temp-folder fallback, and that they stay on your machine
 - `plugin.json` links for the Claude directory listing: documentation (the README), support (this repository's issues) and privacy (the README section on what SOMA runs, sends and fetches). The listing description no longer repeats the name
 
+### Changed
+
+- `explore-app` reads Appium screens the targeted way, as `run-manual-test` and `triage-failure` do: one element, or page source saved to a file with a selector, never the full tree inline; the full XML only for absence or counts. A suspicious finding gets one `maxWidth` 720 evidence screenshot on its screen, re-tries are checked from structured state, and a finding judged only from a screenshot says so (#56)
+
 ## [0.2.0] - 2026-11-13
 
 The first marketplace release. Status moves from experimental to beta.
