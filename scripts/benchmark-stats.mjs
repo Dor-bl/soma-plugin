@@ -112,7 +112,9 @@ export function streamFileName(task, arm, run) {
 // a sibling whose name continues the home folder's (/home/user2, /home/useré, /home/user.old).
 // Anything else ends it, including a space and a sentence's final period. A sibling whose
 // name continues after a space ("C:\Users\Some.User Backup") is therefore redacted too: this
-// errs toward hiding the user name, since a missed match would publish it.
+// errs toward hiding the user name, since a missed match would publish it. For the same
+// reason "_" and "~" count as boundaries, so Markdown _italics_ and ~~strikethrough~~ around
+// a path do not hide it from the match (a sibling like /home/user_old is redacted as well).
 export function redactHome(text, home) {
   if (typeof text !== 'string' || !home) return text;
   const trimmed = home.replace(/[\\/]+$/, '');
@@ -121,7 +123,7 @@ export function redactHome(text, home) {
   // A slash may come before a home that starts with a drive (file:///C:/Users/...). A home
   // that starts with a slash already takes all of a URL's slashes (file:///home/user), so a
   // slash before it means a longer path (/mnt//home/user). A letter may never come before it.
-  const before = /^[\\/]/.test(trimmed) ? '(?<![\\p{L}\\p{N}_.~+\\\\/-])' : '(?<![\\p{L}\\p{N}_.~+-])';
-  const after = '(?![\\p{L}\\p{N}_+-]|\\.[\\p{L}\\p{N}_])';
+  const before = /^[\\/]/.test(trimmed) ? '(?<![\\p{L}\\p{N}.+\\\\/-])' : '(?<![\\p{L}\\p{N}.+-])';
+  const after = '(?![\\p{L}\\p{N}+-]|\\.[\\p{L}\\p{N}])';
   return text.replace(new RegExp(`${before}${pattern}${after}`, 'giu'), '~');
 }

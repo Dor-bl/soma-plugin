@@ -117,6 +117,9 @@ const tests = [
     // (the home path's leading slash also takes the URL's slashes; the name is gone either way)
     assert.equal(redactHome('file:///home/user/a.png', '/home/user'), 'file:~/a.png');
     assert.equal(redactHome('file:///C:/Users/Some.User/a.png', home), 'file:///~/a.png');
+    // Markdown around the path does not hide it
+    for (const [wrapped, out] of [['`/home/user/a.png`', '`~/a.png`'], ['**/home/user/a.png**', '**~/a.png**'], ['_/home/user_', '_~_'], ['~~/home/user/a.png~~', '~~~/a.png~~'], ['[a](/home/user/a.png)', '[a](~/a.png)']])
+      assert.equal(redactHome(wrapped, '/home/user'), out);
     // Repeated separators in a longer path do not let the home match inside it
     assert.equal(redactHome('/mnt//home/user/a.png', '/home/user'), '/mnt//home/user/a.png');
     // A sentence's final period ends the path, so the name is not left exposed
