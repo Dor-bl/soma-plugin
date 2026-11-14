@@ -118,7 +118,8 @@ export function redactHome(text, home) {
   const trimmed = home.replace(/[\\/]+$/, '');
   if (!trimmed) return text;
   const pattern = trimmed.split(/[\\/]+/).map((part) => part.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('[\\\\/]+');
-  const before = '(?<![\\p{L}\\p{N}_.~+\\\\/-])';
+  // A slash may come before it (file:///home/user, file:///C:/Users/...); a letter may not
+  const before = '(?<![\\p{L}\\p{N}_.~+-])';
   const after = '(?![\\p{L}\\p{N}_+-]|\\.[\\p{L}\\p{N}_])';
   return text.replace(new RegExp(`${before}${pattern}${after}`, 'giu'), '~');
 }
