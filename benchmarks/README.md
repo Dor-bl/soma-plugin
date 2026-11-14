@@ -63,3 +63,32 @@ Baseline, 2026-11-07. Android 13 (API 33) `google_apis` x86_64 system image, Pix
 | read-android-version | soma | 3/3 | 376,454 (373,874–617,744) | -1% | 1,880 | 12 | 0.16 | 77 |
 
 Whole run: 31.7 minutes, USD 1.41 for the plain arm and USD 1.87 for the SOMA arm. Reading: two tasks are within the noise band (+5%, -1%); on `dark-theme` SOMA used more tokens (two of three runs near 1.0M against two plain runs near 570k) while finishing faster (77 s against 125 s median). Cost was slightly higher for SOMA on every task, as expected from the added prompt text. Caveats: with 3 runs the ranges overlap heavily, and on this AVD screenshots were unreadable for both arms (see above), so both relied on page source. The very first run (`dark-theme`, plain, 973,694 tokens) also paid for a one-off workaround: the checkout sat in a long temp path, so Appium's push of its UiAutomator2 APKs failed on Windows' 260-character path limit and the agent installed them by hand through `adb`; later runs found them installed. Run the benchmark from a short path (or set `CLAUDE_PLUGIN_DATA` to one) to avoid this. Two runs reported they could not read the saved page-source file and worked from element attributes instead.
+
+### Rerun, 2026-11-13
+
+Same AVD, image, emulator, `appium-mcp` 1.97.1, CLI 2.1.319 and model `claude-sonnet-5-5` as the baseline; 3 runs per task and arm; 18 of 18 runs passed, every run with successful `appium-mcp` calls and no Bash calls. Raw data: [`results/2026-11-13T22-31-52-758Z.json`](results/2026-11-13T22-31-52-758Z.json). Changes since the baseline: the phase 2 skill fixes (#58), `run-manual-test` with the Appium tools inline and no backend file reads (#65), and smaller skill changes that do not touch this path (#70, #73 to #75). #58 also changed the harness for **both** arms: it sets `NO_UI=1` and saves screenshots and page source in the run's folder, so screenshots are now readable. Compare the gap between the arms, not the absolute numbers against the baseline.
+
+| Task | Arm | Passed | Total tokens (median, range) | vs plain | Context per turn | Turns | Output tokens | Tool calls | Bash calls | Cost (USD) | Time (s) |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| dark-theme | plain | 3/3 | 900,850 (808,461–1,161,223) | – | 39,723 | 22 | 2,304 | 20 | 0 | 0.21 | 57 |
+| dark-theme | soma | 3/3 | 886,469 (832,277–973,691) | -2% | 36,491 | 24 | 2,720 | 22 | 0 | 0.22 | 57 |
+| screen-timeout | plain | 3/3 | 598,344 (580,565–678,891) | – | 34,510 | 19 | 1,755 | 16 | 0 | 0.17 | 44 |
+| screen-timeout | soma | 3/3 | 816,708 (763,229–876,150) | 36% | 37,298 | 21 | 2,662 | 19 | 0 | 0.21 | 63 |
+| read-android-version | plain | 3/3 | 436,621 (396,682–758,081) | – | 42,006 | 10 | 1,184 | 9 | 0 | 0.11 | 65 |
+| read-android-version | soma | 3/3 | 588,793 (496,575–590,167) | 35% | 37,748 | 14 | 1,839 | 12 | 0 | 0.16 | 69 |
+
+Per run, averaged over all nine runs of each arm, against the baseline (its context per turn and turns recomputed from its JSON):
+
+| | Baseline plain | Baseline SOMA | Rerun plain | Rerun SOMA |
+| --- | --- | --- | --- | --- |
+| Cost (USD) | 0.156 | 0.207 (+33%) | 0.179 | 0.198 (+11%) |
+| Total tokens | 558k | 709k (+27%) | 702k | 758k (+8%) |
+| Turns | 18.7 | 21.7 | 17.8 | 19.4 |
+| Context per turn (mean of each run's cache reads / turns) | 28.8k | 30.3k | 38.1k | 37.7k |
+
+Whole run: 24.3 minutes, USD 1.61 for the plain arm and USD 1.78 for the SOMA arm. Reading:
+
+- The SOMA overhead shrank from +33% to +11% in cost and from +27% to +8% in tokens, but mostly because the plain arm got more expensive (0.156 to 0.179 USD per run). The SOMA arm itself is flat (0.207 to 0.198 USD, within noise).
+- Why plain grew: with `NO_UI` the screenshots are readable, and the plain arm now looks at them. Over nine runs it read 16 screenshots and fetched page source 10 times, against 7 and 5 for SOMA. Tool results added up to 3.7 MB of text for plain and 0.9 MB for SOMA. The skill's "find the element, screenshot once per visual check" guidance is doing what it should.
+- What still costs SOMA: fixed prompt text. In the streams, a SOMA session sits at about 50k tokens of context after setup against about 44k for plain. The `run-manual-test` skill (12.1 KB, up from 9.2 KB at the baseline after #58 and #65) and the command are re-read on every turn, and SOMA runs take 1.6 more turns (one is the explicit session cleanup). On tasks of 10 to 20 turns, that outweighs the savings in device output. Trimming the hot path (#55) is the lever left.
+- Per task, `dark-theme` went from +74% to -2%, while `screen-timeout` (+5% to +36%) and `read-android-version` (-1% to +35%) went the other way. `dark-theme` and `read-android-version` have overlapping ranges between the arms, so with 3 runs read those as noise. `screen-timeout` does not overlap (plain 580,565–678,891, SOMA 763,229–876,150): SOMA used more tokens on every run of it, which the nine-run average hides. Three runs are too few to call that settled; rerun with more runs before acting on it.

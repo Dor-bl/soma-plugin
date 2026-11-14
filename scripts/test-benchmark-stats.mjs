@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // Unit tests for the benchmark's run parsing and summary (scripts/benchmark-stats.mjs).
 import assert from 'node:assert/strict';
-import { measure, median, parseEvents, streamFileName, summarise, toMarkdown } from './benchmark-stats.mjs';
+import { measure, median, parseEvents, redactHome, streamFileName, summarise, toMarkdown } from './benchmark-stats.mjs';
 
 const stream = [
   { type: 'system', subtype: 'init', model: 'claude-test' },
@@ -99,6 +99,39 @@ const tests = [
   ['stream file names are <task>-<arm>-<run>.jsonl and cannot leave the folder', () => {
     assert.equal(streamFileName('dark-theme', 'soma', 2), 'dark-theme-soma-2.jsonl');
     assert.equal(streamFileName('../x/y', 'plain', 1), '___x_y-plain-1.jsonl');
+  }],
+  ['the home folder is redacted from replies in either slash direction and any case', () => {
+    const home = 'C:\\Users\\Some.User';
+    assert.equal(redactHome('Saved C:\\Users\\Some.User\\AppData\\Local\\Temp\\a.png', home), 'Saved ~\\AppData\\Local\\Temp\\a.png');
+    assert.equal(redactHome('c:/users/some.user/x and C:\\Users\\Some.User\\y', home), '~/x and ~\\y');
+    assert.equal(redactHome('/home/u/x', '/home/u/'), '~/x');
+    // A dot in the name is literal, not "any character"
+    assert.equal(redactHome('C:\\Users\\SomexUser\\x', home), 'C:\\Users\\SomexUser\\x');
+    // Only the complete home path: not a sibling home with the same prefix, not a path that embeds it
+    assert.equal(redactHome('/home/user2/a.png and /mnt/home/user/a.png', '/home/user'), '/home/user2/a.png and /mnt/home/user/a.png');
+    assert.equal(redactHome('C:\\Users\\Some.User2\\a.png', home), 'C:\\Users\\Some.User2\\a.png');
+    assert.equal(redactHome('see /home/user, then "/home/user/a.png"', '/home/user'), 'see ~, then "~/a.png"');
+    // Siblings whose name continues with "+", ".x" or a non-ASCII letter stay as they are
+    assert.equal(redactHome('/home/useré/a.png /home/user+x/a.png /home/user.old/a.png', '/home/user'), '/home/useré/a.png /home/user+x/a.png /home/user.old/a.png');
+    // Inside a file URL too
+    // (the home path's leading slash also takes the URL's slashes; the name is gone either way)
+    assert.equal(redactHome('file:///home/user/a.png', '/home/user'), 'file:~/a.png');
+    assert.equal(redactHome('file:///C:/Users/Some.User/a.png', home), 'file:///~/a.png');
+    // Markdown around the path does not hide it
+    for (const [wrapped, out] of [['`/home/user/a.png`', '`~/a.png`'], ['**/home/user/a.png**', '**~/a.png**'], ['_/home/user_', '_~_'], ['~~/home/user/a.png~~', '~~~/a.png~~'], ['[a](/home/user/a.png)', '[a](~/a.png)']])
+      assert.equal(redactHome(wrapped, '/home/user'), out);
+    // Repeated separators in a longer path do not let the home match inside it
+    assert.equal(redactHome('/mnt//home/user/a.png', '/home/user'), '/mnt//home/user/a.png');
+    // A sentence's final period ends the path, so the name is not left exposed
+    assert.equal(redactHome('Files are under /home/user.', '/home/user'), 'Files are under ~.');
+    assert.equal(redactHome('Saved in C:\\Users\\Some.User.', home), 'Saved in ~.');
+    // A space ends it too: a sibling named after the home folder plus a space is redacted (privacy first)
+    assert.equal(redactHome('"C:\\Users\\Some.User Backup\\a.png"', home), '"~ Backup\\a.png"');
+    // A bare home path followed by ordinary words is still redacted
+    assert.equal(redactHome('files under /home/user and nowhere else', '/home/user'), 'files under ~ and nowhere else');
+    assert.equal(redactHome('/home/user', '/home/user'), '~');
+    assert.equal(redactHome(null, home), null);
+    assert.equal(redactHome('no paths', ''), 'no paths');
   }],
 ];
 

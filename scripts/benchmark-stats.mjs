@@ -104,3 +104,26 @@ export function streamFileName(task, arm, run) {
   const safe = (v) => String(v).replace(/[^A-Za-z0-9_-]/g, '_');
   return `${safe(task)}-${safe(arm)}-${safe(run)}.jsonl`;
 }
+
+// Replies quote evidence paths (screenshots under the temp folder), which carry the local
+// user name. The results JSON is committed, so the home folder becomes "~" before saving.
+// Either slash direction and any letter case match, as Windows paths come in both. Only a
+// complete home path is replaced: not one embedded in a longer path (/mnt/home/user) and not
+// a sibling whose name continues the home folder's (/home/user2, /home/useré, /home/user.old).
+// Anything else ends it, including a space and a sentence's final period. A sibling whose
+// name continues after a space ("C:\Users\Some.User Backup") is therefore redacted too: this
+// errs toward hiding the user name, since a missed match would publish it. For the same
+// reason "_" and "~" count as boundaries, so Markdown _italics_ and ~~strikethrough~~ around
+// a path do not hide it from the match (a sibling like /home/user_old is redacted as well).
+export function redactHome(text, home) {
+  if (typeof text !== 'string' || !home) return text;
+  const trimmed = home.replace(/[\\/]+$/, '');
+  if (!trimmed) return text;
+  const pattern = trimmed.split(/[\\/]+/).map((part) => part.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('[\\\\/]+');
+  // A slash may come before a home that starts with a drive (file:///C:/Users/...). A home
+  // that starts with a slash already takes all of a URL's slashes (file:///home/user), so a
+  // slash before it means a longer path (/mnt//home/user). A letter may never come before it.
+  const before = /^[\\/]/.test(trimmed) ? '(?<![\\p{L}\\p{N}.+\\\\/-])' : '(?<![\\p{L}\\p{N}.+-])';
+  const after = '(?![\\p{L}\\p{N}+-]|\\.[\\p{L}\\p{N}])';
+  return text.replace(new RegExp(`${before}${pattern}${after}`, 'giu'), '~');
+}
