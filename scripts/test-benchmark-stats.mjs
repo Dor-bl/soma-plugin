@@ -111,6 +111,12 @@ const tests = [
     assert.equal(redactHome('/home/user2/a.png and /mnt/home/user/a.png', '/home/user'), '/home/user2/a.png and /mnt/home/user/a.png');
     assert.equal(redactHome('C:\\Users\\Some.User2\\a.png', home), 'C:\\Users\\Some.User2\\a.png');
     assert.equal(redactHome('see /home/user, then "/home/user/a.png"', '/home/user'), 'see ~, then "~/a.png"');
+    // Siblings that continue with a space, "+" or a non-ASCII letter stay as they are
+    assert.equal(redactHome('"C:\\Users\\Some.User Backup\\a.png"', home), '"C:\\Users\\Some.User Backup\\a.png"');
+    assert.equal(redactHome('/home/useré/a.png /home/user+x/a.png', '/home/user'), '/home/useré/a.png /home/user+x/a.png');
+    // A bare home path followed by ordinary words is still redacted
+    assert.equal(redactHome('files under /home/user and nowhere else', '/home/user'), 'files under ~ and nowhere else');
+    assert.equal(redactHome('/home/user', '/home/user'), '~');
     assert.equal(redactHome(null, home), null);
     assert.equal(redactHome('no paths', ''), 'no paths');
   }],
