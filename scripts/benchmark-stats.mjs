@@ -109,15 +109,16 @@ export function streamFileName(task, arm, run) {
 // user name. The results JSON is committed, so the home folder becomes "~" before saving.
 // Either slash direction and any letter case match, as Windows paths come in both. Only a
 // complete home path is replaced: not one embedded in a longer path (/mnt/home/user) and not
-// a sibling that shares its prefix (/home/user2, /home/useré, "C:\Users\Some.User Backup\x").
-// It ends at a separator, the end of the text, punctuation, or a space after which no path
-// continues within the next word.
+// a sibling whose name continues the home folder's (/home/user2, /home/useré, /home/user.old).
+// Anything else ends it, including a space and a sentence's final period. A sibling whose
+// name continues after a space ("C:\Users\Some.User Backup") is therefore redacted too: this
+// errs toward hiding the user name, since a missed match would publish it.
 export function redactHome(text, home) {
   if (typeof text !== 'string' || !home) return text;
   const trimmed = home.replace(/[\\/]+$/, '');
   if (!trimmed) return text;
   const pattern = trimmed.split(/[\\/]+/).map((part) => part.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('[\\\\/]+');
   const before = '(?<![\\p{L}\\p{N}_.~+\\\\/-])';
-  const after = '(?=[\\\\/]|$|[^\\p{L}\\p{N}_.+\\s-]|\\s+(?![^\\s"\'`]*[\\\\/]))';
+  const after = '(?![\\p{L}\\p{N}_+-]|\\.[\\p{L}\\p{N}_])';
   return text.replace(new RegExp(`${before}${pattern}${after}`, 'giu'), '~');
 }
