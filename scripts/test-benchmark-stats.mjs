@@ -107,6 +107,10 @@ const tests = [
     assert.equal(redactHome('/home/u/x', '/home/u/'), '~/x');
     // A dot in the name is literal, not "any character"
     assert.equal(redactHome('C:\\Users\\SomexUser\\x', home), 'C:\\Users\\SomexUser\\x');
+    // Only the complete home path: not a sibling home with the same prefix, not a path that embeds it
+    assert.equal(redactHome('/home/user2/a.png and /mnt/home/user/a.png', '/home/user'), '/home/user2/a.png and /mnt/home/user/a.png');
+    assert.equal(redactHome('C:\\Users\\Some.User2\\a.png', home), 'C:\\Users\\Some.User2\\a.png');
+    assert.equal(redactHome('see /home/user, then "/home/user/a.png"', '/home/user'), 'see ~, then "~/a.png"');
     assert.equal(redactHome(null, home), null);
     assert.equal(redactHome('no paths', ''), 'no paths');
   }],

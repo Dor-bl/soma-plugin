@@ -84,11 +84,11 @@ Per run, averaged over all nine runs of each arm, against the baseline (its cont
 | Cost (USD) | 0.156 | 0.207 (+33%) | 0.179 | 0.198 (+11%) |
 | Total tokens | 558k | 709k (+27%) | 702k | 758k (+8%) |
 | Turns | 18.7 | 21.7 | 17.8 | 19.4 |
-| Context per turn | 28.7k | 31.3k | 38.1k | 37.6k |
+| Context per turn (mean of each run's cache reads / turns) | 28.8k | 30.3k | 38.1k | 37.7k |
 
 Whole run: 24.3 minutes, USD 1.61 for the plain arm and USD 1.78 for the SOMA arm. Reading:
 
 - The SOMA overhead shrank from +33% to +11% in cost and from +27% to +8% in tokens, but mostly because the plain arm got more expensive (0.156 to 0.179 USD per run). The SOMA arm itself is flat (0.207 to 0.198 USD, within noise).
 - Why plain grew: with `NO_UI` the screenshots are readable, and the plain arm now looks at them. Over nine runs it read 16 screenshots and fetched page source 10 times, against 7 and 5 for SOMA. Tool results added up to 3.7 MB of text for plain and 0.9 MB for SOMA. The skill's "find the element, screenshot once per visual check" guidance is doing what it should.
 - What still costs SOMA: fixed prompt text. In the streams, a SOMA session sits at about 50k tokens of context after setup against about 44k for plain. The `run-manual-test` skill (12.1 KB, up from 9.2 KB at the baseline after #58 and #65) and the command are re-read on every turn, and SOMA runs take 1.6 more turns (one is the explicit session cleanup). On tasks of 10 to 20 turns, that outweighs the savings in device output. Trimming the hot path (#55) is the lever left.
-- Per task, `dark-theme` went from +74% to -2%, while `screen-timeout` (+5% to +36%) and `read-android-version` (-1% to +35%) went the other way. With 3 runs and overlapping ranges, read the per-task rows as noise and use the nine-run averages above.
+- Per task, `dark-theme` went from +74% to -2%, while `screen-timeout` (+5% to +36%) and `read-android-version` (-1% to +35%) went the other way. `dark-theme` and `read-android-version` have overlapping ranges between the arms, so with 3 runs read those as noise. `screen-timeout` does not overlap (plain 580,565–678,891, SOMA 763,229–876,150): SOMA used more tokens on every run of it, which the nine-run average hides. Three runs are too few to call that settled; rerun with more runs before acting on it.
