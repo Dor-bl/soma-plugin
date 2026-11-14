@@ -118,8 +118,10 @@ export function redactHome(text, home) {
   const trimmed = home.replace(/[\\/]+$/, '');
   if (!trimmed) return text;
   const pattern = trimmed.split(/[\\/]+/).map((part) => part.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('[\\\\/]+');
-  // A slash may come before it (file:///home/user, file:///C:/Users/...); a letter may not
-  const before = '(?<![\\p{L}\\p{N}_.~+-])';
+  // A slash may come before a home that starts with a drive (file:///C:/Users/...). A home
+  // that starts with a slash already takes all of a URL's slashes (file:///home/user), so a
+  // slash before it means a longer path (/mnt//home/user). A letter may never come before it.
+  const before = /^[\\/]/.test(trimmed) ? '(?<![\\p{L}\\p{N}_.~+\\\\/-])' : '(?<![\\p{L}\\p{N}_.~+-])';
   const after = '(?![\\p{L}\\p{N}_+-]|\\.[\\p{L}\\p{N}_])';
   return text.replace(new RegExp(`${before}${pattern}${after}`, 'giu'), '~');
 }
