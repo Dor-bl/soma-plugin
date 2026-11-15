@@ -18,7 +18,7 @@ The calling skill gives you:
 - the numbered steps with expected results, and the confirmed Cleanup section if any
 - test account values the tester gave, if a step needs them
 - the privileged actions the tester approved for the steps and for Cleanup, each as an exact action, or "none"
-- the path of `backends/app-map.md`, the exact path of this app's map file and the installed app version the calling skill checked it against, or "no map"
+- the path of `backends/app-map.md`, the exact path of this app's map file and the app version the calling skill checked it against (for an install, the version of the build being installed), or "no map"
 
 If any of these is missing or contradicts itself, do not guess: return at once with what is missing.
 
