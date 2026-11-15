@@ -258,6 +258,10 @@ for (const file of readdirSync(join(root, 'commands')).filter((f) => f.endsWith(
 // Agents: name matches the file, a description, a README row, and every appium-mcp tool they
 // list must be one the smoke test requires, so an upstream rename fails CI instead of leaving
 // the agent without the tool. Plugin MCP tools are named mcp__plugin_<plugin>_<server>__<tool>.
+// Every agent must list its tools (without a list it inherits all of them, shell included), and
+// any tool that is not a plugin MCP tool must be in AGENT_BUILTIN_TOOLS: adding one (e.g. Bash)
+// is a deliberate change to this list, not something a new agent can do on its own.
+const AGENT_BUILTIN_TOOLS = ['Read'];
 const agentFiles = existsSync(join(root, 'agents')) ? readdirSync(join(root, 'agents')).filter((f) => f.endsWith('.md')) : [];
 const smokeTools = new Set(
   [...(read('scripts/mcp-smoke.mjs').match(/const REQUIRED_TOOLS = \[([\s\S]*?)\];/)?.[1] ?? '').matchAll(/'([\w-]+)'/g)].map((m) => m[1]),
@@ -276,7 +280,15 @@ for (const file of agentFiles) {
   if (!new RegExp(`^\\|[^|]*Agent[^|]*\\|\\s*\`${name}\``, 'm').test(read('README.md'))) {
     fail(`README.md: "What's inside" table has no row for agent ${name}`);
   }
-  for (const tool of (fm.tools ?? '').split(',').map((t) => t.trim()).filter((t) => t.startsWith('mcp__'))) {
+  const tools = (fm.tools ?? '').split(',').map((t) => t.trim()).filter(Boolean);
+  if (!tools.length) fail(`${p}: missing tools list on one comma-separated line (without one the agent gets every tool)`);
+  for (const tool of tools) {
+    if (!tool.startsWith('mcp__')) {
+      if (!AGENT_BUILTIN_TOOLS.includes(tool)) {
+        fail(`${p}: tool ${tool} is not allowed; agents may use ${AGENT_BUILTIN_TOOLS.join(', ')} and mcp__plugin_${plugin?.name}_<server>__<tool> (write appium-mcp tools in full, and add a built-in tool to AGENT_BUILTIN_TOOLS only on purpose)`);
+      }
+      continue;
+    }
     const m = tool.match(/^mcp__plugin_([\w-]+?)_([\w-]+)__([\w-]+)$/);
     if (!m || m[1] !== plugin?.name || !mcpServers.includes(m[2])) {
       fail(`${p}: tool ${tool} is not mcp__plugin_${plugin?.name}_<server in .mcp.json>__<tool>`);
