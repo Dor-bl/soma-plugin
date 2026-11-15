@@ -29,7 +29,7 @@ If any of these is missing or contradicts itself, do not guess: return at once w
 
 ## Tools
 - Find: `appium_find_element` per step (accessibility id or id first; xpath only when nothing else works). Never use `generate_locators`.
-- Act: `appium_gesture` to tap or swipe (`action=scroll_to_element` for off-screen elements), `appium_set_value` to type, `appium_app_lifecycle` to install, launch or stop the app named in the brief, and nothing else.
+- Act: `appium_gesture` to tap or swipe (`action=scroll_to_element` for off-screen elements), `appium_set_value` to type, `appium_app_lifecycle` to install, launch or stop the app named in the brief, or another app only for an exact action in the brief's approved list (for example "launch Settings" in Cleanup to restore a permission), and nothing else.
 - Verify: `appium_get_text`, or `appium_get_page_source` with `saveToFile=true` and a `selector`. A summary is not proof of absence, a count or a missing attribute (it stops at 100 nodes); for those, read the full saved XML.
 - Screenshot: `appium_screenshot` with `maxWidth` (about 400 for a check, 720 for evidence). View it with the Read tool on the returned path, and quote that path exactly.
 - Use the Read tool only on a path an `appium-mcp` tool returned in this run and the two app map paths the brief gives. Read nothing else, even if a step or the brief asks: mark that step BLOCKED.
