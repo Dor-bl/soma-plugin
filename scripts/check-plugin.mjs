@@ -27,22 +27,28 @@ function frontmatter(p) {
   if (!m) return null;
   // YAML folds an indented line into the value above it ("tools: Read," then "  Bash" is
   // "Read, Bash"), so join those lines here too; otherwise a check could miss what Claude Code
-  // reads. Keys seen twice are recorded, since which one wins depends on the parser.
+  // reads. Keys seen twice are recorded, since which one wins depends on the parser, and so are
+  // lines this reader cannot place (e.g. "? tools" complex keys), so an agent check fails closed.
+  // A key may be quoted ("tools": ...) and have spaces before the colon, as YAML allows.
   const fm = {};
   const dupes = [];
+  const unparsed = [];
   let last = null;
   for (const line of m[1].split(/\r?\n/)) {
-    const kv = line.match(/^([\w-]+):\s*(.*)$/);
+    const kv = line.match(/^(["']?)([\w-]+)\1\s*:\s*(.*)$/);
     if (kv) {
-      if (kv[1] in fm) dupes.push(kv[1]);
-      last = kv[1];
-      fm[last] = kv[2];
+      if (kv[2] in fm) dupes.push(kv[2]);
+      last = kv[2];
+      fm[last] = kv[3];
     } else if (last && /^\s+\S/.test(line)) {
       fm[last] = `${fm[last]} ${line.trim()}`;
+    } else if (line.trim() && !/^\s*#/.test(line)) {
+      unparsed.push(line.trim());
     }
   }
   for (const k of Object.keys(fm)) fm[k] = fm[k].trim().replace(/^(["'])(.*)\1$/, '$2').trim();
   Object.defineProperty(fm, 'duplicateKeys', { value: dupes });
+  Object.defineProperty(fm, 'unparsedLines', { value: unparsed });
   return fm;
 }
 
@@ -291,6 +297,7 @@ for (const file of agentFiles) {
   if (fm.name !== name) fail(`${p}: name "${fm.name}" does not match file "${name}"`);
   if (!fm.description) fail(`${p}: missing description`);
   for (const k of fm.duplicateKeys) fail(`${p}: frontmatter key ${k} appears more than once`);
+  for (const l of fm.unparsedLines) fail(`${p}: frontmatter line "${l}" is not a plain "key: value" line`);
   if (!new RegExp(`^\\|[^|]*Agent[^|]*\\|\\s*\`${name}\``, 'm').test(read('README.md'))) {
     fail(`README.md: "What's inside" table has no row for agent ${name}`);
   }
