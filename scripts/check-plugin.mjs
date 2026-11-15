@@ -25,11 +25,24 @@ function readJson(p) {
 function frontmatter(p) {
   const m = read(p).match(/^---\r?\n([\s\S]*?)\r?\n---/);
   if (!m) return null;
+  // YAML folds an indented line into the value above it ("tools: Read," then "  Bash" is
+  // "Read, Bash"), so join those lines here too; otherwise a check could miss what Claude Code
+  // reads. Keys seen twice are recorded, since which one wins depends on the parser.
   const fm = {};
+  const dupes = [];
+  let last = null;
   for (const line of m[1].split(/\r?\n/)) {
     const kv = line.match(/^([\w-]+):\s*(.*)$/);
-    if (kv) fm[kv[1]] = kv[2].replace(/^(["'])(.*)\1$/, '$2').trim();
+    if (kv) {
+      if (kv[1] in fm) dupes.push(kv[1]);
+      last = kv[1];
+      fm[last] = kv[2];
+    } else if (last && /^\s+\S/.test(line)) {
+      fm[last] = `${fm[last]} ${line.trim()}`;
+    }
   }
+  for (const k of Object.keys(fm)) fm[k] = fm[k].trim().replace(/^(["'])(.*)\1$/, '$2').trim();
+  Object.defineProperty(fm, 'duplicateKeys', { value: dupes });
   return fm;
 }
 
@@ -277,6 +290,7 @@ for (const file of agentFiles) {
   const name = file.replace(/\.md$/, '');
   if (fm.name !== name) fail(`${p}: name "${fm.name}" does not match file "${name}"`);
   if (!fm.description) fail(`${p}: missing description`);
+  for (const k of fm.duplicateKeys) fail(`${p}: frontmatter key ${k} appears more than once`);
   if (!new RegExp(`^\\|[^|]*Agent[^|]*\\|\\s*\`${name}\``, 'm').test(read('README.md'))) {
     fail(`README.md: "What's inside" table has no row for agent ${name}`);
   }
