@@ -12,7 +12,7 @@ SOMA is a Claude Code plugin for mobile QA, built on the official [`appium-mcp`]
 - `skills/<name>/SKILL.md`: one skill per folder
 - `commands/*.md`: slash commands (`/soma:<file>`), each a one-line hand-off to a skill
 - `backends/`: one file per device engine (Appium default, optional Google Artemis). Skills say *what* to do; these files say *which tools* do it. Selection rules are in `backends/README.md`
-- `scripts/`: the launcher (`start-appium-mcp.mjs`, `allowlist.mjs`, `child-env.mjs`, `system-tools.mjs`), the emulator starter (`start-emulator.mjs`), CI checks (`check-plugin.mjs`, `mcp-smoke.mjs`, with its Windows cleanup in `process-tree.mjs`) and their unit tests (`test-*.mjs`)
+- `scripts/`: the launcher (`start-appium-mcp.mjs`, `allowlist.mjs`, `child-env.mjs`, `stdin-gate.mjs`, `system-tools.mjs`), the emulator starter (`start-emulator.mjs`), CI checks (`check-plugin.mjs`, `mcp-smoke.mjs`, with its Windows cleanup in `process-tree.mjs`) and their unit tests (`test-*.mjs`)
 - `benchmarks/`: tasks and method for the token benchmark (plain Claude Code vs SOMA on the Android Settings app); `scripts/benchmark.mjs` runs it, `benchmark-stats.mjs` holds the tested parsing and summary
 
 ## Checks (same as CI)
@@ -23,6 +23,7 @@ node scripts/check-plugin.mjs        # frontmatter, userConfig, version badge, c
 node scripts/test-allowlist.mjs       # remote-server allowlist
 node scripts/test-process-tree.mjs    # Windows process-tree cleanup
 node scripts/test-child-env.mjs       # credential-looking env vars stay out of appium-mcp
+node scripts/test-stdin-gate.mjs      # launcher exits on stdin close during an install, replays held input
 node scripts/test-system-tools.mjs    # Windows system tool path resolution
 node scripts/test-triage-command.mjs  # /soma:triage command contract
 node scripts/test-injection-match.mjs # injection-check reply and shell matching
