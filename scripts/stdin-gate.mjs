@@ -31,8 +31,15 @@ export function holdStdin(stream, onEnd) {
       stream.off('end', onClose);
       stream.off('close', onClose);
       for (const chunk of chunks.splice(0)) target.write(chunk);
-      if (ended) target.end();
-      else stream.pipe(target);
+      // pipe() forwards a normal end, but not a close or error without one. The server
+      // must still see EOF then, or it and this launcher keep waiting on an open stdin.
+      const finish = () => {
+        if (!target.writableEnded && !target.destroyed) target.end();
+      };
+      if (ended) return finish();
+      stream.on('close', finish);
+      stream.on('error', finish);
+      stream.pipe(target);
     },
   };
 }

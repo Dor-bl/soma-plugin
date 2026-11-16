@@ -57,6 +57,30 @@ const collect = (stream) => {
   console.log('✔ release replays held input, forwards the rest and the end, without calling onEnd');
 }
 
+// After release, a stdin close or error without an end still ends the target
+for (const [label, close] of [
+  ['close', (s) => s.destroy()],
+  ['error', (s) => s.destroy(new Error('EPIPE'))],
+]) {
+  const stdin = new PassThrough();
+  const server = new PassThrough();
+  const out = collect(server);
+  let calls = 0;
+  const gate = holdStdin(stdin, () => calls++);
+  stdin.write('one\n');
+  await tick();
+  gate.release(server);
+  stdin.write('two\n');
+  await tick();
+  close(stdin);
+  await tick();
+  await tick();
+  assert.equal(out.text(), 'one\ntwo\n');
+  assert.equal(out.ended(), true);
+  assert.equal(calls, 0);
+  console.log(`✔ a stdin ${label} without an end after release ends the target`);
+}
+
 // Release after stdin already ended (onEnd chose not to exit): replay, then end the target
 {
   const stdin = new PassThrough();
