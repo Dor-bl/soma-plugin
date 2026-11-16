@@ -12,6 +12,7 @@ Notable changes to SOMA, newest first. The format follows [Keep a Changelog](htt
 ### Changed
 
 - `explore-app` reads Appium screens the targeted way, as `run-manual-test` and `triage-failure` do: one element, or page source saved to a file with a selector, never the full tree inline; the full XML only for absence or counts. A suspicious finding gets one `maxWidth` 720 evidence screenshot on its screen, re-tries are checked from structured state, and a finding judged only from a screenshot says so (#56)
+- `explore-app` lists the Appium tools it needs inline and reads `backends/appium.md` only for iOS, a remote server or a tool not listed, instead of on every Appium run, as `run-manual-test` already does (#54)
 
 ## [0.2.0] - 2026-11-13
 
