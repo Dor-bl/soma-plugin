@@ -25,11 +25,30 @@ function readJson(p) {
 function frontmatter(p) {
   const m = read(p).match(/^---\r?\n([\s\S]*?)\r?\n---/);
   if (!m) return null;
+  // YAML folds an indented line into the value above it ("tools: Read," then "  Bash" is
+  // "Read, Bash"), so join those lines here too; otherwise a check could miss what Claude Code
+  // reads. Keys seen twice are recorded, since which one wins depends on the parser, and so are
+  // lines this reader cannot place (e.g. "? tools" complex keys), so an agent check fails closed.
+  // A key may be quoted ("tools": ...) and have spaces before the colon, as YAML allows.
   const fm = {};
+  const dupes = [];
+  const unparsed = [];
+  let last = null;
   for (const line of m[1].split(/\r?\n/)) {
-    const kv = line.match(/^([\w-]+):\s*(.*)$/);
-    if (kv) fm[kv[1]] = kv[2].replace(/^(["'])(.*)\1$/, '$2').trim();
+    const kv = line.match(/^(["']?)([\w-]+)\1\s*:\s*(.*)$/);
+    if (kv) {
+      if (kv[2] in fm) dupes.push(kv[2]);
+      last = kv[2];
+      fm[last] = kv[3];
+    } else if (last && /^\s+\S/.test(line)) {
+      fm[last] = `${fm[last]} ${line.trim()}`;
+    } else if (line.trim() && !/^\s*#/.test(line)) {
+      unparsed.push(line.trim());
+    }
   }
+  for (const k of Object.keys(fm)) fm[k] = fm[k].trim().replace(/^(["'])(.*)\1$/, '$2').trim();
+  Object.defineProperty(fm, 'duplicateKeys', { value: dupes });
+  Object.defineProperty(fm, 'unparsedLines', { value: unparsed });
   return fm;
 }
 
@@ -159,7 +178,8 @@ for (const dir of REDACTING_SKILLS) {
 // The skills that quote device output (screenshots, logs, page source) must carry the same
 // redaction wording, so a fix in one reaches all of them (see AGENTS.md "Writing skills").
 // write-test-case is left out: it quotes stories and tickets, not device output.
-const REDACTION_SYNC = ['bug-report', 'run-manual-test', 'explore-app', 'triage-failure'];
+// The device-runner agent quotes the same device output for run-manual-test, so it is in the set too.
+const REDACTION_SYNC = ['skills/bug-report/SKILL.md', 'skills/run-manual-test/SKILL.md', 'skills/explore-app/SKILL.md', 'skills/triage-failure/SKILL.md', 'agents/device-runner.md'];
 function section(text, heading) {
   const lines = text.replace(/\r\n/g, '\n').split('\n');
   let fence = null;
@@ -180,13 +200,14 @@ function section(text, heading) {
   }
   return start === -1 ? null : lines.slice(start + 1).join('\n').trim().split('\n');
 }
-const redaction = REDACTION_SYNC.filter((d) => existsSync(join(root, `skills/${d}/SKILL.md`))).map((d) => [
-  `skills/${d}/SKILL.md`,
-  section(read(`skills/${d}/SKILL.md`), '## Sensitive data (redaction)'),
-]);
+for (const p of REDACTION_SYNC.filter((p) => p.startsWith('agents/') && !existsSync(join(root, p)))) {
+  fail(`${p}: missing (listed in REDACTION_SYNC; update the list if the agent was renamed)`);
+}
+const redaction = REDACTION_SYNC.filter((p) => existsSync(join(root, p))).map((p) => [p, section(read(p), '## Sensitive data (redaction)')]);
 const [refPath, refLines] = redaction.find(([, s]) => s) ?? [];
 for (const [p, lines] of redaction) {
-  if (!lines || p === refPath) continue; // a missing section is reported above
+  if (!lines && p.startsWith('agents/')) fail(`${p}: missing "## Sensitive data (redaction)" section`);
+  if (!lines || p === refPath) continue; // a missing skill section is reported above
   const i = Array.from({ length: Math.max(lines.length, refLines.length) }).findIndex((_, n) => lines[n] !== refLines[n]);
   if (i !== -1) {
     fail(`${p}: "Sensitive data (redaction)" differs from ${refPath} at section line ${i + 1}; keep the wording in sync across ${REDACTION_SYNC.join(', ')}`);
@@ -250,6 +271,54 @@ for (const file of readdirSync(join(root, 'commands')).filter((f) => f.endsWith(
   const name = `/soma:${file.replace(/\.md$/, '')}`;
   if (!new RegExp(`^\\|[^|]*Command[^|]*\\|\\s*\`${name}[\\s\`]`, 'm').test(readme)) {
     fail(`README.md: "What's inside" table has no row for ${name}`);
+  }
+}
+
+// Agents: name matches the file, a description, a README row, and every appium-mcp tool they
+// list must be one the smoke test requires, so an upstream rename fails CI instead of leaving
+// the agent without the tool. Plugin MCP tools are named mcp__plugin_<plugin>_<server>__<tool>.
+// Every agent must list its tools (without a list it inherits all of them, shell included), and
+// any tool that is not a plugin MCP tool must be in AGENT_BUILTIN_TOOLS: adding one (e.g. Bash)
+// is a deliberate change to this list, not something a new agent can do on its own.
+const AGENT_BUILTIN_TOOLS = ['Read'];
+const agentFiles = existsSync(join(root, 'agents')) ? readdirSync(join(root, 'agents')).filter((f) => f.endsWith('.md')) : [];
+const smokeTools = new Set(
+  [...(read('scripts/mcp-smoke.mjs').match(/const REQUIRED_TOOLS = \[([\s\S]*?)\];/)?.[1] ?? '').matchAll(/'([\w-]+)'/g)].map((m) => m[1]),
+);
+const mcpServers = Object.keys(mcp?.mcpServers ?? {});
+for (const file of agentFiles) {
+  const p = `agents/${file}`;
+  const fm = frontmatter(p);
+  if (!fm) {
+    fail(`${p}: no frontmatter`);
+    continue;
+  }
+  const name = file.replace(/\.md$/, '');
+  if (fm.name !== name) fail(`${p}: name "${fm.name}" does not match file "${name}"`);
+  if (!fm.description) fail(`${p}: missing description`);
+  for (const k of fm.duplicateKeys) fail(`${p}: frontmatter key ${k} appears more than once`);
+  for (const l of fm.unparsedLines) fail(`${p}: frontmatter line "${l}" is not a plain "key: value" line`);
+  if (!new RegExp(`^\\|[^|]*Agent[^|]*\\|\\s*\`${name}\``, 'm').test(read('README.md'))) {
+    fail(`README.md: "What's inside" table has no row for agent ${name}`);
+  }
+  const tools = (fm.tools ?? '').split(',').map((t) => t.trim()).filter(Boolean);
+  if (!tools.length) fail(`${p}: missing tools list on one comma-separated line (without one the agent gets every tool)`);
+  for (const tool of tools) {
+    if (!tool.startsWith('mcp__')) {
+      if (!AGENT_BUILTIN_TOOLS.includes(tool)) {
+        fail(`${p}: tool ${tool} is not allowed; agents may use ${AGENT_BUILTIN_TOOLS.join(', ')} and mcp__plugin_${plugin?.name}_<server>__<tool> (write appium-mcp tools in full, and add a built-in tool to AGENT_BUILTIN_TOOLS only on purpose)`);
+      }
+      continue;
+    }
+    const m = tool.match(/^mcp__plugin_([\w-]+?)_([\w-]+)__([\w-]+)$/);
+    if (!m || m[1] !== plugin?.name || !mcpServers.includes(m[2])) {
+      fail(`${p}: tool ${tool} is not mcp__plugin_${plugin?.name}_<server in .mcp.json>__<tool>`);
+    } else if (!smokeTools.has(m[3])) {
+      fail(`${p}: tool ${m[3]} is not in REQUIRED_TOOLS in scripts/mcp-smoke.mjs`);
+    }
+  }
+  for (const m of read(p).matchAll(/\$\{(user_config\.\w+|CLAUDE_PLUGIN_ROOT)\}/g)) {
+    fail(`${p}: \${${m[1]}} is not guaranteed to be substituted in agent files; have the calling skill pass the value in the brief`);
   }
 }
 
