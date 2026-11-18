@@ -16,6 +16,10 @@ Notable changes to SOMA, newest first. The format follows [Keep a Changelog](htt
 - `explore-app` reads Appium screens the targeted way, as `run-manual-test` and `triage-failure` do: one element, or page source saved to a file with a selector, never the full tree inline; the full XML only for absence or counts. A suspicious finding gets one `maxWidth` 720 evidence screenshot on its screen, re-tries are checked from structured state, and a finding judged only from a screenshot says so (#56)
 - `explore-app` lists the Appium tools it needs inline and reads `backends/appium.md` only for iOS, a remote server or a tool not listed, instead of on every Appium run, as `run-manual-test` already does (#54)
 
+### Security
+
+- `appium-mcp`'s dependency tree takes patched versions of `hono` (4.13.19), `@hono/node-server` (2.1.9) and `basic-ftp` (6.2.6). `runtime/package.json` overrides the packages `applesign` 5.0.1 ships as runtime dependencies (`uuid`, and `mocha`'s `nanoid`, `serialize-javascript`, `js-yaml`, `minimatch` and `diff`) with patched releases in the same major. `appium-mcp` itself stays at 1.97.1. Drop the `applesign` overrides once `appium-mcp` accepts `applesign` 6, which no longer ships `mocha` (nowsecure/node-applesign#185)
+
 ## [0.2.0] - 2026-11-13
 
 The first marketplace release. Status moves from experimental to beta.
