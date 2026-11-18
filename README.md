@@ -57,7 +57,7 @@ SOMA wraps the official [`appium-mcp`](https://github.com/appium/appium-mcp) ser
 - 📱 `scripts/start-emulator.mjs`: used by `start-device` to start an emulator detached and watch it boot
 - ⚙️ `remote_server_url` setting: leave empty for local, or point it at a remote Appium/WebDriver server or device cloud. Only that exact URL is allowed, and only if it's `https://` (plain `http://` for localhost only) with no embedded credentials. When it's empty, all remote servers are blocked
 - 🔑 `capabilities_file` setting (optional): a `capabilities.json` read from disk by `appium-mcp`. Put device-cloud credentials here instead of in the URL or the chat. Only `check-setup` reads it, after you approve the command, to check that it exists and is valid JSON without printing it; the other skills are told never to open it. Claude's file tools could still read it, so keep it out of the project folder and out of version control
-- 🗺️ `app_map_dir` setting (optional): a folder where `explore-app` saves the locators it found per app and `run-manual-test` and `generate-test` reuse them to skip repeat lookups; `triage-failure` reads them only as evidence of a changed locator (Appium only). Empty means off. Maps hold element names and locators, never typed or on-screen user data. Format and rules: [`backends/app-map.md`](backends/app-map.md)
+- 🗺️ `app_map_dir` setting (optional): a folder where `explore-app` saves the locators it found per app and `run-manual-test` and `generate-test` reuse them to skip repeat lookups; `triage-failure` reads them only as evidence of a changed locator (Appium only). Empty means off. Maps hold element names and locators, never typed or on-screen user data. `/soma:setup app map` checks the folder exists and warns if it sits in a git repository without being ignored. Format and rules: [`backends/app-map.md`](backends/app-map.md)
 - 🧩 Engines: skills describe *what* to do; [`backends/`](backends/README.md) describes *how* each engine does it
 
 ## 🧩 Engines
@@ -93,7 +93,7 @@ Or in two steps: `/plugin marketplace add Dor-bl/soma-plugin`, then `/plugin ins
 > [!IMPORTANT]
 > The first start installs `appium-mcp` and its locked dependencies (about 370 MB) from `registry.npmjs.org`, which can take minutes. Claude Code waits 30 seconds for an MCP server, so `appium-mcp` may show as *failed to connect* at first. The install keeps running in the background: reconnect with `/mcp` once it has finished, or run `/soma:setup` first and let it install the server before your first test.
 
-`/soma:setup` (the `check-setup` skill) checks Node, the SDKs and your devices and explains how to fix what is missing. Add a focus such as `android`, `ios` or `artemis` to check one area.
+`/soma:setup` (the `check-setup` skill) checks Node, the SDKs and your devices and explains how to fix what is missing. Add a focus such as `android`, `ios`, `artemis` or `app map` to check one area.
 
 To try a checkout without installing it, start Claude from the folder *above* the clone (inside it, `.mcp.json` loads as a project server and cannot start):
 
