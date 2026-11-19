@@ -163,7 +163,7 @@ Reading: **this run does not compare the arms on the device work**, because the 
 What the run does show:
 
 - A SOMA weakness on slow devices: the plain session recovers from a slow UiAutomator2 start by itself, SOMA stops and asks. With a tester present that costs one reply; unattended it fails the run. A default launch timeout for emulators, or one automatic retry with a longer one, would close it.
-- The plain arm passed 4 of 6, using 2.2M to 11.1M tokens and USD 0.41 to 1.67 per task. Both failures were wrong claims that AndroidWorld's check caught: on `ExpenseAddMultipleFromMarkor` it reported logging the two reimbursable transactions, and on `MarkorMergeNotes` it chose its own reading of the line breaks between the merged notes.
+- The plain arm passed 4 of 6, using 2.2M to 11.1M tokens and USD 0.41 to 1.67 per task. Both failures were wrong claims that AndroidWorld's check caught: on `ExpenseAddMultipleFromMarkor` it reported logging the two reimbursable transactions, and on `MarkorMergeNotes` it reported a saved, read-back note. The blank lines it put between the notes are what the check expects. By its reply, though, it saved the note as `bH6xnAbn.txt`, while the check looks for a file named exactly `bH6xnAbn`. That is the likely cause, but the device state was not kept, so it is not confirmed.
 - Rerun these six once the SOMA arm can start a session on this emulator.
 
 ## Results
