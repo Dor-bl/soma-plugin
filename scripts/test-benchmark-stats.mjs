@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // Unit tests for the benchmark's run parsing and summary (scripts/benchmark-stats.mjs).
 import assert from 'node:assert/strict';
-import { measure, median, parseEvents, redactHome, streamFileName, summarise, toMarkdown } from './benchmark-stats.mjs';
+import { consolePort, measure, median, parseEvents, promptFor, redactHome, refereeOutcome, streamFileName, summarise, toMarkdown } from './benchmark-stats.mjs';
 
 const stream = [
   { type: 'system', subtype: 'init', model: 'claude-test' },
@@ -183,6 +183,29 @@ const tests = [
     assert.equal(redactHome('/home/user', '/home/user'), '~');
     assert.equal(redactHome(null, home), null);
     assert.equal(redactHome('no paths', ''), 'no paths');
+  }],
+  ['prompts: the Settings suite keeps its published wording; a note goes before the confirmation', () => {
+    const settings = { steps: 'Open Settings, tap Display.', app: 'Settings', pkg: 'com.android.settings' };
+    assert.equal(promptFor('plain', settings), 'Using the Appium tools, on an Android device: Open Settings, tap Display. Platform Android, app Settings (com.android.settings) on the running emulator. I confirm the steps and the app: run it now without asking again, and finish with a one-line result.');
+    assert.equal(promptFor('soma', settings), '/soma:run-test android Open Settings, tap Display. Platform Android, app Settings (com.android.settings) on the running emulator. I confirm the steps and the app: run it now without asking again, and finish with a one-line result.');
+    const aw = promptFor('soma', { steps: 'Create a contact.', app: 'Contacts', pkg: 'com.google.android.contacts', note: 'Dismiss first-run screens.' });
+    assert.match(aw, /^\/soma:run-test android Create a contact\. Platform Android, app Contacts \(com\.google\.android\.contacts\) on the running emulator\. Dismiss first-run screens\. I confirm/);
+  }],
+  ['consolePort reads emulator serials only', () => {
+    assert.equal(consolePort('emulator-5554'), 5554);
+    assert.equal(consolePort('emulator-5556'), 5556);
+    assert.equal(consolePort('R58M123'), null);
+    assert.equal(consolePort('emulator-5554x'), null);
+    assert.equal(consolePort(undefined), null);
+  }],
+  ['refereeOutcome: only a full score without an error passes', () => {
+    assert.deepEqual(refereeOutcome({ success: 1, error: null }), { ok: true });
+    assert.deepEqual(refereeOutcome({ success: 0, error: null }), { ok: false });
+    assert.deepEqual(refereeOutcome({ success: 0.5, error: null }), { ok: false });
+    assert.equal(refereeOutcome({ success: 1, error: 'KeyError()' }).ok, false);
+    assert.match(refereeOutcome({ success: 0, error: 'KeyError()' }).error, /raised: KeyError/);
+    assert.match(refereeOutcome(null).error, /no result/);
+    assert.match(refereeOutcome({}).error, /no result/);
   }],
 ];
 

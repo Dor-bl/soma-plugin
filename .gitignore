@@ -16,3 +16,6 @@ setup-soma.ps1
 
 # Raw benchmark streams (--keep-streams): full tool results, large; review before sharing
 benchmarks/results/*/
+
+# Python bytecode from benchmarks/androidworld
+__pycache__/

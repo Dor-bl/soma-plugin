@@ -3,7 +3,10 @@
 // in), Node 22+, `adb` and ONE running Android emulator, and it spends model calls.
 //   node scripts/benchmark.mjs [--runs 3] [--tasks id,id] [--arms plain,soma] [--model <id>]
 //                              [--timeout-min 15] [--out <folder>] [--keep-streams] [--dry-run]
-// See benchmarks/README.md for the method and how to read the results.
+//                              [--suite settings|androidworld] [--aw-python <path>]
+// See benchmarks/README.md for the method and how to read the results. The androidworld suite
+// takes its tasks and pass/fail checks from AndroidWorld (benchmarks/androidworld/), through a
+// Python referee run with --aw-python (or ANDROID_WORLD_PYTHON).
 //
 // Both arms get the same appium-mcp launch (this repo's launcher, and --strict-mcp-config so
 // nothing else is loaded), the same tools allowed and the same task text. They differ only in
@@ -15,11 +18,10 @@ import { closeSync, mkdirSync, mkdtempSync, openSync, readFileSync, realpathSync
 import { homedir, tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { measure, parseEvents, redactHome, streamFileName, summarise, toMarkdown } from './benchmark-stats.mjs';
+import { consolePort, measure, parseEvents, promptFor, redactHome, refereeOutcome, streamFileName, summarise, toMarkdown } from './benchmark-stats.mjs';
 import { TASKKILL } from './system-tools.mjs';
 
 const root = fileURLToPath(new URL('..', import.meta.url)).replace(/[\\/]+$/, '');
-const { app, tasks: allTasks } = JSON.parse(readFileSync(join(root, 'benchmarks', 'tasks.json'), 'utf8'));
 const flag = (name, fallback) => {
   const i = process.argv.indexOf(`--${name}`);
   if (i < 0) return fallback;
@@ -27,6 +29,20 @@ const flag = (name, fallback) => {
   if (value === undefined || value.startsWith('--')) fail(`--${name} needs a value`);
   return value;
 };
+const suite = flag('suite', 'settings');
+if (!['settings', 'androidworld'].includes(suite)) fail(`unknown suite: ${suite}`);
+const androidWorld = suite === 'androidworld';
+// Both suites end up as tasks with { id, app, pkg }; Settings tasks also carry their steps,
+// reset and adb check, AndroidWorld tasks get their goal from the referee at run time
+const awDir = join(root, 'benchmarks', 'androidworld');
+const suiteFile = JSON.parse(readFileSync(androidWorld ? join(awDir, 'tasks.json') : join(root, 'benchmarks', 'tasks.json'), 'utf8'));
+const allTasks = androidWorld
+  ? suiteFile.tasks.map((t) => ({ id: t.id, app: t.app, pkg: t.package }))
+  : suiteFile.tasks.map((t) => ({ ...t, app: suiteFile.app.name, pkg: suiteFile.app.package }));
+// Pre-approved in both arms: AndroidWorld's apps can open on a permission request or a
+// first-run screen, and device-runner taps one only when the tester approved it up front
+const AW_NOTE = 'If a permission request or a first-run screen of this app comes up, allow or dismiss it and go on.';
+const awPython = flag('aw-python', process.env.ANDROID_WORLD_PYTHON ?? '');
 const runs = Number(flag('runs', 3));
 const arms = flag('arms', 'plain,soma').split(',');
 const taskIds = flag('tasks', allTasks.map((t) => t.id).join(',')).split(',');
@@ -78,19 +94,16 @@ const claudeConfigDir = resolve(process.env.CLAUDE_CONFIG_DIR ?? join(homedir(),
 const claudeProjects = join(claudeConfigDir, 'projects');
 const savedResultsDir = (cwd) => join(claudeProjects, cwd.replace(/[^a-zA-Z0-9]/g, '-'));
 
-// What the tester says. Skills stop to confirm the plan, which -p cannot answer, so both arms
-// carry the confirmation up front.
-const CONFIRM = `Platform Android, app ${app.name} (${app.package}) on the running emulator. I confirm the steps and the app: run it now without asking again, and finish with a one-line result.`;
-const promptFor = (arm, task) =>
-  arm === 'soma'
-    ? `/soma:run-test android ${task.steps} ${CONFIRM}`
-    : `Using the Appium tools, on an Android device: ${task.steps} ${CONFIRM}`;
+// The prompt for one run; an AndroidWorld goal comes from the referee once the task is set up
+const promptOf = (arm, task, goal) =>
+  promptFor(arm, androidWorld ? { steps: goal, app: task.app, pkg: task.pkg, note: AW_NOTE } : task);
 
 if (dryRun) {
-  for (const task of tasks) for (const arm of arms) console.log(`[${arm}] ${task.id}: ${promptFor(arm, task)}`);
+  for (const task of tasks) for (const arm of arms) console.log(`[${arm}] ${task.id}: ${promptOf(arm, task, '<the AndroidWorld goal for this run\'s seed>')}`);
   console.log(`${tasks.length * arms.length * runs} runs planned (${runs} per task and arm)${keepStreams ? '; streams kept under <out>/<timestamp>/' : ''}`);
   process.exit(0);
 }
+if (androidWorld && !awPython) fail('the androidworld suite needs the AndroidWorld Python: pass --aw-python <path> or set ANDROID_WORLD_PYTHON (see benchmarks/README.md)');
 
 // Discovery is unscoped; every later command is pinned to the validated serial with -s, so an
 // emulator that drops out mid-run makes the command fail instead of adb picking another device
@@ -109,6 +122,18 @@ const adbOrFail = (args) => {
   return r;
 };
 
+// AndroidWorld needs its own emulator setup (apps, and the accessibility forwarder its checks
+// read the screen through), and it sets the device clock to October 2023. Checking for the
+// forwarder keeps the suite off an emulator that was not set up for it.
+let adbPath = null;
+if (androidWorld) {
+  const listed = adb('shell pm list packages com.google.androidenv.accessibilityforwarder').stdout ?? '';
+  if (!/accessibilityforwarder/.test(listed)) fail(`${serial} is not set up for AndroidWorld (no accessibility forwarder). Run benchmarks/androidworld/setup_device.py on an emulator kept for AndroidWorld first (see benchmarks/README.md).`);
+  // The referee runs adb itself and needs its full path
+  const found = spawnSync(process.platform === 'win32' ? 'where' : 'which', ['adb'], { encoding: 'utf8' }).stdout?.split(/\r?\n/).filter(Boolean) ?? [];
+  adbPath = found.find((p) => process.platform !== 'win32' || /\.exe$/i.test(p)) ?? fail('could not find the full path of adb');
+}
+
 // A locked or sleeping device makes every run fail the same way and say nothing about either
 // arm: the reset step shortens the screen timeout, and a device with a PIN then locks.
 // Keep the screen on, wake it, and stop the benchmark if a lock screen is still up.
@@ -124,9 +149,11 @@ function requireUnlockedDevice() {
 
 let running = null;
 let workspace = null;
+let referee = null;
 for (const signal of ['SIGINT', 'SIGTERM']) {
   process.on(signal, () => {
     if (running) killTree(running);
+    if (referee) killTree(referee.child);
     if (workspace) cleanUp(workspace);
     console.error(`✘ stopped by ${signal}`);
     process.exit(130);
@@ -150,7 +177,7 @@ if (keepStreams) {
 function writeReports() {
   const models = [...new Set(results.map((r) => r.model).filter(Boolean))];
   const table = toMarkdown(summarise(results));
-  writeFileSync(join(outDir, `${stamp}.json`), JSON.stringify({ date: stamp, models, runsPerCell: runs, adbDevice: serial, appiumMcp: appiumMcpVersion(), results }, null, 2));
+  writeFileSync(join(outDir, `${stamp}.json`), JSON.stringify({ date: stamp, suite, ...(androidWorld ? { androidWorld: suiteFile.androidWorld } : {}), models, runsPerCell: runs, adbDevice: serial, appiumMcp: appiumMcpVersion(), results }, null, 2));
   writeFileSync(join(outDir, `${stamp}.md`), `Model: ${models.join(', ') || 'unknown'}; runs per task and arm: ${runs}\n\n${table}\n`);
   return table;
 }
@@ -159,18 +186,25 @@ for (let n = 1; n <= runs; n++) {
   for (const task of tasks) {
     for (const arm of arms) {
       requireUnlockedDevice();
-      // A reset that did not take could leave the expected value from the last run in place
-      for (const cmd of task.reset) adbOrFail(cmd);
-      // Home only backgrounds Settings, and the next run would resume on the last screen;
-      // force-stop ends the task but keeps the app's data (unlike pm clear)
-      adbOrFail(`shell am force-stop ${app.package}`);
-      adbOrFail('shell input keyevent KEYCODE_HOME');
+      let goal = null;
+      if (androidWorld) {
+        // The referee resets the task's app state and goes Home. Seed = run number: both arms
+        // of a run get the same parameters, and each run gets new ones
+        goal = await startReferee(task, n);
+      } else {
+        // A reset that did not take could leave the expected value from the last run in place
+        for (const cmd of task.reset) adbOrFail(cmd);
+        // Home only backgrounds Settings, and the next run would resume on the last screen;
+        // force-stop ends the task but keeps the app's data (unlike pm clear)
+        adbOrFail(`shell am force-stop ${task.pkg}`);
+        adbOrFail('shell input keyevent KEYCODE_HOME');
+      }
       // Resolved: the child sees the real path (macOS /var is /private/var) and saved results are keyed by it
       const cwd = (workspace = realpathSync(mkdtempSync(join(tmpdir(), 'soma-bench-'))));
       const saved = savedResultsDir(cwd);
       mkdirSync(saved, { recursive: true });
       const args = [
-        '-p', promptFor(arm, task),
+        '-p', promptOf(arm, task, goal?.goal),
         '--strict-mcp-config', '--mcp-config', mcpConfigFor(cwd),
         // Skip the caller's user settings, so a SOMA already enabled there cannot leak into the plain arm
         '--setting-sources', 'project,local',
@@ -218,7 +252,8 @@ for (let n = 1; n <= runs; n++) {
         }
       }
       const m = measure(parseEvents(run.stdout ?? ''));
-      const check = verify(task, m.reply);
+      // Scored even after a timeout: the check reads the device, whatever the run said
+      const check = androidWorld ? refereeOutcome(await finishReferee()) : verify(task, m.reply);
       // With Bash allowed, an agent could change the setting through adb and skip the UI work
       // being measured, so a pass also needs at least one appium-mcp tool call that succeeded
       const outcomeOk = !run.error && !m.isError && check.ok;
@@ -226,9 +261,9 @@ for (let n = 1; n <= runs; n++) {
       const passed = outcomeOk && !invalid;
       // The reply and both errors are saved without the local home folder (an adb error can name
       // the adb path under it); the check above used the raw reply
-      results.push({ task: task.id, arm, run: n, passed, invalid, checkError: redactHome(check.error ?? null, homedir()), ...m, durationSec: wallSec, reportedDurationSec: m.durationSec, reply: redactHome(m.reply, homedir()), wallSec, error: redactHome(run.error?.message ?? null, homedir()), stream });
+      results.push({ task: task.id, arm, run: n, ...(goal ? { seed: goal.seed, complexity: goal.complexity } : {}), passed, invalid, checkError: redactHome(check.error ?? null, homedir()), ...m, durationSec: wallSec, reportedDurationSec: m.durationSec, reply: redactHome(m.reply, homedir()), wallSec, error: redactHome(run.error?.message ?? null, homedir()), stream });
       writeReports();
-      console.log(`${passed ? '✔' : '✘'}${check.error ? ' (adb check failed: ' + check.error + ')' : ''}${invalid ? ' (no successful appium-mcp call: not counted as a pass)' : ''} run ${n} ${task.id} [${arm}]: ${m.total == null ? 'no usage reported' : m.total.toLocaleString('en-US') + ' tokens'}, ${m.toolCalls} tool calls, ${wallSec.toFixed(0)} s${run.error ? ` (${run.error.message})` : ''}`);
+      console.log(`${passed ? '✔' : '✘'}${check.error ? ` (${androidWorld ? '' : 'adb '}check failed: ${check.error})` : ''}${invalid ? ' (no successful appium-mcp call: not counted as a pass)' : ''} run ${n} ${task.id} [${arm}]: ${m.total == null ? 'no usage reported' : m.total.toLocaleString('en-US') + ' tokens'}, ${m.toolCalls} tool calls, ${wallSec.toFixed(0)} s${run.error ? ` (${run.error.message})` : ''}`);
     }
   }
 }
@@ -249,6 +284,61 @@ function verify(task, reply) {
   }
   // Exact: "60000" must not match inside "600000"
   return { ok: out === task.verify.expect };
+}
+
+// Declarations, not consts: the run loop above calls them before this point is reached
+function sleep(ms) {
+  return new Promise((r) => setTimeout(r, ms));
+}
+function readJson(file) {
+  try { return JSON.parse(readFileSync(file, 'utf8')); } catch { return null; }
+}
+
+// Starts the AndroidWorld referee for one run and waits until it has set up the task.
+// Its folder is outside the run's workspace, so the agent under test cannot signal "done".
+// A referee that cannot set up a task stops the benchmark: the device state is then unknown,
+// as when an adb reset fails.
+async function startReferee(task, n) {
+  const dir = realpathSync(mkdtempSync(join(tmpdir(), 'soma-aw-')));
+  const args = [join(awDir, 'referee.py'), '--task', task.id, '--seed', String(n), '--dir', dir, '--adb', adbPath, '--console-port', String(consolePort(serial))];
+  const child = spawn(awPython, args, { stdio: ['ignore', 'ignore', 'pipe'], detached: process.platform !== 'win32', windowsHide: true });
+  // The handlers write to this run's own record: `referee` is cleared when the run ends
+  const r = (referee = { child, dir, stderr: '', exited: false });
+  child.stderr.setEncoding('utf8').on('data', (d) => (r.stderr = (r.stderr + d).slice(-4000)));
+  child.on('close', () => (r.exited = true));
+  child.on('error', (error) => { r.exited = true; r.stderr += String(error); });
+  const deadline = Date.now() + 10 * 60_000;
+  while (Date.now() < deadline) {
+    const goal = readJson(join(dir, 'goal.json'));
+    if (goal) return goal;
+    if (r.exited) break;
+    await sleep(1000);
+  }
+  const why = r.exited ? `it exited: ${r.stderr.trim().split('\n').slice(-5).join(' | ')}` : 'no goal after 10 minutes';
+  stopReferee();
+  fail(`the AndroidWorld referee could not set up ${task.id} (${why})`);
+}
+
+// Tells the referee the agent is done, and returns its result.json (null if it wrote none)
+async function finishReferee() {
+  const r = referee;
+  writeFileSync(join(r.dir, 'done'), '');
+  let result = null;
+  const deadline = Date.now() + 5 * 60_000;
+  while (Date.now() < deadline && !(result = readJson(join(r.dir, 'result.json'))) && !r.exited) await sleep(1000);
+  result ??= readJson(join(r.dir, 'result.json'));
+  // Then let it tear the task down and disconnect, so the next run's referee starts clean
+  const closeBy = Date.now() + 60_000;
+  while (!r.exited && Date.now() < closeBy) await sleep(500);
+  stopReferee();
+  return result;
+}
+
+function stopReferee() {
+  if (!referee) return;
+  if (!referee.exited) killTree(referee.child);
+  cleanUp(referee.dir);
+  referee = null;
 }
 
 // On Windows a folder stays locked for a moment while a child of the finished run (the
