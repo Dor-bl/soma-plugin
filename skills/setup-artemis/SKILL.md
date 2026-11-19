@@ -7,6 +7,8 @@ description: Guide the tester through installing the optional Google Artemis eng
 
 Plugin files below are written as `${CLAUDE_PLUGIN_ROOT}/<path>`, under the plugin's root folder. If that prefix still shows as a literal `${...}` placeholder (Codex does not fill it in), the root is the folder that contains the `skills` folder this file is in.
 
+Claude Code only. The registration steps below use the `claude mcp` commands and a Claude Code restart. If this session runs in Codex (for example the `${CLAUDE_PLUGIN_ROOT}` prefix above is still a literal placeholder), stop before changing anything: say that SOMA sets up Artemis for Claude Code only for now, and that without Artemis the skills use Appium.
+
 Artemis is Android only and runs on the tester's machine, so a remote Appium server does not matter here (`${user_config.remote_server_url}` is not used). Read `${CLAUDE_PLUGIN_ROOT}/backends/artemis.md` first: it explains what Artemis changes on a device and why its own installers are not used.
 
 Every step below changes the tester's machine. Explain what a step does and get a yes before running it. Skip steps already done (check first, read-only). Never use `start.bat` / `start.sh`, `artemis init`, `artemis mcp --install` or `uv tool install`: they write config and rules into every AI client on the machine.
