@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // Unit tests for the benchmark's run parsing and summary (scripts/benchmark-stats.mjs).
 import assert from 'node:assert/strict';
-import { measure, median, parseEvents, redactHome, streamFileName, summarise, toMarkdown } from './benchmark-stats.mjs';
+import { cleanGoal, consolePort, GOAL_MAX, measure, median, parseEvents, promptFor, redactHome, refereeOutcome, streamFileName, summarise, toMarkdown } from './benchmark-stats.mjs';
 
 const stream = [
   { type: 'system', subtype: 'init', model: 'claude-test' },
@@ -56,8 +56,11 @@ const tests = [
       { type: 'user', message: { content: [{ type: 'tool_result', tool_use_id: 'a1' }] } },
       { type: 'result', is_error: false, result: 'The test is running.', num_turns: 4, duration_ms: 9000, total_cost_usd: 0.05,
         usage: { input_tokens: 8, cache_read_input_tokens: 115_535, cache_creation_input_tokens: 17_367, output_tokens: 862 }, modelUsage: soFar },
-      { type: 'assistant', message: { content: [{ type: 'tool_use', id: 'a2', name: 'mcp__appium-mcp__appium_find_element' }] } },
-      { type: 'user', message: { content: [{ type: 'tool_result', tool_use_id: 'a2' }] } },
+      // device-runner's turns: two content blocks of one turn share a message id
+      { type: 'assistant', parent_tool_use_id: 'a1', message: { id: 'msg_s1', content: [{ type: 'text', text: 'Step 1' }] } },
+      { type: 'assistant', parent_tool_use_id: 'a1', message: { id: 'msg_s1', content: [{ type: 'tool_use', id: 'a2', name: 'mcp__plugin_soma_appium-mcp__appium_find_element' }] } },
+      { type: 'user', parent_tool_use_id: 'a1', message: { content: [{ type: 'tool_result', tool_use_id: 'a2' }] } },
+      { type: 'assistant', parent_tool_use_id: 'a1', message: { id: 'msg_s2', content: [{ type: 'text', text: 'PASS' }] } },
       { type: 'result', is_error: false, result: 'PASS: contact saved', num_turns: 22, duration_ms: 56_000, total_cost_usd: 0.3,
         usage: { input_tokens: 36, cache_read_input_tokens: 926_802, cache_creation_input_tokens: 19_150, output_tokens: 2707 }, modelUsage: session },
     ].map((e) => JSON.stringify(e)).join('\n');
@@ -65,7 +68,8 @@ const tests = [
     assert.equal(m.total, 46 + 4201 + 1_042_337 + 42_164);
     assert.equal(m.cacheRead, 1_042_337);
     assert.equal(m.costUsd, 0.3);
-    assert.equal(m.turns, 26);
+    // 4 + 22 main-session turns, plus the subagent's 2
+    assert.equal(m.turns, 28);
     assert.equal(m.durationSec, 65);
     assert.equal(m.reply, 'PASS: contact saved');
     assert.equal(m.appiumOk, 1);
@@ -179,6 +183,41 @@ const tests = [
     assert.equal(redactHome('/home/user', '/home/user'), '~');
     assert.equal(redactHome(null, home), null);
     assert.equal(redactHome('no paths', ''), 'no paths');
+  }],
+  ['prompts: the Settings suite keeps its published wording; a note goes before the confirmation', () => {
+    const settings = { steps: 'Open Settings, tap Display.', app: 'Settings', pkg: 'com.android.settings' };
+    assert.equal(promptFor('plain', settings), 'Using the Appium tools, on an Android device: Open Settings, tap Display. Platform Android, app Settings (com.android.settings) on the running emulator. I confirm the steps and the app: run it now without asking again, and finish with a one-line result.');
+    assert.equal(promptFor('soma', settings), '/soma:run-test android Open Settings, tap Display. Platform Android, app Settings (com.android.settings) on the running emulator. I confirm the steps and the app: run it now without asking again, and finish with a one-line result.');
+    const aw = promptFor('soma', { steps: 'Create a contact.', app: 'Contacts', pkg: 'com.google.android.contacts', note: 'Dismiss first-run screens.' });
+    assert.match(aw, /^\/soma:run-test android Create a contact\. Platform Android, app Contacts \(com\.google\.android\.contacts\) on the running emulator\. Dismiss first-run screens\. I confirm/);
+  }],
+  ['consolePort reads emulator serials only', () => {
+    assert.equal(consolePort('emulator-5554'), 5554);
+    assert.equal(consolePort('emulator-5556'), 5556);
+    assert.equal(consolePort('R58M123'), null);
+    assert.equal(consolePort('emulator-5554x'), null);
+    assert.equal(consolePort(undefined), null);
+  }],
+  ['refereeOutcome: only a full score without an error passes', () => {
+    assert.deepEqual(refereeOutcome({ success: 1, error: null }), { ok: true });
+    assert.deepEqual(refereeOutcome({ success: 0, error: null }), { ok: false });
+    assert.deepEqual(refereeOutcome({ success: 0.5, error: null }), { ok: false });
+    assert.equal(refereeOutcome({ success: 1, error: 'KeyError()' }).ok, false);
+    assert.match(refereeOutcome({ success: 0, error: 'KeyError()' }).error, /raised: KeyError/);
+    assert.match(refereeOutcome(null).error, /no result/);
+    assert.match(refereeOutcome({}).error, /no result/);
+  }],
+  ['cleanGoal keeps a goal as written, removes control characters, refuses empty or overlong text', () => {
+    const table = 'Add the following expenses:\nname|amount\nRent|$10';
+    assert.equal(cleanGoal(table), table);
+    assert.equal(cleanGoal('Turn wifi off.'), 'Turn wifi off.');
+    assert.equal(cleanGoal('a\r\nb\rc'), 'a\nb\nc');
+    assert.equal(cleanGoal('Turn\u0000 wifi\u001b off.\u007f'), 'Turn wifi off.');
+    assert.equal(cleanGoal('tab\tkept'), 'tab\tkept');
+    assert.throws(() => cleanGoal(''), /empty/);
+    assert.throws(() => cleanGoal(undefined), /empty/);
+    assert.throws(() => cleanGoal('x'.repeat(GOAL_MAX + 1)), /over the/);
+    assert.equal(cleanGoal('x'.repeat(GOAL_MAX)).length, GOAL_MAX);
   }],
 ];
 

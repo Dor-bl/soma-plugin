@@ -50,6 +50,87 @@ With `--keep-streams`, each run's raw `stream-json` is also saved to `benchmarks
 - **Bash calls** counts shell tool calls. The plain arm may use Bash as a fallback (sideloading APKs, reading files) that a tester without a shell does not have.
 - Skills add prompt text, so any saving has to come from fewer wasted tool calls and less device-server output. The result may be neutral or higher; publish what it shows.
 
+## AndroidWorld suite
+
+The Settings tasks are short enough that both arms pass every run, so they compare cost but not success. `--suite androidworld` runs harder tasks in real apps instead, taken from [AndroidWorld](https://github.com/google-research/android_world) (Google Research, Apache-2.0): it sets each task up with random parameters (a contact name, an expense amount, an event time), and its own check reads the app's database or files afterwards to decide pass or fail. The same two arms and the same "no Appium, no pass" rule apply.
+
+The tasks are in [`androidworld/tasks.json`](androidworld/tasks.json), with the AndroidWorld commit they were picked from. All ten are checked from app data, not from what is on screen, so a run that closes the app at the end is judged the same as one that leaves it open:
+
+| Task | App | Complexity |
+| --- | --- | --- |
+| `SystemWifiTurnOff` | Settings | 1 |
+| `MarkorCreateFolder` | Markor | 1 |
+| `ContactsAddContact` | Contacts | 1.2 |
+| `ExpenseAddSingle` | Pro Expense | 1.2 |
+| `SimpleCalendarDeleteOneEvent` | Simple Calendar Pro | 1.2 |
+| `MarkorCreateNote` | Markor | 1.6 |
+| `TurnOffWifiAndTurnOnBluetooth` | Settings | 2 |
+| `RecipeAddSingleRecipe` | Broccoli | 2.4 |
+| `SimpleCalendarAddOneEvent` | Simple Calendar Pro | 3.4 |
+| `ExpenseAddMultiple` | Pro Expense | 6 |
+
+Complexity is AndroidWorld's own estimate; it sets a step budget of ten steps per point for its agents. This harness has no step budget, only `--timeout-min`.
+
+How a run works: [`androidworld/referee.py`](androidworld/referee.py) connects to the emulator, sets the task up and writes its goal; the harness sends that goal as the task text to the arm; when the session ends, the referee runs AndroidWorld's check and writes the result. Both arms of a run get the same task: the first arm's referee generates the parameters (seeded with the run number) and saves them, and the other arm's referee loads them, because some tasks put the clock into their parameters (`MarkorCreateFolder` names its folder after the current time), so a seed alone does not repeat them. Each run gets new parameters. The referee waits ten minutes longer than `--timeout-min`; if the session has not ended by then, the run is recorded as not checked, never checked mid-run. The referee's folder is outside the session's workspace, so the agent cannot end the wait early. A task that cannot be set up stops the benchmark, and a check that raises an error is recorded in `checkError` and not counted as a pass. The results JSON records the suite, the AndroidWorld commit, and each run's seed, complexity and goal, so the arms' goals can be compared.
+
+### Setting it up
+
+AndroidWorld changes the emulator: it installs about 20 apps and sets the clock to October 2023 on every task. Use an emulator kept for it, never your everyday one. The harness refuses to run the suite on an emulator without AndroidWorld's accessibility forwarder.
+
+1. Clone AndroidWorld at the commit in `androidworld/tasks.json`, and install it into a Python 3.11+ virtual environment as its README says (`pip install -r requirements.txt`, then `pip install -e .`). The referee checks the installed copy before every task and refuses another commit, local changes to tracked files, or an install it cannot trace to a git checkout: the goals and checks come from that code, so a different copy would run different tasks under the same names.
+2. Create an AVD: Pixel 6, API 33 (Android 13) `google_apis` x86_64, with at least 4 GB RAM and an 8 GB data partition (the default 800 MB is too small for the apps). Set Screen lock to None, as above.
+3. Start it with the gRPC port AndroidWorld talks to: `emulator -avd <name> -no-snapshot -grpc 8554`. On a machine whose GPU driver crashes the emulator, add `-gpu swiftshader_indirect`.
+4. Once per emulator, install the apps: `<venv python> benchmarks/androidworld/setup_device.py --adb <full path to adb>`. It downloads the APKs from AndroidWorld's storage bucket and takes several minutes.
+5. Open each app in the task list once and get past its first-run and permission screens, so neither arm meets them first. The prompt also tells both arms they may allow or dismiss such a screen.
+
+[`androidworld/aw_compat.py`](androidworld/aw_compat.py) applies three workarounds whenever the referee or the setup runs. On Windows with Python 3.11, `android_env` cannot install the accessibility forwarder, because `adb` cannot open the temporary APK file; this is fixed upstream in [google-deepmind/android_env#449](https://github.com/google-deepmind/android_env/pull/449), and Python 3.12 is reported to avoid it (not tested here). On a software-rendered emulator, AndroidWorld's 30-second `adb install` limit is too short for its larger APKs, and one timeout stops the whole setup; the limit is raised to 300 seconds. And `android_env` downloads the accessibility forwarder APK every time a referee starts, so each run depended on the network and a transient error there (WinError 10055 on Windows) stopped the benchmark; it is downloaded once, with retries, and kept in `~/.cache/soma-androidworld/`.
+
+### Running the suite
+
+```bash
+node scripts/benchmark.mjs --suite androidworld --dry-run
+node scripts/benchmark.mjs --suite androidworld --aw-python <venv python> --runs 3
+```
+
+`ANDROID_WORLD_PYTHON` can stand in for `--aw-python`. Everything else is as for the Settings suite: one emulator, the warmed `appium-mcp` install, the same output files.
+
+Reading it: the goal is a single sentence such as "Create a new contact for Ali Wang. Their number is +16790377420.", not a list of steps, while `run-manual-test` is written for test cases with steps. A SOMA failure on a vague goal says something about that fit, not only about the device work. Report passes per task and complexity next to the token columns.
+
+### First look: one run per task, 2026-11-19
+
+Pixel 6 AVD (1080x2400, 420 dpi), Android 13 (API 33) `google_apis` x86_64, SwiftShader, emulator 34.2.13; AndroidWorld at the commit in `tasks.json`; `appium-mcp` 1.97.1, CLI 2.1.319, model `claude-sonnet-5-5`; one run per task and arm (seed 1). Raw data: [`results/2026-11-19T08-33-16-863Z.json`](results/2026-11-19T08-33-16-863Z.json) (`SystemWifiTurnOff`) and [`results/2026-11-19T08-39-04-300Z.json`](results/2026-11-19T08-39-04-300Z.json) (the other nine); the run was split when the checkout it ran from changed under it. In every SOMA run, all Appium calls came from `device-runner`. The **Time** column here stopped after AndroidWorld's check and the cleanup, before the clock fix in #98, so it is not comparable with later runs. Parameters were not yet shared between the arms: `MarkorCreateFolder` gave each arm a different folder name (the same kind of task, not the identical one); the other nine tasks take theirs from the seed alone.
+
+| Task | Arm | Passed | Total tokens (median, range) | vs plain | Context per turn | Turns | Output tokens | Tool calls | Bash calls | Cost (USD) | Time (s) |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| SystemWifiTurnOff | plain | 1/1 | 744,435 (744,435–744,435) | – | 44,330 | 16 | 1,930 | 15 | 0 | 0.22 | 108 |
+| SystemWifiTurnOff | soma | 1/1 | 375,850 (375,850–375,850) | -50% | 18,714 | 18 | 3,289 | 18 | 0 | 0.18 | 91 |
+| MarkorCreateFolder | plain | 1/1 | 856,971 (856,971–856,971) | – | 45,810 | 18 | 1,864 | 17 | 0 | 0.22 | 67 |
+| MarkorCreateFolder | soma | 1/1 | 547,043 (547,043–547,043) | -36% | 24,189 | 21 | 3,740 | 22 | 0 | 0.20 | 76 |
+| ContactsAddContact | plain | 1/1 | 1,319,578 (1,319,578–1,319,578) | – | 42,793 | 30 | 3,832 | 29 | 0 | 0.29 | 108 |
+| ContactsAddContact | soma | 1/1 | 642,691 (642,691–642,691) | -51% | 24,888 | 24 | 4,452 | 27 | 0 | 0.23 | 95 |
+| ExpenseAddSingle | plain | 1/1 | 1,048,685 (1,048,685–1,048,685) | – | 38,607 | 26 | 2,945 | 25 | 0 | 0.30 | 85 |
+| ExpenseAddSingle | soma | 1/1 | 908,763 (908,763–908,763) | -13% | 29,517 | 29 | 5,248 | 33 | 0 | 0.29 | 103 |
+| SimpleCalendarDeleteOneEvent | plain | 1/1 | 1,431,842 (1,431,842–1,431,842) | – | 55,353 | 25 | 2,457 | 24 | 0 | 0.35 | 76 |
+| SimpleCalendarDeleteOneEvent | soma | 1/1 | 1,035,222 (1,035,222–1,035,222) | -28% | 21,158 | 46 | 9,068 | 46 | 0 | 0.35 | 144 |
+| MarkorCreateNote | plain | 1/1 | 1,277,814 (1,277,814–1,277,814) | – | 44,226 | 28 | 2,992 | 27 | 0 | 0.30 | 84 |
+| MarkorCreateNote | soma | 1/1 | 954,846 (954,846–954,846) | -25% | 30,001 | 30 | 5,963 | 34 | 0 | 0.30 | 112 |
+| TurnOffWifiAndTurnOnBluetooth | plain | 1/1 | 2,071,522 (2,071,522–2,071,522) | – | 50,618 | 40 | 5,473 | 39 | 0 | 0.42 | 170 |
+| TurnOffWifiAndTurnOnBluetooth | soma | 1/1 | 1,142,609 (1,142,609–1,142,609) | -45% | 31,039 | 35 | 5,599 | 36 | 0 | 0.32 | 124 |
+| RecipeAddSingleRecipe | plain | 1/1 | 1,544,801 (1,544,801–1,544,801) | – | 32,653 | 46 | 4,621 | 45 | 0 | 0.35 | 211 |
+| RecipeAddSingleRecipe | soma | 1/1 | 528,950 (528,950–528,950) | -66% | 20,806 | 23 | 5,791 | 31 | 0 | 0.25 | 118 |
+| SimpleCalendarAddOneEvent | plain | 1/1 | 3,793,981 (3,793,981–3,793,981) | – | 58,877 | 63 | 6,272 | 62 | 0 | 0.75 | 160 |
+| SimpleCalendarAddOneEvent | soma | 1/1 | 1,702,729 (1,702,729–1,702,729) | -55% | 33,070 | 49 | 8,425 | 58 | 0 | 0.46 | 140 |
+| ExpenseAddMultiple | plain | 1/1 | 1,838,120 (1,838,120–1,838,120) | – | 30,391 | 59 | 6,618 | 58 | 1 | 0.40 | 132 |
+| ExpenseAddMultiple | soma | 1/1 | 1,286,450 (1,286,450–1,286,450) | -30% | 33,092 | 37 | 8,490 | 62 | 0 | 0.37 | 138 |
+
+| Ten tasks, one run each | Plain | SOMA |
+| --- | --- | --- |
+| Passed | 10/10 | 10/10 |
+| Mean total tokens per run | 1.59M | 0.91M (-43%) |
+| Cost (USD, all ten runs) | 3.60 | 2.96 (-18%) |
+
+Reading: both arms passed every task, so these ten do not separate the arms on success either. SOMA used fewer tokens on every task (-13% to -66%) and cost less on eight of ten (the other two within 3%); unlike the Settings tasks, the saving shows in cost too, because these sessions run longer, so the plain session re-reads more device output per turn (its context per turn grows to 30k to 59k, while `device-runner` stays at 19k to 33k). One run each is a first look, not a result: rerun with `--runs 3` before quoting a number, and add harder tasks (complexity 3 and up, several apps) to test whether either arm passes more often. The plain arm made one Bash call (`ExpenseAddMultiple`) and still made its change through Appium.
+
 ## Results
 
 Baseline, 2026-11-07. Android 13 (API 33) `google_apis` x86_64 system image, Pixel 6 Pro profile (1440x3120, 560 dpi, SwiftShader), emulator 34.2.13; `appium-mcp` 1.97.1; Claude Code CLI 2.1.319, model `claude-sonnet-5-5`; 3 runs per task and arm; 18 of 18 runs passed, every run with successful `appium-mcp` calls. Raw data: [`results/2026-11-07T17-21-43-593Z.json`](results/2026-11-07T17-21-43-593Z.json).
@@ -93,3 +174,40 @@ Whole run: 24.3 minutes, USD 1.61 for the plain arm and USD 1.78 for the SOMA ar
 - Why plain grew: with `NO_UI` the screenshots are readable, and the plain arm now looks at them. Over nine runs it read 16 screenshots and fetched page source 10 times, against 7 and 5 for SOMA. Tool results added up to 3.7 MB of text for plain and 0.9 MB for SOMA. The skill's "find the element, screenshot once per visual check" guidance is doing what it should.
 - What still costs SOMA: fixed prompt text. In the streams, a SOMA session sits at about 50k tokens of context after setup against about 44k for plain. The `run-manual-test` skill (12.1 KB, up from 9.2 KB at the baseline after #58 and #65) and the command are re-read on every turn, and SOMA runs take 1.6 more turns (one is the explicit session cleanup). On tasks of 10 to 20 turns, that outweighs the savings in device output. Trimming the hot path (#55) is the lever left.
 - Per task, `dark-theme` went from +74% to -2%, while `screen-timeout` (+5% to +36%) and `read-android-version` (-1% to +35%) went the other way. `dark-theme` and `read-android-version` have overlapping ranges between the arms, so with 3 runs read those as noise. `screen-timeout` does not overlap (plain 580,565–678,891, SOMA 763,229–876,150): SOMA used more tokens on every run of it, which the nine-run average hides. Three runs are too few to call that settled; rerun with more runs before acting on it.
+
+### Rerun after device-runner, 2026-11-19
+
+Same AVD, image, emulator, `appium-mcp` 1.97.1, CLI 2.1.319 and model `claude-sonnet-5-5` as the earlier runs; 3 runs per task and arm; 17 of 18 runs passed, every run with successful `appium-mcp` calls and no Bash calls. Raw data: [`results/2026-11-19T08-03-16-114Z.json`](results/2026-11-19T08-03-16-114Z.json).
+
+The change since the 2026-11-13 rerun is the `device-runner` subagent (#83): `run-manual-test` now hands the confirmed run to it, and it works in the background in its own context. Measuring it needed three harness fixes, so compare the arms within this run, not the absolute numbers against earlier ones:
+
+- A SOMA stream has two result events (the hand-off, then the session's end), and only the first was read (#95).
+- `device-runner` lists its tools under the plugin's server name (`mcp__plugin_soma_appium-mcp__*`), and the harness loaded the server as `appium-mcp`, so the agent had no tools, returned BLOCKED, and the main session ran the test itself. A first attempt at this rerun measured that fallback and was discarded. Both arms now load the server as `plugin_soma_appium-mcp`; in all nine SOMA runs every Appium call came from `device-runner`, none from the main session.
+- The agent's turns are not in `num_turns`, and its working time is in no result event. **Turns** now adds the agent's turns, and **Time** is each run's wall-clock time in both arms. In this run the clock stopped only after the harness's cleanup and device check, the same work in both arms; later runs stop it when the session ends.
+
+| Task | Arm | Passed | Total tokens (median, range) | vs plain | Context per turn | Turns | Output tokens | Tool calls | Bash calls | Cost (USD) | Time (s) |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| dark-theme | plain | 2/3 | 909,968 (878,751–1,158,764) | – | 38,394 | 26 | 2,677 | 23 | 0 | 0.24 | 73 |
+| dark-theme | soma | 3/3 | 395,626 (384,741–412,807) | -57% | 18,994 | 19 | 3,649 | 18 | 0 | 0.16 | 81 |
+| screen-timeout | plain | 3/3 | 640,736 (538,113–643,508) | – | 35,761 | 17 | 1,827 | 15 | 0 | 0.17 | 62 |
+| screen-timeout | soma | 3/3 | 444,461 (410,122–489,349) | -31% | 19,041 | 21 | 3,912 | 21 | 0 | 0.19 | 82 |
+| read-android-version | plain | 3/3 | 452,882 (395,784–485,478) | – | 42,301 | 10 | 1,251 | 9 | 0 | 0.12 | 78 |
+| read-android-version | soma | 3/3 | 359,484 (355,292–418,610) | -21% | 19,543 | 17 | 2,870 | 15 | 0 | 0.15 | 95 |
+
+Per run, averaged over all nine runs of each arm:
+
+| | Plain | SOMA |
+| --- | --- | --- |
+| Total tokens | 678k | 408k (-40%) |
+| Cache reads | 652k | 374k (-43%) |
+| Cache writes | 24.4k | 30.0k (+23%) |
+| Output tokens | 1.9k | 3.5k (+85%) |
+| Cost (USD) | 0.182 | 0.176 (-3%) |
+| Wall time (s) | 76 | 86 |
+
+Whole run: 24.3 minutes, USD 1.64 for the plain arm and USD 1.58 for the SOMA arm. Reading:
+
+- SOMA now uses fewer tokens than plain on every task, and the ranges do not overlap on `dark-theme` or `screen-timeout`. The device work happens in `device-runner`'s own context of about 19k tokens per turn, against about 38k in the plain session, which carries every screenshot and page source to the end.
+- Cost is about even. Cache reads are the bulk of the tokens and the cheapest kind; SOMA pays for a second context's cache writes and for more output (the per-step report and its summary), which are priced higher. Fewer tokens is not lower cost here.
+- SOMA takes about 10 s longer per run, the hand-off and the report back.
+- The one failure is the plain arm's third `dark-theme` run, as in the discarded attempt: it replied that dark theme was on ("the screen is dark in the final screenshot"), while `cmd uimode night` said it was off. The device check caught a wrong claim.
