@@ -18,6 +18,10 @@ Notable changes to SOMA, newest first. The format follows [Keep a Changelog](htt
 - `explore-app` lists the Appium tools it needs inline and reads `backends/appium.md` only for iOS, a remote server or a tool not listed, instead of on every Appium run, as `run-manual-test` already does (#54)
 - `triage-failure` lists the Appium tools a reproduction needs inline, names the engine rule (Appium unless the run used Artemis) and reads `backends/README.md` only when the engine is unclear and `backends/appium.md` only for iOS, a remote server or a tool not listed, instead of on every reproduction, as `run-manual-test` and `explore-app` already do (#54)
 
+### Fixed
+
+- Benchmark: a SOMA run since `device-runner` emits two result events (the hand-off turn, then the rest of the session once the background subagent reports back), and only the first was read, so it recorded about an eighth of the session's tokens, 4 of its 26 turns and the hand-off text as the reply. Tokens and cost now come from the last result event's session-wide `modelUsage` and `total_cost_usd`, the reply from the last event, and turns and duration are summed over all of them. Plain runs, with one result event, measure the same as before. Published results predate `device-runner` and are not affected
+
 ## [0.2.0] - 2026-11-13
 
 The first marketplace release. Status moves from experimental to beta.
