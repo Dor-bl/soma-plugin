@@ -21,6 +21,7 @@ Notable changes to SOMA, newest first. The format follows [Keep a Changelog](htt
 ### Fixed
 
 - Benchmark: a SOMA run since `device-runner` emits two result events (the hand-off turn, then the rest of the session once the background subagent reports back), and only the first was read, so it recorded about an eighth of the session's tokens, 4 of its 26 turns and the hand-off text as the reply. Tokens and cost now come from the last result event's session-wide `modelUsage` and `total_cost_usd`, the reply from the last event, and turns and duration are summed over all of them. Plain runs, with one result event, measure the same as before. Published results predate `device-runner` and are not affected
+- Benchmark: in the SOMA arm, `device-runner` never got its Appium tools. The harness loaded `appium-mcp` under that name with `--strict-mcp-config`, so the tools were `mcp__appium-mcp__*`, while the agent lists the plugin's names (`mcp__plugin_soma_appium-mcp__*`); the agent returned BLOCKED and the main session ran the test itself. Both arms now load the server as `plugin_soma_appium-mcp`, so its tools carry the names plugin users get. The Time column is now each run's wall-clock time, since the background agent's time is in no result event
 
 ## [0.2.0] - 2026-11-13
 

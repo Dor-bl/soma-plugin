@@ -56,8 +56,11 @@ const tests = [
       { type: 'user', message: { content: [{ type: 'tool_result', tool_use_id: 'a1' }] } },
       { type: 'result', is_error: false, result: 'The test is running.', num_turns: 4, duration_ms: 9000, total_cost_usd: 0.05,
         usage: { input_tokens: 8, cache_read_input_tokens: 115_535, cache_creation_input_tokens: 17_367, output_tokens: 862 }, modelUsage: soFar },
-      { type: 'assistant', message: { content: [{ type: 'tool_use', id: 'a2', name: 'mcp__appium-mcp__appium_find_element' }] } },
-      { type: 'user', message: { content: [{ type: 'tool_result', tool_use_id: 'a2' }] } },
+      // device-runner's turns: two content blocks of one turn share a message id
+      { type: 'assistant', parent_tool_use_id: 'a1', message: { id: 'msg_s1', content: [{ type: 'text', text: 'Step 1' }] } },
+      { type: 'assistant', parent_tool_use_id: 'a1', message: { id: 'msg_s1', content: [{ type: 'tool_use', id: 'a2', name: 'mcp__plugin_soma_appium-mcp__appium_find_element' }] } },
+      { type: 'user', parent_tool_use_id: 'a1', message: { content: [{ type: 'tool_result', tool_use_id: 'a2' }] } },
+      { type: 'assistant', parent_tool_use_id: 'a1', message: { id: 'msg_s2', content: [{ type: 'text', text: 'PASS' }] } },
       { type: 'result', is_error: false, result: 'PASS: contact saved', num_turns: 22, duration_ms: 56_000, total_cost_usd: 0.3,
         usage: { input_tokens: 36, cache_read_input_tokens: 926_802, cache_creation_input_tokens: 19_150, output_tokens: 2707 }, modelUsage: session },
     ].map((e) => JSON.stringify(e)).join('\n');
@@ -65,7 +68,8 @@ const tests = [
     assert.equal(m.total, 46 + 4201 + 1_042_337 + 42_164);
     assert.equal(m.cacheRead, 1_042_337);
     assert.equal(m.costUsd, 0.3);
-    assert.equal(m.turns, 26);
+    // 4 + 22 main-session turns, plus the subagent's 2
+    assert.equal(m.turns, 28);
     assert.equal(m.durationSec, 65);
     assert.equal(m.reply, 'PASS: contact saved');
     assert.equal(m.appiumOk, 1);

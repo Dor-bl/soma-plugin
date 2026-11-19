@@ -55,12 +55,18 @@ const dataDir = process.env.CLAUDE_PLUGIN_DATA ? resolve(process.env.CLAUDE_PLUG
 // permitted roots). NO_UI as in .mcp.json: without it every screenshot and session result
 // carries an HTML viewer of 70 to 280 KB that overflows the tool-result limit and hides the
 // saved file path.
+// The server is named as Claude Code names the plugin's own server, so its tools are
+// mcp__plugin_soma_appium-mcp__*: the names the device-runner agent lists. Under the plain
+// name `appium-mcp` the agent got no tools, returned BLOCKED, and the SOMA arm measured the
+// main session's fallback instead. --strict-mcp-config keeps the plugin's own .mcp.json from
+// loading, so this is the only server; both arms get the same name.
+const SERVER = 'plugin_soma_appium-mcp';
 const mcpConfigFor = (cwd) => JSON.stringify({
-  mcpServers: { 'appium-mcp': { command: 'node', args: [launcher], env: { SOMA_DATA_DIR: dataDir, NO_UI: '1', SCREENSHOTS_DIR: join(cwd, 'artifacts'), PAGE_SOURCES_DIR: join(cwd, 'artifacts') } } },
+  mcpServers: { [SERVER]: { command: 'node', args: [launcher], env: { SOMA_DATA_DIR: dataDir, NO_UI: '1', SCREENSHOTS_DIR: join(cwd, 'artifacts'), PAGE_SOURCES_DIR: join(cwd, 'artifacts') } } },
 });
 // The same for both arms. Bash is open because SOMA's skills may call adb or aapt; the plain
 // arm gets the same freedom, and any use of it is counted in tool calls.
-const ALLOWED = ['Read', 'Bash', 'Skill', 'mcp__appium-mcp'];
+const ALLOWED = ['Read', 'Bash', 'Skill', `mcp__${SERVER}`];
 
 // Large tool results (page source, screenshots) are saved under Claude's config folder, in a
 // folder named after the run's working directory. Reading them back is outside the workspace,
@@ -216,9 +222,12 @@ for (let n = 1; n <= runs; n++) {
       const passed = outcomeOk && !invalid;
       // The reply and both errors are saved without the local home folder (an adb error can name
       // the adb path under it); the check above used the raw reply
-      results.push({ task: task.id, arm, run: n, passed, invalid, checkError: redactHome(check.error ?? null, homedir()), ...m, reply: redactHome(m.reply, homedir()), wallSec: (Date.now() - started) / 1000, error: redactHome(run.error?.message ?? null, homedir()), stream });
+      // Time is the run's wall-clock time in both arms: device-runner works in the background, and
+      // its time is in neither result event's duration_ms (kept as reportedDurationSec)
+      const wallSec = (Date.now() - started) / 1000;
+      results.push({ task: task.id, arm, run: n, passed, invalid, checkError: redactHome(check.error ?? null, homedir()), ...m, durationSec: wallSec, reportedDurationSec: m.durationSec, reply: redactHome(m.reply, homedir()), wallSec, error: redactHome(run.error?.message ?? null, homedir()), stream });
       writeReports();
-      console.log(`${passed ? '✔' : '✘'}${check.error ? ' (adb check failed: ' + check.error + ')' : ''}${invalid ? ' (no successful appium-mcp call: not counted as a pass)' : ''} run ${n} ${task.id} [${arm}]: ${m.total == null ? 'no usage reported' : m.total.toLocaleString('en-US') + ' tokens'}, ${m.toolCalls} tool calls, ${m.durationSec?.toFixed(0) ?? '?'} s${run.error ? ` (${run.error.message})` : ''}`);
+      console.log(`${passed ? '✔' : '✘'}${check.error ? ' (adb check failed: ' + check.error + ')' : ''}${invalid ? ' (no successful appium-mcp call: not counted as a pass)' : ''} run ${n} ${task.id} [${arm}]: ${m.total == null ? 'no usage reported' : m.total.toLocaleString('en-US') + ' tokens'}, ${m.toolCalls} tool calls, ${wallSec.toFixed(0)} s${run.error ? ` (${run.error.message})` : ''}`);
     }
   }
 }

@@ -96,29 +96,37 @@ Whole run: 24.3 minutes, USD 1.61 for the plain arm and USD 1.78 for the SOMA ar
 
 ### Rerun after device-runner, 2026-11-19
 
-Same AVD, image, emulator, `appium-mcp` 1.97.1, CLI 2.1.319 and model `claude-sonnet-5-5` as the earlier runs; 3 runs per task and arm; 17 of 18 runs passed, every run with successful `appium-mcp` calls and no Bash calls. Raw data: [`results/2026-11-19T07-18-39-760Z.json`](results/2026-11-19T07-18-39-760Z.json). The change since the 2026-11-13 rerun is the `device-runner` subagent (#83): the SOMA arm's `run-manual-test` now hands the confirmed run to it. It runs in the background, so a SOMA stream has two result events, and this is the first run measured with the fix that reads both (#95); all nine SOMA runs used it.
+Same AVD, image, emulator, `appium-mcp` 1.97.1, CLI 2.1.319 and model `claude-sonnet-5-5` as the earlier runs; 3 runs per task and arm; 17 of 18 runs passed, every run with successful `appium-mcp` calls and no Bash calls. Raw data: [`results/2026-11-19T08-03-16-114Z.json`](results/2026-11-19T08-03-16-114Z.json).
+
+The change since the 2026-11-13 rerun is the `device-runner` subagent (#83): `run-manual-test` now hands the confirmed run to it, and it works in the background in its own context. Measuring it needed three harness fixes, so compare the arms within this run, not the absolute numbers against earlier ones:
+
+- A SOMA stream has two result events (the hand-off, then the session's end), and only the first was read (#95).
+- `device-runner` lists its tools under the plugin's server name (`mcp__plugin_soma_appium-mcp__*`), and the harness loaded the server as `appium-mcp`, so the agent had no tools, returned BLOCKED, and the main session ran the test itself. A first attempt at this rerun measured that fallback and was discarded. Both arms now load the server as `plugin_soma_appium-mcp`; in all nine SOMA runs every Appium call came from `device-runner`, none from the main session.
+- The agent's turns are not in `num_turns`, and its working time is in no result event. **Turns** now adds the agent's turns, and **Time** is each run's wall-clock time in both arms.
 
 | Task | Arm | Passed | Total tokens (median, range) | vs plain | Context per turn | Turns | Output tokens | Tool calls | Bash calls | Cost (USD) | Time (s) |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| dark-theme | plain | 2/3 | 844,107 (814,200–853,098) | – | 35,171 | 23 | 2,004 | 18 | 0 | 0.23 | 51 |
-| dark-theme | soma | 3/3 | 1,035,093 (988,905–1,092,294) | 23% | 44,076 | 24 | 3,799 | 21 | 0 | 0.26 | 58 |
-| screen-timeout | plain | 3/3 | 687,031 (628,673–688,152) | – | 36,257 | 18 | 1,748 | 16 | 0 | 0.21 | 44 |
-| screen-timeout | soma | 3/3 | 862,631 (854,489–918,225) | 26% | 40,199 | 21 | 3,725 | 18 | 0 | 0.24 | 62 |
-| read-android-version | plain | 3/3 | 549,128 (449,789–710,454) | – | 42,030 | 14 | 1,415 | 12 | 0 | 0.20 | 61 |
-| read-android-version | soma | 3/3 | 743,921 (623,695–863,466) | 35% | 47,518 | 15 | 3,034 | 12 | 0 | 0.21 | 75 |
+| dark-theme | plain | 2/3 | 909,968 (878,751–1,158,764) | – | 38,394 | 26 | 2,677 | 23 | 0 | 0.24 | 73 |
+| dark-theme | soma | 3/3 | 395,626 (384,741–412,807) | -57% | 18,994 | 19 | 3,649 | 18 | 0 | 0.16 | 81 |
+| screen-timeout | plain | 3/3 | 640,736 (538,113–643,508) | – | 35,761 | 17 | 1,827 | 15 | 0 | 0.17 | 62 |
+| screen-timeout | soma | 3/3 | 444,461 (410,122–489,349) | -31% | 19,041 | 21 | 3,912 | 21 | 0 | 0.19 | 82 |
+| read-android-version | plain | 3/3 | 452,882 (395,784–485,478) | – | 42,301 | 10 | 1,251 | 9 | 0 | 0.12 | 78 |
+| read-android-version | soma | 3/3 | 359,484 (355,292–418,610) | -21% | 19,543 | 17 | 2,870 | 15 | 0 | 0.15 | 95 |
 
-Per run, averaged over all nine runs of each arm, against the 2026-11-13 rerun:
+Per run, averaged over all nine runs of each arm:
 
-| | 11-13 plain | 11-13 SOMA | 11-19 plain | 11-19 SOMA |
-| --- | --- | --- | --- | --- |
-| Cost (USD) | 0.179 | 0.198 (+11%) | 0.205 | 0.237 (+16%) |
-| Total tokens | 702k | 758k (+8%) | 692k | 887k (+28%) |
-| Turns | 17.8 | 19.4 | 17.8 | 19.8 |
-| Context per turn (mean of each run's cache reads / turns) | 38.1k | 37.7k | 37.6k | 43.4k |
+| | Plain | SOMA |
+| --- | --- | --- |
+| Total tokens | 678k | 408k (-40%) |
+| Cache reads | 652k | 374k (-43%) |
+| Cache writes | 24.4k | 30.0k (+23%) |
+| Output tokens | 1.9k | 3.5k (+85%) |
+| Cost (USD) | 0.182 | 0.176 (-3%) |
+| Wall time (s) | 76 | 86 |
 
-Whole run: 23.6 minutes, USD 1.85 for the plain arm and USD 2.14 for the SOMA arm. Reading:
+Whole run: 24.3 minutes, USD 1.64 for the plain arm and USD 1.58 for the SOMA arm. Reading:
 
-- The one failure is the plain arm's third `dark-theme` run: it replied that dark theme was on ("the final screenshot shows the switch on"), while `cmd uimode night` said it was off. The device check caught a wrong claim, which is what it is for.
-- The plain arm is flat in tokens and turns against 11-13; its cost per run rose (0.179 to 0.205 USD) with the same token counts, so read cost changes between dates with care.
-- SOMA's overhead grew from +8% to +28% in tokens. The streams show where: the hand-off part (the main session loading the skill and briefing `device-runner`, 4 turns) costs the same in every run, 134k tokens on average, and the `device-runner` part averages 751k, close to the plain arm's 692k for the whole task. On tasks of 10 to 20 turns that fixed hand-off is most of the gap; it should weigh less on longer tasks, which is what the AndroidWorld suite is for. Trimming the hand-off (the skill text the main session reads before it delegates) is the lever.
-- Per task the ranges do not overlap on `dark-theme` (plain 814,200–853,098, SOMA 988,905–1,092,294) or `screen-timeout`; `read-android-version` overlaps.
+- SOMA now uses fewer tokens than plain on every task, and the ranges do not overlap on `dark-theme` or `screen-timeout`. The device work happens in `device-runner`'s own context of about 19k tokens per turn, against about 38k in the plain session, which carries every screenshot and page source to the end.
+- Cost is about even. Cache reads are the bulk of the tokens and the cheapest kind; SOMA pays for a second context's cache writes and for more output (the per-step report and its summary), which are priced higher. Fewer tokens is not lower cost here.
+- SOMA takes about 10 s longer per run, the hand-off and the report back.
+- The one failure is the plain arm's third `dark-theme` run, as in the discarded attempt: it replied that dark theme was on ("the screen is dark in the final screenshot"), while `cmd uimode night` said it was off. The device check caught a wrong claim.

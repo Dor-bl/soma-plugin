@@ -63,7 +63,9 @@ export function measure(events) {
   // pending call with no result at all, which is not a success
   const okIds = new Set(results.filter((r) => !r.is_error).map((r) => r.tool_use_id));
   // The device-server calls: a run that did its task without one bypassed the measured work
-  const appium = toolUses.filter((t) => typeof t.name === 'string' && t.name.startsWith('mcp__appium-mcp__'));
+  // Both server names: the plugin's own (runs since the device-runner fix) and `appium-mcp`
+  // (earlier runs, whose results files are re-read)
+  const appium = toolUses.filter((t) => typeof t.name === 'string' && /^mcp__(plugin_soma_)?appium-mcp__/.test(t.name));
   // Shell use per arm: a tester without a shell has no such fallback (e.g. sideloading APKs)
   const bash = toolUses.filter((t) => t.name === 'Bash');
   // No result event (a timeout) means no usage was reported: null, never 0, so it stays out of
@@ -74,7 +76,12 @@ export function measure(events) {
   const cacheWrite = field('cache_creation_input_tokens');
   const output = field('output_tokens');
   const sumOf = (key) => (resultEvents.some((e) => e[key] != null) ? resultEvents.reduce((n, e) => n + (e[key] ?? 0), 0) : null);
-  const turns = sumOf('num_turns');
+  // num_turns counts the main session only. A subagent's turns (device-runner) arrive as
+  // assistant events with a parent_tool_use_id, one message id per turn (a turn with several
+  // content blocks repeats its id), so they are added here
+  const subagentTurns = new Set(events.filter((e) => e.type === 'assistant' && e.parent_tool_use_id && e.message?.id).map((e) => e.message.id)).size;
+  const mainTurns = sumOf('num_turns');
+  const turns = mainTurns == null && !subagentTurns ? null : (mainTurns ?? 0) + subagentTurns;
   const durationMs = sumOf('duration_ms');
   return {
     model: events.find((e) => e.type === 'system' && e.subtype === 'init')?.model ?? null,
