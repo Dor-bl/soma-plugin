@@ -102,7 +102,7 @@ The change since the 2026-11-13 rerun is the `device-runner` subagent (#83): `ru
 
 - A SOMA stream has two result events (the hand-off, then the session's end), and only the first was read (#95).
 - `device-runner` lists its tools under the plugin's server name (`mcp__plugin_soma_appium-mcp__*`), and the harness loaded the server as `appium-mcp`, so the agent had no tools, returned BLOCKED, and the main session ran the test itself. A first attempt at this rerun measured that fallback and was discarded. Both arms now load the server as `plugin_soma_appium-mcp`; in all nine SOMA runs every Appium call came from `device-runner`, none from the main session.
-- The agent's turns are not in `num_turns`, and its working time is in no result event. **Turns** now adds the agent's turns, and **Time** is each run's wall-clock time in both arms.
+- The agent's turns are not in `num_turns`, and its working time is in no result event. **Turns** now adds the agent's turns, and **Time** is each run's wall-clock time in both arms. In this run the clock stopped only after the harness's cleanup and device check, the same work in both arms; later runs stop it when the session ends.
 
 | Task | Arm | Passed | Total tokens (median, range) | vs plain | Context per turn | Turns | Output tokens | Tool calls | Bash calls | Cost (USD) | Time (s) |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |

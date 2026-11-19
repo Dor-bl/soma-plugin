@@ -183,6 +183,10 @@ for (let n = 1; n <= runs; n++) {
       ];
       const started = Date.now();
       const run = await runClaude(args, { cwd, timeout: timeoutMs });
+      // Time is the run's wall-clock time in both arms, taken before cleanup and the check:
+      // device-runner works in the background, and its time is in neither result event's
+      // duration_ms (kept as reportedDurationSec)
+      const wallSec = (Date.now() - started) / 1000;
       cleanUp(cwd);
       cleanUp(saved);
       workspace = null;
@@ -222,9 +226,6 @@ for (let n = 1; n <= runs; n++) {
       const passed = outcomeOk && !invalid;
       // The reply and both errors are saved without the local home folder (an adb error can name
       // the adb path under it); the check above used the raw reply
-      // Time is the run's wall-clock time in both arms: device-runner works in the background, and
-      // its time is in neither result event's duration_ms (kept as reportedDurationSec)
-      const wallSec = (Date.now() - started) / 1000;
       results.push({ task: task.id, arm, run: n, passed, invalid, checkError: redactHome(check.error ?? null, homedir()), ...m, durationSec: wallSec, reportedDurationSec: m.durationSec, reply: redactHome(m.reply, homedir()), wallSec, error: redactHome(run.error?.message ?? null, homedir()), stream });
       writeReports();
       console.log(`${passed ? '✔' : '✘'}${check.error ? ' (adb check failed: ' + check.error + ')' : ''}${invalid ? ' (no successful appium-mcp call: not counted as a pass)' : ''} run ${n} ${task.id} [${arm}]: ${m.total == null ? 'no usage reported' : m.total.toLocaleString('en-US') + ' tokens'}, ${m.toolCalls} tool calls, ${wallSec.toFixed(0)} s${run.error ? ` (${run.error.message})` : ''}`);
