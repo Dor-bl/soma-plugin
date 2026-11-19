@@ -12,6 +12,7 @@ Notable changes to SOMA, newest first. The format follows [Keep a Changelog](htt
 - README: a "Stores" line under "What SOMA runs, sends and fetches", saying where screenshots, page source, Artemis captures and app maps are kept, including the folder overrides and the temp-folder fallback, and that they stay on your machine
 - `check-setup` checks the optional app map folder when `app_map_dir` is set: an absolute path to an existing folder, whether it sits inside a git repository without being ignored or already has committed maps (a warning, since a team may share maps on purpose; it offers the `.gitignore` line and changes nothing), and which map files it holds per platform, by name only. The setting is used only as a literal path: it goes into commands inside single quotes, and a value with a newline, backtick or single quote is reported as invalid and not passed to any command, and a git error other than "not a git repository" is reported as unknown, not as outside a repository. `/soma:setup app map` checks just that
 - `check-plugin.mjs` fails when a skill, command, backend or agent file names an `appium_*` tool that is not in the smoke test's `REQUIRED_TOOLS`, so a newly relied-on tool is covered by the check that catches upstream renames and removals
+- README: a benchmark chart under the overview (`assets/benchmark-light.svg` and `benchmark-dark.svg`, following GitHub's theme) with the 2026-11-19 Settings-suite numbers for plain Claude Code and SOMA, per metric and per run, linked to the full results in `benchmarks/README.md`
 - `plugin.json` links for the Claude directory listing: documentation (the README), support (this repository's issues) and privacy (the README section on what SOMA runs, sends and fetches). The listing description no longer repeats the name
 
 ### Changed
@@ -54,6 +55,10 @@ The first marketplace release. Status moves from experimental to beta.
 - `triage-failure` captures reproduction evidence the way `run-manual-test` does: the failing step is checked from an element or page source saved with a selector rather than the full tree, one screenshot (`maxWidth` about 720) is taken when the check is visual or when the step fails, and saved files are read with the Read tool, not a shell (#56)
 - `/soma:setup-artemis` is now `/soma:artemis`. The command shared its name with the `setup-artemis` skill, so the plugin listed `setup-artemis` twice; the skill keeps its name (found on the macOS clean install, #64)
 - README known limitations: results of the iOS simulator pass and the Windows and macOS clean installs from the release gate (#64), remote mode labelled untested, and why `appium-mcp` stays at 1.97.1
+
+### Security
+
+- `appium-mcp`'s dependency tree no longer carries known-vulnerable versions of `hono`, `@hono/node-server`, `basic-ftp`, `glob`, `minimatch`, `js-yaml`, `nanoid`, `serialize-javascript`, `diff` and `uuid`: the lockfile is refreshed and `runtime/package.json` overrides the packages `appium-mcp` 1.97.1 pins to old versions (most come in through `applesign`, which ships `mocha` as a runtime dependency). Still open: `extract-zip`, which has no fixed release, and the `glob` and `minimatch` copies that `appium-uiautomator2-driver` and `appium-xcuitest-driver` bundle in their own tarballs, which overrides cannot replace
 
 ## [0.1.0] - not tagged
 

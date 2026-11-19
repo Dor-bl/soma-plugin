@@ -2,7 +2,7 @@ name: CI
 
 on:
   push:
-    branches: [main]
+    branches: [main, develop]
   pull_request:
   schedule:
     # Nightly (Linux only): catch upstream appium-mcp changes and dead links without a commit

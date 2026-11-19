@@ -27,6 +27,15 @@ SOMA wraps the official [`appium-mcp`](https://github.com/appium/appium-mcp) ser
 
 **No code required.** Manual QA can use SOMA as is: describe a test case in plain language, watch it run on a device, and get a bug report when something fails. Generating automated tests (`/soma:gen-test`) is optional.
 
+<p align="center">
+  <a href="benchmarks/README.md#rerun-after-device-runner-2026-11-19">
+    <picture>
+      <source media="(prefers-color-scheme: dark)" srcset="assets/benchmark-dark.svg">
+      <img src="assets/benchmark-light.svg" alt="Benchmark on the Android Settings app, 3 tasks x 3 runs per arm, mean per run, plain Claude Code with appium-mcp against the same with SOMA: context per turn 38.0k to 19.4k tokens (-49%), total tokens 678k to 408k (-40%), cost per run $0.182 to $0.176 (-3%), wall time 76 s to 86 s (+13%). Runs passed: plain 8/9, SOMA 9/9." width="720">
+    </picture>
+  </a>
+</p>
+
 ## 📦 What's inside
 
 | Type | Name | Description |
