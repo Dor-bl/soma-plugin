@@ -29,7 +29,7 @@ node scripts/test-system-tools.mjs    # Windows system tool path resolution
 node scripts/test-triage-command.mjs  # /soma:triage command contract
 node scripts/test-injection-match.mjs # injection-check reply and shell matching
 node scripts/test-benchmark-stats.mjs # benchmark run parsing and summary
-node scripts/test-release.mjs         # release script: version bump, changelog cut, notes
+node scripts/test-release.mjs         # release script: version bump, changelog cut, notes, promote checks
 npx markdownlint-cli2 "**/*.md"
 node scripts/mcp-smoke.mjs           # first run installs ~370 MB; SMOKE_TIMEOUT_MS overrides, CLAUDE_PLUGIN_DATA sets the install folder
 ```
@@ -46,9 +46,9 @@ Not in CI: `node scripts/injection-check.mjs` runs live Claude Code sessions (ne
 
 ## Releasing
 
-1. On a branch from `develop`, `node scripts/release.mjs <version>` bumps `plugin.json` and the README badge, moves the "Unreleased" changelog entries under `## [<version>] - <today>`, and runs `check-plugin.mjs`. With the version already in `plugin.json`, it only dates that version's heading. `--date YYYY-MM-DD` sets another date.
-2. Review the diff, open a PR against `develop`, merge it.
-3. Open a PR from `develop` to `main` and merge it with a merge commit (not squash or rebase, which would rewrite `develop`'s commits and make the next release PR conflict).
+1. `node scripts/release.mjs <version> --pr` (clean working tree, `gh` signed in) starts `release/v<version>` from `origin/develop`, bumps `plugin.json` and the README badge, moves the "Unreleased" changelog entries under `## [<version>] - <today>`, runs `check-plugin.mjs`, then commits, pushes and opens the PR against `develop`. With the version already in `plugin.json`, it only dates that version's heading. `--date YYYY-MM-DD` sets another date. Without `--pr` it only edits the files in the current checkout.
+2. Review the PR and merge it (squash is fine).
+3. `node scripts/release.mjs --promote <version>` checks that `origin/develop` has that version with a dated heading and that it is newer than `main`, then opens the `develop` → `main` PR. Merge it with a merge commit (not squash or rebase, which would rewrite `develop`'s commits and make the next release PR conflict).
 4. On main, `.github/workflows/release.yml` sees the version change, tags `v<version>` on the merge commit and publishes a GitHub release with that changelog section as notes. It skips a push that leaves the version unchanged or a version that already has a release, and fails if the heading has no date. A version with a suffix (`1.0.0-rc.1`) is published as a prerelease. If it failed on something transient (network, a GitHub outage), use "Re-run jobs" on that run: it keeps the version-bump commit. If the fix needs a commit (e.g. an undated heading), merge the fix into `develop` and promote it to `main` as in step 3, then start the workflow by hand from the Actions tab on main: a changelog-only push does not trigger it, and the tag then goes on the current tip of main.
 
 ## Running appium-mcp while working in this repo
