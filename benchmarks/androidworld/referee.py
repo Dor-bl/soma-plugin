@@ -6,11 +6,13 @@ against state captured when the task is set up, and the task object holds the
 random parameters.
 
   python referee.py --task ContactsAddContact --seed 1 --dir <run folder> \
-      --adb <adb path> [--console-port 5554] [--grpc-port 8554]
+      --adb <adb path> --commit <sha> --timeout <seconds> --params <file> \
+      [--console-port 5554] [--grpc-port 8554]
 
   1. connects to the running emulator, goes Home, sets up the task
   2. writes <dir>/goal.json  {"task", "seed", "goal", "complexity"}
-  3. waits until <dir>/done exists (the agent under test works meanwhile)
+  3. waits until <dir>/done exists (the agent under test works meanwhile); without
+     it by --timeout, the result is an error and the task is not checked
   4. writes <dir>/result.json {"success": 0.0 to 1.0, "error"}, tears the task down
 
 A failure before goal.json exits non-zero with the error on stderr. A check
@@ -19,6 +21,7 @@ that raises is reported in result.json as "error", with success 0.
 import argparse
 import json
 import pathlib
+import pickle
 import random
 import subprocess
 import sys
@@ -39,7 +42,11 @@ ap.add_argument('--dir', required=True)
 ap.add_argument('--adb', required=True)
 ap.add_argument('--console-port', type=int, default=5554)
 ap.add_argument('--grpc-port', type=int, default=8554)
-ap.add_argument('--timeout', type=float, default=3600, help='seconds to wait for done')
+ap.add_argument('--timeout', type=float, required=True,
+                help='seconds to wait for done; then the run is reported as not finished')
+ap.add_argument('--params', required=True,
+                help='file with the parameters of this task and run: written by the '
+                'first arm, read by the others, so every arm gets the same task')
 ap.add_argument('--commit', required=True,
                 help='the AndroidWorld commit the task list was made for')
 a = ap.parse_args()
@@ -93,9 +100,20 @@ try:
   env.reset(go_home=True)
   task_type = registry.TaskRegistry().get_registry(
       registry.TaskRegistry.ANDROID_WORLD_FAMILY)[a.task]
-  random.seed(a.seed)
-  np.random.seed(a.seed)
-  task = task_type(task_type.generate_random_params())
+  # Some tasks put the clock into their parameters (MarkorCreateFolder names its folder
+  # after datetime.now()), so the seed alone does not repeat them: the first arm's
+  # parameters are saved and reused. The file is written by this script only.
+  params_file = pathlib.Path(a.params)
+  if params_file.exists():
+    params = pickle.loads(params_file.read_bytes())
+  else:
+    random.seed(a.seed)
+    np.random.seed(a.seed)
+    params = task_type.generate_random_params()
+    tmp = params_file.with_suffix('.tmp')
+    tmp.write_bytes(pickle.dumps(params))
+    tmp.replace(params_file)
+  task = task_type(params)
   task.initialize_task(env)
   write('goal.json', {'task': a.task, 'seed': a.seed, 'goal': task.goal,
                       'complexity': task.complexity})
@@ -105,10 +123,14 @@ try:
     time.sleep(1)
 
   error = None
-  try:
-    success = float(task.is_successful(env))
-  except Exception as e:  # reported, never counted as a pass
-    success, error = 0.0, repr(e)
+  if not (out / 'done').exists():
+    # Never check a run that may still be working: report it instead
+    success, error = 0.0, f'no done signal after {a.timeout:.0f} s; the run was not checked'
+  else:
+    try:
+      success = float(task.is_successful(env))
+    except Exception as e:  # reported, never counted as a pass
+      success, error = 0.0, repr(e)
   write('result.json', {'task': a.task, 'seed': a.seed, 'success': success,
                         'error': error})
   task.tear_down(env)

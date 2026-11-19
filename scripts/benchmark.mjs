@@ -150,10 +150,14 @@ function requireUnlockedDevice() {
 let running = null;
 let workspace = null;
 let referee = null;
+// AndroidWorld: one parameters file per task and run, written by the first arm's referee and
+// read by the next, so both arms get the same task even where a task's parameters use the clock
+const paramsDir = androidWorld ? realpathSync(mkdtempSync(join(tmpdir(), 'soma-aw-params-'))) : null;
 for (const signal of ['SIGINT', 'SIGTERM']) {
   process.on(signal, () => {
     if (running) killTree(running);
     if (referee) killTree(referee.child);
+    if (paramsDir) cleanUp(paramsDir);
     if (workspace) cleanUp(workspace);
     console.error(`✘ stopped by ${signal}`);
     process.exit(130);
@@ -261,7 +265,7 @@ for (let n = 1; n <= runs; n++) {
       const passed = outcomeOk && !invalid;
       // The reply and both errors are saved without the local home folder (an adb error can name
       // the adb path under it); the check above used the raw reply
-      results.push({ task: task.id, arm, run: n, ...(goal ? { seed: goal.seed, complexity: goal.complexity } : {}), passed, invalid, checkError: redactHome(check.error ?? null, homedir()), ...m, durationSec: wallSec, reportedDurationSec: m.durationSec, reply: redactHome(m.reply, homedir()), wallSec, error: redactHome(run.error?.message ?? null, homedir()), stream });
+      results.push({ task: task.id, arm, run: n, ...(goal ? { seed: goal.seed, complexity: goal.complexity, goal: goal.goal } : {}), passed, invalid, checkError: redactHome(check.error ?? null, homedir()), ...m, durationSec: wallSec, reportedDurationSec: m.durationSec, reply: redactHome(m.reply, homedir()), wallSec, error: redactHome(run.error?.message ?? null, homedir()), stream });
       writeReports();
       console.log(`${passed ? '✔' : '✘'}${check.error ? ` (${androidWorld ? '' : 'adb '}check failed: ${check.error})` : ''}${invalid ? ' (no successful appium-mcp call: not counted as a pass)' : ''} run ${n} ${task.id} [${arm}]: ${m.total == null ? 'no usage reported' : m.total.toLocaleString('en-US') + ' tokens'}, ${m.toolCalls} tool calls, ${wallSec.toFixed(0)} s${run.error ? ` (${run.error.message})` : ''}`);
     }
@@ -269,6 +273,7 @@ for (let n = 1; n <= runs; n++) {
 }
 
 const table = writeReports();
+if (paramsDir) cleanUp(paramsDir);
 console.log(`\n${table}\n\nSaved to ${join(outDir, stamp)}.{json,md}${keepStreams ? `, streams in ${streamsDir}` : ''}`);
 
 // The outcome as the device and the reply show it, never the reply alone for state changes
@@ -301,7 +306,10 @@ function readJson(file) {
 async function startReferee(task, n) {
   const dir = realpathSync(mkdtempSync(join(tmpdir(), 'soma-aw-')));
   // --commit: the referee refuses an AndroidWorld other than the one the task list was made for
-  const args = [join(awDir, 'referee.py'), '--task', task.id, '--seed', String(n), '--dir', dir, '--adb', adbPath, '--console-port', String(consolePort(serial)), '--commit', suiteFile.androidWorld.commit];
+  const args = [join(awDir, 'referee.py'), '--task', task.id, '--seed', String(n), '--dir', dir, '--adb', adbPath, '--console-port', String(consolePort(serial)), '--commit', suiteFile.androidWorld.commit,
+    // The referee waits for done a little longer than the harness lets a run go, so it never
+    // checks a run that is still working
+    '--timeout', String(Math.ceil(timeoutMs / 1000) + 600), '--params', join(paramsDir, `${task.id}-${n}.pkl`)];
   const child = spawn(awPython, args, { stdio: ['ignore', 'ignore', 'pipe'], detached: process.platform !== 'win32', windowsHide: true });
   // The handlers write to this run's own record: `referee` is cleared when the run ends
   const r = (referee = { child, dir, stderr: '', exited: false });
@@ -317,6 +325,7 @@ async function startReferee(task, n) {
   }
   const why = r.exited ? `it exited: ${r.stderr.trim().split('\n').slice(-5).join(' | ')}` : 'no goal after 10 minutes';
   stopReferee();
+  cleanUp(paramsDir);
   fail(`the AndroidWorld referee could not set up ${task.id} (${why})`);
 }
 
