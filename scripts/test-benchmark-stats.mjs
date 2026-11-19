@@ -74,6 +74,20 @@ const tests = [
     assert.equal(single.total, 10);
     assert.equal(single.turns, 2);
   }],
+  ['without modelUsage, a multi-result stream sums each part\'s usage; none reported stays null', () => {
+    const parts = [
+      { type: 'result', num_turns: 4, usage: { input_tokens: 1, cache_read_input_tokens: 100, cache_creation_input_tokens: 10, output_tokens: 5 } },
+      { type: 'result', num_turns: 6, usage: { input_tokens: 2, cache_read_input_tokens: 300, cache_creation_input_tokens: 20, output_tokens: 7 } },
+    ];
+    const m = measure(parseEvents(parts.map((e) => JSON.stringify(e)).join('\n')));
+    assert.equal(m.total, 1 + 100 + 10 + 5 + 2 + 300 + 20 + 7);
+    assert.equal(m.cacheRead, 400);
+    assert.equal(m.turns, 10);
+    assert.equal(m.contextPerTurn, 40);
+    const none = measure(parseEvents([{ type: 'result', num_turns: 1 }, { type: 'result', num_turns: 2 }].map((e) => JSON.stringify(e)).join('\n')));
+    assert.equal(none.total, null);
+    assert.equal(none.cacheRead, null);
+  }],
   ['a stream without a result event is an error run', () => {
     assert.equal(measure(parseEvents('{"type":"system","subtype":"init"}')).isError, true);
   }],

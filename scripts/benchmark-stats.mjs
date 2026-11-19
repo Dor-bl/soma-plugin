@@ -29,17 +29,31 @@ function sessionUsage(result) {
   };
 }
 
+// Without `modelUsage`, each result event's `usage` covers only its own part, so the parts
+// are added up; null when no event reports usage
+function summedUsage(resultEvents) {
+  const parts = resultEvents.map((e) => e.usage).filter(Boolean);
+  if (!parts.length) return null;
+  const sum = (key) => parts.reduce((n, u) => n + (u[key] ?? 0), 0);
+  return {
+    input_tokens: sum('input_tokens'),
+    cache_read_input_tokens: sum('cache_read_input_tokens'),
+    cache_creation_input_tokens: sum('cache_creation_input_tokens'),
+    output_tokens: sum('output_tokens'),
+  };
+}
+
 // Everything a run reports that the benchmark compares.
 // A run can emit more than one result event: when a skill hands the work to a background
 // subagent (run-manual-test's device-runner), the first turn ends with the hand-off and the
 // session goes on when the subagent reports back. So the last result event holds the reply,
 // and its `modelUsage` and `total_cost_usd` cover the whole session, while each event's
-// `usage`, `num_turns` and `duration_ms` cover only its own part: those are the fallback
-// (`usage`, for streams without `modelUsage`) or are summed (turns, duration).
+// `usage`, `num_turns` and `duration_ms` cover only its own part, so those are summed
+// (`usage` only as the fallback for streams without `modelUsage`).
 export function measure(events) {
   const resultEvents = events.filter((e) => e.type === 'result');
   const result = resultEvents.at(-1) ?? {};
-  const reported = sessionUsage(result) ?? result.usage;
+  const reported = sessionUsage(result) ?? summedUsage(resultEvents);
   const hasUsage = Boolean(reported);
   const usage = reported ?? {};
   const toolUses = events.filter((e) => e.type === 'assistant').flatMap((e) => e.message?.content ?? []).filter((c) => c.type === 'tool_use');
