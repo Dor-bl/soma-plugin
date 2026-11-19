@@ -46,14 +46,16 @@ const tests = [
   ['a background subagent hand-off: tokens and cost from the last result, turns and time summed', () => {
     // Shaped like a run-manual-test run since device-runner (#83): the first result ends the
     // hand-off turn, the second comes after the subagent reported back. Each event's usage is
-    // only its own part; modelUsage and total_cost_usd are the session's.
+    // only its own part; the last event's modelUsage and total_cost_usd are the session's.
     const session = { 'claude-test': { inputTokens: 46, outputTokens: 4201, cacheReadInputTokens: 1_042_337, cacheCreationInputTokens: 42_164 } };
+    // The hand-off event carries smaller running totals, so reading it instead of the last one fails
+    const soFar = { 'claude-test': { inputTokens: 8, outputTokens: 862, cacheReadInputTokens: 115_535, cacheCreationInputTokens: 17_367 } };
     const handOff = [
       { type: 'system', subtype: 'init', model: 'claude-test' },
       { type: 'assistant', message: { content: [{ type: 'tool_use', id: 'a1', name: 'Agent' }] } },
       { type: 'user', message: { content: [{ type: 'tool_result', tool_use_id: 'a1' }] } },
-      { type: 'result', is_error: false, result: 'The test is running.', num_turns: 4, duration_ms: 9000, total_cost_usd: 0.3,
-        usage: { input_tokens: 8, cache_read_input_tokens: 115_535, cache_creation_input_tokens: 17_367, output_tokens: 862 }, modelUsage: session },
+      { type: 'result', is_error: false, result: 'The test is running.', num_turns: 4, duration_ms: 9000, total_cost_usd: 0.05,
+        usage: { input_tokens: 8, cache_read_input_tokens: 115_535, cache_creation_input_tokens: 17_367, output_tokens: 862 }, modelUsage: soFar },
       { type: 'assistant', message: { content: [{ type: 'tool_use', id: 'a2', name: 'mcp__appium-mcp__appium_find_element' }] } },
       { type: 'user', message: { content: [{ type: 'tool_result', tool_use_id: 'a2' }] } },
       { type: 'result', is_error: false, result: 'PASS: contact saved', num_turns: 22, duration_ms: 56_000, total_cost_usd: 0.3,
