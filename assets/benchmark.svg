@@ -1,0 +1,74 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 920 640" width="920" height="640" role="img" aria-labelledby="title desc">
+  <title id="title">Benchmark: SOMA against plain Claude Code on the Android Settings tasks</title>
+  <desc id="desc">Mean per run over 9 runs per arm, plain = 100%. Context per turn: SOMA 51% (38.0k to 19.4k tokens). Total tokens: 60% (678k to 408k). Cost: 97% (0.182 to 0.176 USD). Wall time: 113% (76 to 86 seconds). Passed: plain 8 of 9, SOMA 9 of 9.</desc>
+  <defs>
+    <linearGradient id="soma" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#10B981"/>
+      <stop offset="1" stop-color="#2563EB"/>
+    </linearGradient>
+    <linearGradient id="headline" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#34D399"/>
+      <stop offset="1" stop-color="#60A5FA"/>
+    </linearGradient>
+  </defs>
+  <style>
+    text { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace; }
+    .eyebrow { font-size: 13px; letter-spacing: 3px; fill: #8B93A7; }
+    .head { font-size: 28px; font-weight: 700; fill: #F1F5F9; }
+    .metric { font-size: 17px; font-weight: 700; fill: #F1F5F9; }
+    .sub { font-size: 13px; fill: #8B93A7; }
+    .val { font-size: 15px; fill: #94A3B8; }
+    .valsoma { font-size: 15px; font-weight: 700; fill: #F1F5F9; }
+    .legend { font-size: 14px; fill: #CBD5E1; }
+    .note { font-size: 13px; fill: #8B93A7; }
+  </style>
+
+  <rect width="920" height="640" rx="24" fill="#0B1220"/>
+  <rect x="0.5" y="0.5" width="919" height="639" rx="23.5" fill="none" stroke="#1E293B"/>
+
+  <text class="eyebrow" x="48" y="62">BENCHMARK · ANDROID SETTINGS · 3 TASKS × 3 RUNS</text>
+  <text class="head" x="48" y="106">Same tasks, same appium-mcp.</text>
+  <text class="head" x="48" y="144"><tspan fill="url(#headline)">SOMA</tspan> keeps device output</text>
+  <text class="head" x="48" y="182">out of your context.</text>
+
+  <!-- Bars start at x=290; 100% = 400px -->
+  <!-- Context per turn -->
+  <text class="metric" x="48" y="248">Context per turn</text>
+  <text class="sub" x="48" y="270">38.0k → 19.4k tokens</text>
+  <rect x="290" y="226" width="400" height="22" rx="4" fill="#64748B"/>
+  <text class="val" x="702" y="243">100%</text>
+  <rect x="290" y="252" width="204" height="22" rx="4" fill="url(#soma)"/>
+  <text class="valsoma" x="506" y="269">51% · −49%</text>
+
+  <!-- Total tokens -->
+  <text class="metric" x="48" y="338">Total tokens</text>
+  <text class="sub" x="48" y="360">678k → 408k</text>
+  <rect x="290" y="316" width="400" height="22" rx="4" fill="#64748B"/>
+  <text class="val" x="702" y="333">100%</text>
+  <rect x="290" y="342" width="240" height="22" rx="4" fill="url(#soma)"/>
+  <text class="valsoma" x="542" y="359">60% · −40%</text>
+
+  <!-- Cost -->
+  <text class="metric" x="48" y="428">Cost</text>
+  <text class="sub" x="48" y="450">$0.182 → $0.176</text>
+  <rect x="290" y="406" width="400" height="22" rx="4" fill="#64748B"/>
+  <text class="val" x="702" y="423">100%</text>
+  <rect x="290" y="432" width="388" height="22" rx="4" fill="url(#soma)"/>
+  <text class="valsoma" x="690" y="449">97% · −3%</text>
+
+  <!-- Wall time -->
+  <text class="metric" x="48" y="518">Wall time</text>
+  <text class="sub" x="48" y="540">76 s → 86 s</text>
+  <rect x="290" y="496" width="400" height="22" rx="4" fill="#64748B"/>
+  <text class="val" x="702" y="513">100%</text>
+  <rect x="290" y="522" width="452" height="22" rx="4" fill="url(#soma)"/>
+  <text class="valsoma" x="754" y="539">113% · +13%</text>
+
+  <!-- Legend -->
+  <rect x="48" y="572" width="14" height="14" rx="3" fill="#64748B"/>
+  <text class="legend" x="70" y="584">Claude Code + appium-mcp (8/9 passed)</text>
+  <rect x="460" y="572" width="14" height="14" rx="3" fill="url(#soma)"/>
+  <text class="legend" x="482" y="584">+ SOMA (9/9 passed)</text>
+
+  <text class="note" x="48" y="616">Mean per run, plain = 100%, 2026-11-19. Differences under ~15% are noise.</text>
+</svg>
