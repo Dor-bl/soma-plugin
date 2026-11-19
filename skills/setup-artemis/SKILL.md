@@ -5,7 +5,7 @@ description: Guide the tester through installing the optional Google Artemis eng
 
 # Set up Google Artemis (optional engine)
 
-Plugin files below are written as `${CLAUDE_PLUGIN_ROOT}/<path>`, under the plugin's root folder. If that prefix still shows as a literal `${...}` placeholder (Codex does not fill it in), the root is the folder two levels above this SKILL.md.
+Plugin files below are written as `${CLAUDE_PLUGIN_ROOT}/<path>`, under the plugin's root folder. If that prefix still shows as a literal `${...}` placeholder (Codex does not fill it in), the root is the folder that contains the `skills` folder this file is in.
 
 Artemis is Android only and runs on the tester's machine, so a remote Appium server does not matter here (`${user_config.remote_server_url}` is not used). Read `${CLAUDE_PLUGIN_ROOT}/backends/artemis.md` first: it explains what Artemis changes on a device and why its own installers are not used.
 

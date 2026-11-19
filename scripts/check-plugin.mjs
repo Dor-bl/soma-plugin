@@ -376,7 +376,7 @@ const promptFiles = [
 ].filter((p) => existsSync(join(root, p)));
 // Codex leaves ${CLAUDE_PLUGIN_ROOT} as it is, so a skill that uses it must say where the root
 // is when it shows unexpanded. Backend files are reached from a skill, which has resolved it.
-const ROOT_FALLBACK = 'Codex does not fill it in), the root is the folder two levels above this SKILL.md';
+const ROOT_FALLBACK = 'Codex does not fill it in), the root is the folder that contains the `skills` folder this file is in';
 for (const p of promptFiles) {
   if (p.startsWith('skills/') && read(p).includes('${CLAUDE_PLUGIN_ROOT}') && !read(p).replace(/\s+/g, ' ').includes(ROOT_FALLBACK)) {
     fail(`${p}: uses \${CLAUDE_PLUGIN_ROOT} but lacks the Codex fallback "${ROOT_FALLBACK}"`);

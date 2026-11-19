@@ -5,7 +5,7 @@ description: Start an Android emulator or iOS simulator and wait until it is ful
 
 # Start a device
 
-Plugin files below are written as `${CLAUDE_PLUGIN_ROOT}/<path>`, under the plugin's root folder. If that prefix still shows as a literal `${...}` placeholder (Codex does not fill it in), the root is the folder two levels above this SKILL.md.
+Plugin files below are written as `${CLAUDE_PLUGIN_ROOT}/<path>`, under the plugin's root folder. If that prefix still shows as a literal `${...}` placeholder (Codex does not fill it in), the root is the folder that contains the `skills` folder this file is in.
 
 Local mode only. Remote Appium server URL configured: `${user_config.remote_server_url}`. If it is empty, or still shows as a literal `${user_config...}` placeholder, it is not set: continue. If it is set, devices come from that server, not this machine: say so and stop. Starting a local emulator or simulator, or running `adb` or `xcrun` here, would not affect the remote session and could act on the wrong device. The one exception: the tester explicitly asks for a local device anyway (for example to use an engine that only reaches local `adb` devices, see `${CLAUDE_PLUGIN_ROOT}/backends/README.md`); then continue, and say the device is local, not on the remote server.
 
