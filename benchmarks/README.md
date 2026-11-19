@@ -54,7 +54,7 @@ With `--keep-streams`, each run's raw `stream-json` is also saved to `benchmarks
 
 The Settings tasks are short enough that both arms pass every run, so they compare cost but not success. `--suite androidworld` runs harder tasks in real apps instead, taken from [AndroidWorld](https://github.com/google-research/android_world) (Google Research, Apache-2.0): it sets each task up with random parameters (a contact name, an expense amount, an event time), and its own check reads the app's database or files afterwards to decide pass or fail. The same two arms and the same "no Appium, no pass" rule apply.
 
-The tasks are in [`androidworld/tasks.json`](androidworld/tasks.json), with the AndroidWorld commit they were picked from. All ten are checked from app data, not from what is on screen, so a run that closes the app at the end is judged the same as one that leaves it open:
+The tasks are in [`androidworld/tasks.json`](androidworld/tasks.json), with the AndroidWorld commit they were picked from. All sixteen are checked from app data, not from what is on screen, so a run that closes the app at the end is judged the same as one that leaves it open. The first ten were picked for a first look; the last six are harder (complexity 3.4 to 7.8, two of them across two apps, one reading recipes from an image):
 
 | Task | App | Complexity |
 | --- | --- | --- |
@@ -68,6 +68,12 @@ The tasks are in [`androidworld/tasks.json`](androidworld/tasks.json), with the 
 | `RecipeAddSingleRecipe` | Broccoli | 2.4 |
 | `SimpleCalendarAddOneEvent` | Simple Calendar Pro | 3.4 |
 | `ExpenseAddMultiple` | Pro Expense | 6 |
+| `SimpleCalendarAddRepeatingEvent` | Simple Calendar Pro | 3.4 |
+| `RecipeDeleteMultipleRecipesWithConstraint` | Broccoli | 4 |
+| `VlcCreateTwoPlaylists` | VLC | 4.8 |
+| `ExpenseAddMultipleFromMarkor` | Pro Expense, Markor | 6 |
+| `RecipeAddMultipleRecipesFromImage` | Broccoli, Simple Gallery Pro | 6 |
+| `MarkorMergeNotes` | Markor | 7.8 |
 
 Complexity is AndroidWorld's own estimate; it sets a step budget of ten steps per point for its agents. This harness has no step budget, only `--timeout-min`.
 
@@ -82,6 +88,8 @@ AndroidWorld changes the emulator: it installs about 20 apps and sets the clock 
 3. Start it with the gRPC port AndroidWorld talks to: `emulator -avd <name> -no-snapshot -grpc 8554`. On a machine whose GPU driver crashes the emulator, add `-gpu swiftshader_indirect`.
 4. Once per emulator, install the apps: `<venv python> benchmarks/androidworld/setup_device.py --adb <full path to adb>`. It downloads the APKs from AndroidWorld's storage bucket and takes several minutes.
 5. Open each app in the task list once and get past its first-run and permission screens, so neither arm meets them first. The prompt also tells both arms they may allow or dismiss such a screen.
+
+AndroidWorld's Retro Music tasks build MP3 files during setup and need `ffmpeg` on the path (`pydub` calls it); none is in the list, so the suite runs without it.
 
 [`androidworld/aw_compat.py`](androidworld/aw_compat.py) applies three workarounds whenever the referee or the setup runs. On Windows with Python 3.11, `android_env` cannot install the accessibility forwarder, because `adb` cannot open the temporary APK file; this is fixed upstream in [google-deepmind/android_env#449](https://github.com/google-deepmind/android_env/pull/449), and Python 3.12 is reported to avoid it (not tested here). On a software-rendered emulator, AndroidWorld's 30-second `adb install` limit is too short for its larger APKs, and one timeout stops the whole setup; the limit is raised to 300 seconds. And `android_env` downloads the accessibility forwarder APK every time a referee starts, so each run depended on the network and a transient error there (WinError 10055 on Windows) stopped the benchmark; it is downloaded once, with retries, and kept in `~/.cache/soma-androidworld/`.
 
@@ -130,6 +138,33 @@ Pixel 6 AVD (1080x2400, 420 dpi), Android 13 (API 33) `google_apis` x86_64, Swif
 | Cost (USD, all ten runs) | 3.60 | 2.96 (-18%) |
 
 Reading: both arms passed every task, so these ten do not separate the arms on success either. SOMA used fewer tokens on every task (-13% to -66%) and cost less on eight of ten (the other two within 3%); unlike the Settings tasks, the saving shows in cost too, because these sessions run longer, so the plain session re-reads more device output per turn (its context per turn grows to 30k to 59k, while `device-runner` stays at 19k to 33k). One run each is a first look, not a result: rerun with `--runs 3` before quoting a number, and add harder tasks (complexity 3 and up, several apps) to test whether either arm passes more often. The plain arm made one Bash call (`ExpenseAddMultiple`) and still made its change through Appium.
+
+### Harder tasks: one run per task, 2026-11-19
+
+Same setup as the first look, after the parameter-sharing and reseeding fixes: both arms got the identical goal on every task. Raw data: [`results/2026-11-19T14-54-52-785Z.json`](results/2026-11-19T14-54-52-785Z.json). 55.7 minutes; USD 5.47 for the plain arm, USD 0.90 for the SOMA arm.
+
+| Task | Arm | Passed | Total tokens (median, range) | vs plain | Context per turn | Turns | Output tokens | Tool calls | Bash calls | Cost (USD) | Time (s) |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| SimpleCalendarAddRepeatingEvent | plain | 1/1 | 5,720,527 (5,720,527–5,720,527) | – | 65,943 | 85 | 7,838 | 84 | 0 | 1.07 | 386 |
+| SimpleCalendarAddRepeatingEvent | soma | 0/1 | 225,004 (225,004–225,004) | -96% | 23,783 | 8 | 2,049 | 4 | 0 | 0.15 | 90 |
+| RecipeDeleteMultipleRecipesWithConstraint | plain | 1/1 | 11,146,939 (11,146,939–11,146,939) | – | 64,167 | 172 | 21,293 | 171 | 0 | 1.67 | 679 |
+| RecipeDeleteMultipleRecipesWithConstraint | soma | 0/1 | 223,527 (223,527–223,527) | -98% | 23,637 | 8 | 2,054 | 4 | 0 | 0.15 | 92 |
+| VlcCreateTwoPlaylists | plain | 1/1 | 4,848,021 (4,848,021–4,848,021) | – | 49,864 | 96 | 11,070 | 95 | 0 | 0.79 | 463 |
+| VlcCreateTwoPlaylists | soma | 0/1 | 224,792 (224,792–224,792) | -95% | 23,761 | 8 | 2,053 | 4 | 0 | 0.15 | 93 |
+| ExpenseAddMultipleFromMarkor | plain | 0/1 | 3,265,469 (3,265,469–3,265,469) | – | 41,619 | 77 | 9,094 | 76 | 0 | 0.62 | 260 |
+| ExpenseAddMultipleFromMarkor | soma | 0/1 | 223,921 (223,921–223,921) | -93% | 23,675 | 8 | 2,108 | 4 | 0 | 0.15 | 95 |
+| RecipeAddMultipleRecipesFromImage | plain | 1/1 | 5,102,425 (5,102,425–5,102,425) | – | 38,635 | 130 | 15,040 | 129 | 0 | 0.91 | 465 |
+| RecipeAddMultipleRecipesFromImage | soma | 0/1 | 224,696 (224,696–224,696) | -96% | 23,716 | 8 | 2,271 | 4 | 0 | 0.15 | 95 |
+| MarkorMergeNotes | plain | 0/1 | 2,151,799 (2,151,799–2,151,799) | – | 45,886 | 46 | 6,504 | 45 | 5 | 0.41 | 514 |
+| MarkorMergeNotes | soma | 0/1 | 224,037 (224,037–224,037) | -90% | 23,692 | 8 | 2,126 | 4 | 0 | 0.15 | 113 |
+
+Reading: **this run does not compare the arms on the device work**, because the SOMA arm never got a session. Every SOMA run stopped at the first step: `appium_session_management` failed with "The instrumentation process cannot be initialized within 30000ms timeout", and `device-runner` reported BLOCKED without retrying, as `run-manual-test` tells it to (a session error needs the tester's decision, and `claude -p` has no tester to ask). The plain arm hit the same error on its first try in five of the six tasks, then created the session again with a longer `appium:uiautomator2ServerLaunchTimeout`, and went on. These setups keep the software-rendered emulator busy (AndroidWorld writes databases, images and videos right before the session), so UiAutomator2 takes longer than its 30-second default to start. The first look's lighter setups did not hit it.
+
+What the run does show:
+
+- A SOMA weakness on slow devices: the plain session recovers from a slow UiAutomator2 start by itself, SOMA stops and asks. With a tester present that costs one reply; unattended it fails the run. A default launch timeout for emulators, or one automatic retry with a longer one, would close it.
+- The plain arm passed 4 of 6, using 2.2M to 11.1M tokens and USD 0.41 to 1.67 per task. Both failures were wrong claims that AndroidWorld's check caught: on `ExpenseAddMultipleFromMarkor` it reported logging the two reimbursable transactions, and on `MarkorMergeNotes` it chose its own reading of the line breaks between the merged notes.
+- Rerun these six once the SOMA arm can start a session on this emulator.
 
 ## Results
 
