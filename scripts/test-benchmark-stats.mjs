@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // Unit tests for the benchmark's run parsing and summary (scripts/benchmark-stats.mjs).
 import assert from 'node:assert/strict';
-import { consolePort, measure, median, parseEvents, promptFor, redactHome, refereeOutcome, streamFileName, summarise, toMarkdown } from './benchmark-stats.mjs';
+import { cleanGoal, consolePort, GOAL_MAX, measure, median, parseEvents, promptFor, redactHome, refereeOutcome, streamFileName, summarise, toMarkdown } from './benchmark-stats.mjs';
 
 const stream = [
   { type: 'system', subtype: 'init', model: 'claude-test' },
@@ -206,6 +206,18 @@ const tests = [
     assert.match(refereeOutcome({ success: 0, error: 'KeyError()' }).error, /raised: KeyError/);
     assert.match(refereeOutcome(null).error, /no result/);
     assert.match(refereeOutcome({}).error, /no result/);
+  }],
+  ['cleanGoal keeps a goal as written, removes control characters, refuses empty or overlong text', () => {
+    const table = 'Add the following expenses:\nname|amount\nRent|$10';
+    assert.equal(cleanGoal(table), table);
+    assert.equal(cleanGoal('Turn wifi off.'), 'Turn wifi off.');
+    assert.equal(cleanGoal('a\r\nb\rc'), 'a\nb\nc');
+    assert.equal(cleanGoal('Turn\u0000 wifi\u001b off.\u007f'), 'Turn wifi off.');
+    assert.equal(cleanGoal('tab\tkept'), 'tab\tkept');
+    assert.throws(() => cleanGoal(''), /empty/);
+    assert.throws(() => cleanGoal(undefined), /empty/);
+    assert.throws(() => cleanGoal('x'.repeat(GOAL_MAX + 1)), /over the/);
+    assert.equal(cleanGoal('x'.repeat(GOAL_MAX)).length, GOAL_MAX);
   }],
 ];
 

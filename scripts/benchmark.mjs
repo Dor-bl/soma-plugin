@@ -18,7 +18,7 @@ import { closeSync, mkdirSync, mkdtempSync, openSync, readFileSync, realpathSync
 import { homedir, tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { consolePort, measure, parseEvents, promptFor, redactHome, refereeOutcome, streamFileName, summarise, toMarkdown } from './benchmark-stats.mjs';
+import { cleanGoal, consolePort, measure, parseEvents, promptFor, redactHome, refereeOutcome, streamFileName, summarise, toMarkdown } from './benchmark-stats.mjs';
 import { TASKKILL } from './system-tools.mjs';
 
 const root = fileURLToPath(new URL('..', import.meta.url)).replace(/[\\/]+$/, '');
@@ -319,7 +319,16 @@ async function startReferee(task, n) {
   const deadline = Date.now() + 10 * 60_000;
   while (Date.now() < deadline) {
     const goal = readJson(join(dir, 'goal.json'));
-    if (goal) return goal;
+    if (goal) {
+      try {
+        goal.goal = cleanGoal(goal.goal);
+      } catch (error) {
+        stopReferee();
+        cleanUp(paramsDir);
+        fail(`${task.id}: ${error.message}`);
+      }
+      return goal;
+    }
     if (r.exited) break;
     await sleep(1000);
   }

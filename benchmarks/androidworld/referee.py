@@ -113,6 +113,11 @@ try:
     tmp = params_file.with_suffix('.tmp')
     tmp.write_bytes(pickle.dumps(params))
     tmp.replace(params_file)
+  # Seeded again on both paths, right before setup: initialize_task draws from the same
+  # generators (MarkorCreateFolder adds a random number of distractor files with random
+  # names), and every arm must start from the same device state
+  random.seed(a.seed)
+  np.random.seed(a.seed)
   task = task_type(params)
   task.initialize_task(env)
   write('goal.json', {'task': a.task, 'seed': a.seed, 'goal': task.goal,

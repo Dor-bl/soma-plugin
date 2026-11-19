@@ -198,3 +198,15 @@ export function refereeOutcome(result) {
   if (result.error) return { ok: false, error: `the AndroidWorld check raised: ${result.error}` };
   return { ok: result.success === 1 };
 }
+
+// An AndroidWorld goal before it goes into the prompt: line endings normalised and control
+// characters other than newline and tab removed. A goal is a sentence or a short table; one
+// longer than GOAL_MAX is refused rather than cut, since a cut goal would be another task.
+export const GOAL_MAX = 4000;
+export function cleanGoal(text) {
+  if (typeof text !== 'string' || !text.trim()) throw new Error('the AndroidWorld goal is empty');
+  // eslint-disable-next-line no-control-regex
+  const cleaned = text.replace(/\r\n?/g, '\n').replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/g, '').trim();
+  if (cleaned.length > GOAL_MAX) throw new Error(`the AndroidWorld goal is ${cleaned.length} characters, over the ${GOAL_MAX} allowed`);
+  return cleaned;
+}
