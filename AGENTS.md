@@ -14,7 +14,7 @@ SOMA is a Claude Code plugin for mobile QA, built on the official [`appium-mcp`]
 - `agents/*.md`: subagents. `device-runner` runs a confirmed `run-manual-test` case through Appium in its own context. A skill that delegates passes every value in the brief (resolved remote URL, plugin file paths): do not use `${user_config.*}` or `${CLAUDE_PLUGIN_ROOT}` in agent files
 - `backends/`: one file per device engine (Appium default, optional Google Artemis). Skills say *what* to do; these files say *which tools* do it. Selection rules are in `backends/README.md`
 - `scripts/`: the launcher (`start-appium-mcp.mjs`, `allowlist.mjs`, `child-env.mjs`, `stdin-gate.mjs`, `system-tools.mjs`), the emulator starter (`start-emulator.mjs`), CI checks (`check-plugin.mjs`, `mcp-smoke.mjs`, with its Windows cleanup in `process-tree.mjs`) and their unit tests (`test-*.mjs`)
-- `benchmarks/`: tasks and method for the token benchmark (plain Claude Code vs SOMA on the Android Settings app); `scripts/benchmark.mjs` runs it, `benchmark-stats.mjs` holds the tested parsing and summary
+- `benchmarks/`: tasks and method for the token benchmark (plain Claude Code vs SOMA on the Android Settings app); `scripts/benchmark.mjs` runs it, `benchmark-stats.mjs` holds the tested parsing, summary and prompt. `benchmarks/androidworld/` is the optional `--suite androidworld`: ten AndroidWorld tasks, the Python referee that sets each up and checks it, the one-time device setup and the Windows workarounds (`aw_compat.py`). CI does not run the Python files
 
 ## Checks (same as CI)
 
@@ -72,7 +72,7 @@ The entry passes no remote URL, so remote servers stay blocked and only local de
 ## Writing skills
 
 - Skills drive the device through an engine's MCP tools: `appium-mcp` by default, or the optional Google Artemis server (`mobile_*` tools). Skills say what to do; tool names and engine-specific rules live in `backends/`. Do not reimplement what the server already does.
-- If a skill starts relying on a new `appium-mcp` tool, add it to `REQUIRED_TOOLS` in `scripts/mcp-smoke.mjs` so upstream removals are caught.
+- If a skill starts relying on a new `appium-mcp` tool, add it to `REQUIRED_TOOLS` in `scripts/mcp-smoke.mjs` so upstream removals are caught. `check-plugin.mjs` fails on any `appium_*` tool named in a skill, command, backend or agent file that is missing from that list; tools without the prefix (`select_device`, `generate_locators`, `prepare_ios_simulator`) are not detected, so add those by hand.
 - Session setup reads `${user_config.remote_server_url}`: empty or a literal `${user_config...}` placeholder means local mode (no `remoteServerUrl`), set means pass exactly that value as `remoteServerUrl`. Every skill that creates a session with Appium (`run-manual-test`, `triage-failure`, `generate-test`, `explore-app`) must carry the same remote-URL, `autoGrantPermissions` and `noReset` rules.
 - Anything that runs local tools (`adb`, `appium`, test clients) must say whether it applies to remote sessions too. Local `adb` can hit the wrong device when the server is remote.
 - Skills that quote screenshots, logs or page source back to the tester (`bug-report`, `run-manual-test`, `explore-app`, `triage-failure`) carry the same "Sensitive data (redaction)" section, and so does the `device-runner` agent; `check-plugin.mjs` checks that the section is word-for-word the same in all five (`REDACTION_SYNC`), so change it in every one at once. `write-test-case` has its own variant for stories and tickets and is only checked for presence.

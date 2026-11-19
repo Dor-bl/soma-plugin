@@ -172,3 +172,41 @@ export function redactHome(text, home) {
   const after = '(?![\\p{L}\\p{N}+-]|\\.[\\p{L}\\p{N}])';
   return text.replace(new RegExp(`${before}${pattern}${after}`, 'giu'), '~');
 }
+
+// What the tester says. Skills stop to confirm the plan, which -p cannot answer, so both arms
+// carry the confirmation up front. `note` is extra text both arms get (the AndroidWorld suite
+// pre-approves first-run dialogs there); the Settings suite has none, so its prompts are
+// unchanged from the published runs.
+export function promptFor(arm, { steps, app, pkg, note = '' }) {
+  const confirm = `Platform Android, app ${app} (${pkg}) on the running emulator.${note ? ` ${note}` : ''} I confirm the steps and the app: run it now without asking again, and finish with a one-line result.`;
+  return arm === 'soma'
+    ? `/soma:run-test android ${steps} ${confirm}`
+    : `Using the Appium tools, on an Android device: ${steps} ${confirm}`;
+}
+
+// The emulator console port in an emulator serial ("emulator-5554" -> 5554), which is what
+// AndroidWorld connects to; null for anything else
+export function consolePort(serial) {
+  const m = /^emulator-(\d+)$/.exec(serial ?? '');
+  return m ? Number(m[1]) : null;
+}
+
+// An AndroidWorld referee's result.json -> the same shape as an adb check: a pass needs a
+// full score (1.0) and no error; a check that raised is reported, never counted as a pass
+export function refereeOutcome(result) {
+  if (!result || typeof result.success !== 'number') return { ok: false, error: 'the referee wrote no result' };
+  if (result.error) return { ok: false, error: `the AndroidWorld check raised: ${result.error}` };
+  return { ok: result.success === 1 };
+}
+
+// An AndroidWorld goal before it goes into the prompt: line endings normalised and control
+// characters other than newline and tab removed. A goal is a sentence or a short table; one
+// longer than GOAL_MAX is refused rather than cut, since a cut goal would be another task.
+export const GOAL_MAX = 4000;
+export function cleanGoal(text) {
+  if (typeof text !== 'string' || !text.trim()) throw new Error('the AndroidWorld goal is empty');
+  // eslint-disable-next-line no-control-regex
+  const cleaned = text.replace(/\r\n?/g, '\n').replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/g, '').trim();
+  if (cleaned.length > GOAL_MAX) throw new Error(`the AndroidWorld goal is ${cleaned.length} characters, over the ${GOAL_MAX} allowed`);
+  return cleaned;
+}
