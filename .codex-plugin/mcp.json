@@ -1,0 +1,14 @@
+{
+  "mcpServers": {
+    "appium-mcp": {
+      "command": "node",
+      "args": ["./scripts/start-appium-mcp.mjs"],
+      "cwd": ".",
+      "env": {
+        "NO_UI": "1"
+      },
+      "env_vars": ["ANDROID_HOME", "ANDROID_SDK_ROOT", "JAVA_HOME", "DEVELOPER_DIR", "HTTPS_PROXY", "HTTP_PROXY", "NO_PROXY"],
+      "startup_timeout_sec": 600
+    }
+  }
+}

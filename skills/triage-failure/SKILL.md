@@ -5,6 +5,8 @@ description: "Triage a failed Appium or Artemis test run, or any mobile UI test:
 
 # Triage a failed test
 
+Plugin files below are written as `${CLAUDE_PLUGIN_ROOT}/<path>`, under the plugin's root folder. If that prefix still shows as a literal `${...}` placeholder (Codex does not fill it in), the root is the folder two levels above this SKILL.md.
+
 ## Gather
 Ask for whatever is missing, in one message: the error/stack trace, the failing step, platform and OS version, app build, and whether it failed before.
 

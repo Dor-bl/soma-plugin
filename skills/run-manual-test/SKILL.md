@@ -5,6 +5,8 @@ description: Execute a manual test case (steps written in plain language) on a m
 
 # Run a manual test case
 
+Plugin files below are written as `${CLAUDE_PLUGIN_ROOT}/<path>`, under the plugin's root folder. If that prefix still shows as a literal `${...}` placeholder (Codex does not fill it in), the root is the folder two levels above this SKILL.md.
+
 ## Inputs to confirm (ask one short question if missing)
 - Platform: Android or iOS
 - App under test: package/bundle ID, or local path to the .apk/.app/.ipa

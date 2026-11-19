@@ -95,6 +95,21 @@ Or in two steps: `/plugin marketplace add Dor-bl/soma-plugin`, then `/plugin ins
 
 `/soma:setup` (the `check-setup` skill) checks Node, the SDKs and your devices and explains how to fix what is missing. Add a focus such as `android`, `ios`, `artemis` or `app map` to check one area.
 
+### In Codex (experimental)
+
+SOMA also ships a Codex manifest (`.codex-plugin/plugin.json`) and marketplace (`.agents/plugins/marketplace.json`). Add the marketplace, then install SOMA from `/plugins` in Codex or from the ChatGPT desktop app:
+
+```bash
+codex plugin marketplace add Dor-bl/soma-plugin
+```
+
+It has not been run in Codex yet, and it differs from the Claude Code plugin:
+
+- **Skills and `appium-mcp` only.** Ask for a skill by name, for example "use the check-setup skill" or "use the run-manual-test skill to run this test case on Android". The `/soma:*` commands and the `device-runner` agent are written for Claude Code; without the agent, `run-manual-test` runs the steps in the conversation.
+- **Local mode only.** Codex has no plugin settings, so `remote_server_url`, `capabilities_file` and `app_map_dir` are unset: local devices only, every remote server blocked, app maps off.
+- **Environment.** Codex gives MCP servers only a short list of environment variables. SOMA's Codex config also passes `ANDROID_HOME`, `ANDROID_SDK_ROOT`, `JAVA_HOME`, `DEVELOPER_DIR` and the proxy variables, and waits up to 10 minutes for the first start, which installs `appium-mcp`.
+- **Install location.** Codex gives the server no data folder, so `appium-mcp` installs into the plugin's own folder (`.runtime/`), and each new SOMA version installs it again.
+
 To try a checkout without installing it, start Claude from the folder *above* the clone (inside it, `.mcp.json` loads as a project server and cannot start):
 
 ```bash

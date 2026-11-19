@@ -107,6 +107,47 @@ for (const f of ['LICENSE', 'NOTICE', 'CHANGELOG.md', 'SECURITY.md', '.claude-pl
   if (!existsSync(join(root, f))) fail(`${f}: missing (needed for publishing)`);
 }
 
+// Codex: .codex-plugin/plugin.json mirrors the Claude manifest's package fields, points at
+// files that exist, and fills the interface fields Codex requires (with its length limits).
+// Its MCP config starts the same servers as .mcp.json, without Claude's ${...} variables,
+// which Codex does not substitute. The repo's Codex marketplace lists the plugin at its root.
+const codex = existsSync(join(root, '.codex-plugin/plugin.json')) ? readJson('.codex-plugin/plugin.json') : fail('.codex-plugin/plugin.json: missing');
+if (codex && plugin) {
+  for (const key of ['name', 'version', 'description', 'author', 'homepage', 'repository', 'license', 'keywords']) {
+    if (JSON.stringify(codex[key]) !== JSON.stringify(plugin[key])) fail(`.codex-plugin/plugin.json: "${key}" differs from .claude-plugin/plugin.json`);
+  }
+  const ui = codex.interface ?? {};
+  const LIMITS = { displayName: 30, shortDescription: 30, longDescription: 4000, developerName: 80, category: 80 };
+  for (const [key, max] of Object.entries(LIMITS)) {
+    if (!ui[key]) fail(`.codex-plugin/plugin.json: missing "interface.${key}"`);
+    else if (ui[key].length > max) fail(`.codex-plugin/plugin.json: "interface.${key}" is over ${max} chars`);
+  }
+  if (!Array.isArray(ui.capabilities)) fail('.codex-plugin/plugin.json: "interface.capabilities" must be an array (use [] for none)');
+  const paths = [['skills', codex.skills], ['mcpServers', codex.mcpServers], ['interface.composerIcon', ui.composerIcon], ['interface.logo', ui.logo]];
+  for (const [key, p] of paths) {
+    if (typeof p !== 'string' || !p.startsWith('./')) fail(`.codex-plugin/plugin.json: "${key}" must be a "./" path in the plugin`);
+    else if (/(^|\/)\.\.(\/|$)/.test(p) || !existsSync(join(root, p))) fail(`.codex-plugin/plugin.json: "${key}" (${p}) does not exist in the plugin`);
+  }
+  if (typeof codex.mcpServers === 'string' && existsSync(join(root, codex.mcpServers))) {
+    const codexMcp = readJson(codex.mcpServers);
+    const names = (o) => Object.keys(o?.mcpServers ?? {}).sort().join(', ');
+    if (names(codexMcp) !== names(mcp)) fail(`${codex.mcpServers}: servers (${names(codexMcp)}) differ from .mcp.json (${names(mcp)})`);
+    for (const [name, server] of Object.entries(codexMcp?.mcpServers ?? {})) {
+      if (!server.command) fail(`${codex.mcpServers}: server "${name}" has no "command"`);
+      if (JSON.stringify(server).includes('${')) fail(`${codex.mcpServers}: server "${name}" uses a \${...} variable, which Codex does not substitute; use paths relative to "cwd": "."`);
+    }
+  }
+}
+const codexMarket = existsSync(join(root, '.agents/plugins/marketplace.json')) ? readJson('.agents/plugins/marketplace.json') : fail('.agents/plugins/marketplace.json: missing (the Codex marketplace)');
+if (codexMarket && plugin) {
+  if (codexMarket.name !== marketplace?.name) fail('.agents/plugins/marketplace.json: "name" differs from .claude-plugin/marketplace.json');
+  const entry = (codexMarket.plugins ?? []).find((p) => p.name === plugin.name);
+  if (!entry) fail(`.agents/plugins/marketplace.json: no plugin entry named "${plugin.name}"`);
+  else if (entry.source?.source !== 'local' || entry.source?.path !== './') fail('.agents/plugins/marketplace.json: the entry must use source {"source": "local", "path": "./"} (the plugin is this repo)');
+  const repo = plugin.repository?.match(/^https:\/\/github\.com\/([\w.-]+\/[\w.-]+)$/)?.[1];
+  if (repo && !read('README.md').includes(`codex plugin marketplace add ${repo}`)) fail(`README.md: missing the Codex install text "codex plugin marketplace add ${repo}"`);
+}
+
 // appium-mcp is pinned in runtime/package.json and locked in runtime/package-lock.json.
 // Every version mentioned in docs and skills, and the lockfile, must match that pin.
 const runtimePkg = JSON.parse(read('runtime/package.json'));
@@ -333,7 +374,13 @@ const promptFiles = [
   ...readdirSync(join(root, 'commands')).filter((f) => f.endsWith('.md')).map((f) => `commands/${f}`),
   ...readdirSync(join(root, 'backends')).filter((f) => f.endsWith('.md')).map((f) => `backends/${f}`),
 ].filter((p) => existsSync(join(root, p)));
+// Codex leaves ${CLAUDE_PLUGIN_ROOT} as it is, so a skill that uses it must say where the root
+// is when it shows unexpanded. Backend files are reached from a skill, which has resolved it.
+const ROOT_FALLBACK = 'Codex does not fill it in), the root is the folder two levels above this SKILL.md';
 for (const p of promptFiles) {
+  if (p.startsWith('skills/') && read(p).includes('${CLAUDE_PLUGIN_ROOT}') && !read(p).replace(/\s+/g, ' ').includes(ROOT_FALLBACK)) {
+    fail(`${p}: uses \${CLAUDE_PLUGIN_ROOT} but lacks the Codex fallback "${ROOT_FALLBACK}"`);
+  }
   for (const m of read(p).matchAll(/\$\{CLAUDE_PLUGIN_ROOT\}\/([^\s`"'()<>[\]]*)/g)) {
     const path = m[1].replace(/#.*$/, '');
     // Before the punctuation cleanup below, which would turn a final `..` into nothing

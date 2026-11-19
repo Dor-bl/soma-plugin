@@ -1,5 +1,6 @@
 #!/usr/bin/env node
-// Prepares a release: bumps the version in plugin.json and the README badge,
+// Prepares a release: bumps the version in both plugin manifests (Claude Code
+// and Codex) and the README badge,
 // and moves the changelog's Unreleased entries under a dated version heading.
 //
 //   node scripts/release.mjs 0.3.0               # today's date (UTC)
@@ -141,8 +142,11 @@ function main(argv) {
   if (!isValidSemver(current)) fail(`plugin.json: current version is not semver (${current})`);
   if (compareVersions(version, current) < 0) fail(`${version} is lower than the current version ${current}`);
 
+  // The Codex manifest carries the same version (check-plugin.mjs fails when they differ)
+  const codexPath = path('.codex-plugin/plugin.json');
   const files = {
     [manifestPath]: keepEol(manifest, (t) => bumpManifest(t, version)),
+    [codexPath]: keepEol(readFileSync(codexPath, 'utf8'), (t) => bumpManifest(t, version)),
     [path('README.md')]: keepEol(readFileSync(path('README.md'), 'utf8'), (t) => bumpBadge(t, version)),
     [path('CHANGELOG.md')]: keepEol(readFileSync(path('CHANGELOG.md'), 'utf8'), (t) => cutChangelog(t, version, date)),
   };

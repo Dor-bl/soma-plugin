@@ -5,6 +5,8 @@ description: Turn a manual test case into an automated Appium test script (e.g. 
 
 # Generate an automated test
 
+Plugin files below are written as `${CLAUDE_PLUGIN_ROOT}/<path>`, under the plugin's root folder. If that prefix still shows as a literal `${...}` placeholder (Codex does not fill it in), the root is the folder two levels above this SKILL.md.
+
 ## Inputs to confirm (ask one short question if missing)
 - Test case: a test just run with `run-manual-test` in this conversation (reuse its steps, expected results and observed screens), or steps / a file path the tester provides
 - Platform and app under test (same as `run-manual-test`)

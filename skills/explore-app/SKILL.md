@@ -5,6 +5,8 @@ description: Exploratory testing of a mobile app area without written steps (e.g
 
 # Explore an app area
 
+Plugin files below are written as `${CLAUDE_PLUGIN_ROOT}/<path>`, under the plugin's root folder. If that prefix still shows as a literal `${...}` placeholder (Codex does not fill it in), the root is the folder two levels above this SKILL.md.
+
 ## Inputs to confirm (ask one short question if missing)
 - Platform and app under test: package/bundle ID, or local path to the .apk/.app/.ipa
 - The area or goal to explore (e.g. "checkout with a coupon"), and anything off limits (real payments, deleting data, sending messages)

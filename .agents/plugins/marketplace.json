@@ -1,0 +1,20 @@
+{
+  "name": "soma-plugin",
+  "interface": {
+    "displayName": "SOMA"
+  },
+  "plugins": [
+    {
+      "name": "soma",
+      "source": {
+        "source": "local",
+        "path": "./"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Developer Tools"
+    }
+  ]
+}
