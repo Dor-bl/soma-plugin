@@ -43,6 +43,37 @@ const tests = [
     assert.equal(m.reply, 'done');
     assert.equal(m.isError, false);
   }],
+  ['a background subagent hand-off: tokens and cost from the last result, turns and time summed', () => {
+    // Shaped like a run-manual-test run since device-runner (#83): the first result ends the
+    // hand-off turn, the second comes after the subagent reported back. Each event's usage is
+    // only its own part; modelUsage and total_cost_usd are the session's.
+    const session = { 'claude-test': { inputTokens: 46, outputTokens: 4201, cacheReadInputTokens: 1_042_337, cacheCreationInputTokens: 42_164 } };
+    const handOff = [
+      { type: 'system', subtype: 'init', model: 'claude-test' },
+      { type: 'assistant', message: { content: [{ type: 'tool_use', id: 'a1', name: 'Agent' }] } },
+      { type: 'user', message: { content: [{ type: 'tool_result', tool_use_id: 'a1' }] } },
+      { type: 'result', is_error: false, result: 'The test is running.', num_turns: 4, duration_ms: 9000, total_cost_usd: 0.3,
+        usage: { input_tokens: 8, cache_read_input_tokens: 115_535, cache_creation_input_tokens: 17_367, output_tokens: 862 }, modelUsage: session },
+      { type: 'assistant', message: { content: [{ type: 'tool_use', id: 'a2', name: 'mcp__appium-mcp__appium_find_element' }] } },
+      { type: 'user', message: { content: [{ type: 'tool_result', tool_use_id: 'a2' }] } },
+      { type: 'result', is_error: false, result: 'PASS: contact saved', num_turns: 22, duration_ms: 56_000, total_cost_usd: 0.3,
+        usage: { input_tokens: 36, cache_read_input_tokens: 926_802, cache_creation_input_tokens: 19_150, output_tokens: 2707 }, modelUsage: session },
+    ].map((e) => JSON.stringify(e)).join('\n');
+    const m = measure(parseEvents(handOff));
+    assert.equal(m.total, 46 + 4201 + 1_042_337 + 42_164);
+    assert.equal(m.cacheRead, 1_042_337);
+    assert.equal(m.costUsd, 0.3);
+    assert.equal(m.turns, 26);
+    assert.equal(m.durationSec, 65);
+    assert.equal(m.reply, 'PASS: contact saved');
+    assert.equal(m.appiumOk, 1);
+    assert.equal(m.isError, false);
+    // A single result with modelUsage gives the same numbers as its usage (the plain arm)
+    const single = measure(parseEvents(JSON.stringify({ type: 'result', num_turns: 2, usage: { input_tokens: 1, cache_read_input_tokens: 2, cache_creation_input_tokens: 3, output_tokens: 4 },
+      modelUsage: { a: { inputTokens: 1, cacheReadInputTokens: 2, cacheCreationInputTokens: 3, outputTokens: 4 } } })));
+    assert.equal(single.total, 10);
+    assert.equal(single.turns, 2);
+  }],
   ['a stream without a result event is an error run', () => {
     assert.equal(measure(parseEvents('{"type":"system","subtype":"init"}')).isError, true);
   }],

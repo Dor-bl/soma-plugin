@@ -43,6 +43,7 @@ With `--keep-streams`, each run's raw `stream-json` is also saved to `benchmarks
 ## Reading the table
 
 - **Total tokens** is input + cache reads + cache writes + output over the whole session. Cache reads are most of it in a long session and are billed far below fresh input, so also look at **Cost (USD)**.
+- A SOMA run hands the test to the `device-runner` subagent, which runs in the background, so its stream has two result events: the hand-off turn, then the rest of the session. Tokens and cost come from the last one's session-wide `modelUsage` and `total_cost_usd`, the reply from the last one, and **Turns** and **Time** are summed over both.
 - Values are medians over the runs, with the min–max range for tokens. The model is not deterministic; with 3 runs treat differences under about 15% as noise.
 - **vs plain** is the median total tokens against the plain arm, per task.
 - **Context per turn** is cache reads divided by turns, per run: roughly how much context each turn re-reads. Cost is about this times **Turns**, so the two columns show which of the two a change moved.

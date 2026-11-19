@@ -15,11 +15,33 @@ export function parseEvents(stdout) {
   });
 }
 
-// Everything a run reports that the benchmark compares. `result.usage` is the session
-// total, summed over every turn, so cache reads and writes are included.
+// Session-wide token counts from a result event's `modelUsage` (summed over models), in
+// `usage`'s field names; null when the event has none
+function sessionUsage(result) {
+  const models = Object.values(result.modelUsage ?? {});
+  if (!models.length) return null;
+  const sum = (key) => models.reduce((n, m) => n + (m[key] ?? 0), 0);
+  return {
+    input_tokens: sum('inputTokens'),
+    cache_read_input_tokens: sum('cacheReadInputTokens'),
+    cache_creation_input_tokens: sum('cacheCreationInputTokens'),
+    output_tokens: sum('outputTokens'),
+  };
+}
+
+// Everything a run reports that the benchmark compares.
+// A run can emit more than one result event: when a skill hands the work to a background
+// subagent (run-manual-test's device-runner), the first turn ends with the hand-off and the
+// session goes on when the subagent reports back. So the last result event holds the reply,
+// and its `modelUsage` and `total_cost_usd` cover the whole session, while each event's
+// `usage`, `num_turns` and `duration_ms` cover only its own part: those are the fallback
+// (`usage`, for streams without `modelUsage`) or are summed (turns, duration).
 export function measure(events) {
-  const result = events.find((e) => e.type === 'result') ?? {};
-  const usage = result.usage ?? {};
+  const resultEvents = events.filter((e) => e.type === 'result');
+  const result = resultEvents.at(-1) ?? {};
+  const reported = sessionUsage(result) ?? result.usage;
+  const hasUsage = Boolean(reported);
+  const usage = reported ?? {};
   const toolUses = events.filter((e) => e.type === 'assistant').flatMap((e) => e.message?.content ?? []).filter((c) => c.type === 'tool_use');
   const results = events.filter((e) => e.type === 'user').flatMap((e) => e.message?.content ?? []).filter((c) => c?.type === 'tool_result');
   const failedIds = new Set(results.filter((r) => r.is_error).map((r) => r.tool_use_id));
@@ -32,28 +54,30 @@ export function measure(events) {
   const bash = toolUses.filter((t) => t.name === 'Bash');
   // No result event (a timeout) means no usage was reported: null, never 0, so it stays out of
   // the medians. A run that ended in an error still reports its usage, which is kept.
-  const field = (key) => (result.usage ? usage[key] ?? 0 : null);
+  const field = (key) => (hasUsage ? usage[key] ?? 0 : null);
   const input = field('input_tokens');
   const cacheRead = field('cache_read_input_tokens');
   const cacheWrite = field('cache_creation_input_tokens');
   const output = field('output_tokens');
-  const turns = result.num_turns ?? null;
+  const sumOf = (key) => (resultEvents.some((e) => e[key] != null) ? resultEvents.reduce((n, e) => n + (e[key] ?? 0), 0) : null);
+  const turns = sumOf('num_turns');
+  const durationMs = sumOf('duration_ms');
   return {
     model: events.find((e) => e.type === 'system' && e.subtype === 'init')?.model ?? null,
     input, cacheRead, cacheWrite, output,
     // All tokens the model processed or produced; cache reads are the bulk of a long session
-    total: result.usage ? input + cacheRead + cacheWrite + output : null,
+    total: hasUsage ? input + cacheRead + cacheWrite + output : null,
     costUsd: result.total_cost_usd ?? null,
     turns,
     // Every turn re-reads the cached context, so cost is roughly this times the turns
     contextPerTurn: cacheRead != null && turns > 0 ? cacheRead / turns : null,
-    durationSec: result.duration_ms == null ? null : result.duration_ms / 1000,
+    durationSec: durationMs == null ? null : durationMs / 1000,
     toolCalls: toolUses.length,
     toolErrors: toolUses.filter((t) => failedIds.has(t.id)).length,
     appiumCalls: appium.length,
     appiumOk: appium.filter((t) => okIds.has(t.id)).length,
     bashCalls: bash.length,
-    isError: Boolean(result.is_error) || !result.type,
+    isError: resultEvents.some((e) => e.is_error) || !result.type,
     reply: typeof result.result === 'string' ? result.result : '',
   };
 }
