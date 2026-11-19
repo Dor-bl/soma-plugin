@@ -349,6 +349,18 @@ for (const p of promptFiles) {
   }
 }
 
+// Every `appium_*` tool a skill, command, backend or agent file names must be in
+// REQUIRED_TOOLS, so the smoke test catches an upstream rename or removal before a
+// tester's run does. Tools without the `appium_` prefix (select_device, generate_locators,
+// prepare_ios_simulator) cannot be told apart from other names and are still added by hand.
+const toolFiles = [...promptFiles, ...agentFiles.map((f) => `agents/${f}`)];
+for (const p of toolFiles) {
+  const named = new Set([...read(p).matchAll(/\bappium_\w+/g)].map((m) => m[0]));
+  for (const tool of named) {
+    if (!smokeTools.has(tool)) fail(`${p}: appium-mcp tool ${tool} is not in REQUIRED_TOOLS in scripts/mcp-smoke.mjs`);
+  }
+}
+
 if (errors.length) {
   console.error(errors.map((e) => `✘ ${e}`).join('\n'));
   process.exit(1);
