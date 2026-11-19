@@ -28,6 +28,10 @@ Notable changes to SOMA, newest first. The format follows [Keep a Changelog](htt
 - Benchmark: a SOMA run since `device-runner` emits two result events (the hand-off turn, then the rest of the session once the background subagent reports back), and only the first was read, so it recorded about an eighth of the session's tokens, 4 of its 26 turns and the hand-off text as the reply. Tokens and cost now come from the last result event's session-wide `modelUsage` and `total_cost_usd`, the reply from the last event, and turns and duration are summed over all of them. Plain runs, with one result event, measure the same as before. Published results predate `device-runner` and are not affected
 - Benchmark: in the SOMA arm, `device-runner` never got its Appium tools. The harness loaded `appium-mcp` under that name with `--strict-mcp-config`, so the tools were `mcp__appium-mcp__*`, while the agent lists the plugin's names (`mcp__plugin_soma_appium-mcp__*`); the agent returned BLOCKED and the main session ran the test itself. Both arms now load the server as `plugin_soma_appium-mcp`, so its tools carry the names plugin users get. The Time column is now each run's wall-clock time, since the background agent's time is in no result event
 
+### Security
+
+- `appium-mcp`'s dependency tree no longer carries known-vulnerable versions of `hono`, `@hono/node-server`, `basic-ftp`, `glob`, `minimatch`, `js-yaml`, `nanoid`, `serialize-javascript`, `diff` and `uuid`: the lockfile is refreshed and `runtime/package.json` overrides the packages `appium-mcp` 1.97.1 pins to old versions (most come in through `applesign`, which ships `mocha` as a runtime dependency). Still open: `extract-zip`, which has no fixed release, and the `glob` and `minimatch` copies that `appium-uiautomator2-driver` and `appium-xcuitest-driver` bundle in their own tarballs, which overrides cannot replace
+
 ## [0.2.0] - 2026-11-13
 
 The first marketplace release. Status moves from experimental to beta.
@@ -55,10 +59,6 @@ The first marketplace release. Status moves from experimental to beta.
 - `triage-failure` captures reproduction evidence the way `run-manual-test` does: the failing step is checked from an element or page source saved with a selector rather than the full tree, one screenshot (`maxWidth` about 720) is taken when the check is visual or when the step fails, and saved files are read with the Read tool, not a shell (#56)
 - `/soma:setup-artemis` is now `/soma:artemis`. The command shared its name with the `setup-artemis` skill, so the plugin listed `setup-artemis` twice; the skill keeps its name (found on the macOS clean install, #64)
 - README known limitations: results of the iOS simulator pass and the Windows and macOS clean installs from the release gate (#64), remote mode labelled untested, and why `appium-mcp` stays at 1.97.1
-
-### Security
-
-- `appium-mcp`'s dependency tree no longer carries known-vulnerable versions of `hono`, `@hono/node-server`, `basic-ftp`, `glob`, `minimatch`, `js-yaml`, `nanoid`, `serialize-javascript`, `diff` and `uuid`: the lockfile is refreshed and `runtime/package.json` overrides the packages `appium-mcp` 1.97.1 pins to old versions (most come in through `applesign`, which ships `mocha` as a runtime dependency). Still open: `extract-zip`, which has no fixed release, and the `glob` and `minimatch` copies that `appium-uiautomator2-driver` and `appium-xcuitest-driver` bundle in their own tarballs, which overrides cannot replace
 
 ## [0.1.0] - not tagged
 
