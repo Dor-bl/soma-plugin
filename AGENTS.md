@@ -38,11 +38,18 @@ CI also runs a link check (lychee) on all Markdown, so links must resolve.
 
 Not in CI: `node scripts/injection-check.mjs` runs live Claude Code sessions (needs the `claude` CLI, logged in, and uses model calls) to check that `run-test`, `gen-test` and `bug` ignore and flag instructions hidden in a test-case file. Run it after changing `commands/` or a skill's untrusted-content rules. `node scripts/benchmark.mjs` is also live-only (emulator, `adb`, model calls); see `benchmarks/README.md`. It fails only on what the session did (canary created, blocked tools used, files written); its checks on the reply's wording only warn, so read any reply it prints with a ⚠.
 
+## Branches
+
+- `develop` is where work lands: branch from it and open every PR against it (`gh pr create --base develop`). Squash merges are fine there.
+- `main` is what users install: `marketplace.json` points at `./`, so `/plugin marketplace add` and plugin updates read the default branch. It moves only on a release, so its contents always match the version in `plugin.json`. Keep `main` the GitHub default branch; making `develop` the default would ship unreleased work.
+- A hotfix that cannot wait for a release goes in a PR against `main` with a version bump (see "Releasing"), then `main` is merged back into `develop`.
+
 ## Releasing
 
-1. `node scripts/release.mjs <version>` bumps `plugin.json` and the README badge, moves the "Unreleased" changelog entries under `## [<version>] - <today>`, and runs `check-plugin.mjs`. With the version already in `plugin.json`, it only dates that version's heading. `--date YYYY-MM-DD` sets another date.
-2. Review the diff, open a PR, merge it.
-3. On main, `.github/workflows/release.yml` sees the version change, tags `v<version>` on the merge commit and publishes a GitHub release with that changelog section as notes. It skips a push that leaves the version unchanged or a version that already has a release, and fails if the heading has no date. A version with a suffix (`1.0.0-rc.1`) is published as a prerelease. If it failed on something transient (network, a GitHub outage), use "Re-run jobs" on that run: it keeps the version-bump commit. If the fix needs a commit (e.g. an undated heading), merge the fix, then start the workflow by hand from the Actions tab on main: a changelog-only push does not trigger it, and the tag then goes on the current tip of main, so it includes every commit since the bump.
+1. On a branch from `develop`, `node scripts/release.mjs <version>` bumps `plugin.json` and the README badge, moves the "Unreleased" changelog entries under `## [<version>] - <today>`, and runs `check-plugin.mjs`. With the version already in `plugin.json`, it only dates that version's heading. `--date YYYY-MM-DD` sets another date.
+2. Review the diff, open a PR against `develop`, merge it.
+3. Open a PR from `develop` to `main` and merge it with a merge commit (not squash or rebase, which would rewrite `develop`'s commits and make the next release PR conflict).
+4. On main, `.github/workflows/release.yml` sees the version change, tags `v<version>` on the merge commit and publishes a GitHub release with that changelog section as notes. It skips a push that leaves the version unchanged or a version that already has a release, and fails if the heading has no date. A version with a suffix (`1.0.0-rc.1`) is published as a prerelease. If it failed on something transient (network, a GitHub outage), use "Re-run jobs" on that run: it keeps the version-bump commit. If the fix needs a commit (e.g. an undated heading), merge the fix into `develop` and promote it to `main` as in step 3, then start the workflow by hand from the Actions tab on main: a changelog-only push does not trigger it, and the tag then goes on the current tip of main.
 
 ## Running appium-mcp while working in this repo
 

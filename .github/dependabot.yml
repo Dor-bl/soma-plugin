@@ -1,8 +1,10 @@
 version: 2
+# PRs go to develop, like all work; main moves only on a release (see AGENTS.md)
 updates:
   # Actions are pinned to commit SHAs; this proposes the bumps
   - package-ecosystem: github-actions
     directory: /
+    target-branch: develop
     schedule:
       interval: weekly
   # appium-mcp and its lockfile. The launcher reads the pin from runtime/package.json, but a
@@ -10,5 +12,6 @@ updates:
   # (check-plugin.mjs fails otherwise), so expect to touch those in the PR.
   - package-ecosystem: npm
     directory: /runtime
+    target-branch: develop
     schedule:
       interval: weekly
