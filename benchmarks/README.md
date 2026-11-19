@@ -77,7 +77,7 @@ How a run works: [`androidworld/referee.py`](androidworld/referee.py) connects t
 
 AndroidWorld changes the emulator: it installs about 20 apps and sets the clock to October 2023 on every task. Use an emulator kept for it, never your everyday one. The harness refuses to run the suite on an emulator without AndroidWorld's accessibility forwarder.
 
-1. Clone AndroidWorld at the commit in `androidworld/tasks.json`, and install it into a Python 3.11+ virtual environment as its README says (`pip install -r requirements.txt`, then `pip install -e .`).
+1. Clone AndroidWorld at the commit in `androidworld/tasks.json`, and install it into a Python 3.11+ virtual environment as its README says (`pip install -r requirements.txt`, then `pip install -e .`). The referee checks the installed copy before every task and refuses another commit, local changes to tracked files, or an install it cannot trace to a git checkout: the goals and checks come from that code, so a different copy would run different tasks under the same names.
 2. Create an AVD: Pixel 6, API 33 (Android 13) `google_apis` x86_64, with at least 4 GB RAM and an 8 GB data partition (the default 800 MB is too small for the apps). Set Screen lock to None, as above.
 3. Start it with the gRPC port AndroidWorld talks to: `emulator -avd <name> -no-snapshot -grpc 8554`. On a machine whose GPU driver crashes the emulator, add `-gpu swiftshader_indirect`.
 4. Once per emulator, install the apps: `<venv python> benchmarks/androidworld/setup_device.py --adb <full path to adb>`. It downloads the APKs from AndroidWorld's storage bucket and takes several minutes.

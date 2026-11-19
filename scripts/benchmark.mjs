@@ -300,7 +300,8 @@ function readJson(file) {
 // as when an adb reset fails.
 async function startReferee(task, n) {
   const dir = realpathSync(mkdtempSync(join(tmpdir(), 'soma-aw-')));
-  const args = [join(awDir, 'referee.py'), '--task', task.id, '--seed', String(n), '--dir', dir, '--adb', adbPath, '--console-port', String(consolePort(serial))];
+  // --commit: the referee refuses an AndroidWorld other than the one the task list was made for
+  const args = [join(awDir, 'referee.py'), '--task', task.id, '--seed', String(n), '--dir', dir, '--adb', adbPath, '--console-port', String(consolePort(serial)), '--commit', suiteFile.androidWorld.commit];
   const child = spawn(awPython, args, { stdio: ['ignore', 'ignore', 'pipe'], detached: process.platform !== 'win32', windowsHide: true });
   // The handlers write to this run's own record: `referee` is cleared when the run ends
   const r = (referee = { child, dir, stderr: '', exited: false });

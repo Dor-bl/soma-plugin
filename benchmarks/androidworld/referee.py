@@ -20,6 +20,7 @@ import argparse
 import json
 import pathlib
 import random
+import subprocess
 import sys
 import time
 
@@ -27,6 +28,7 @@ import numpy as np
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 import aw_compat  # noqa: E402,F401  (patches applied at import)
+import android_world  # noqa: E402
 from android_world import registry  # noqa: E402
 from android_world.env import env_launcher  # noqa: E402
 
@@ -38,7 +40,40 @@ ap.add_argument('--adb', required=True)
 ap.add_argument('--console-port', type=int, default=5554)
 ap.add_argument('--grpc-port', type=int, default=8554)
 ap.add_argument('--timeout', type=float, default=3600, help='seconds to wait for done')
+ap.add_argument('--commit', required=True,
+                help='the AndroidWorld commit the task list was made for')
 a = ap.parse_args()
+
+
+def check_android_world(expected):
+  """Refuses an AndroidWorld that is not the pinned commit, or has local edits.
+
+  The task goals and checks come from the installed AndroidWorld, so another
+  version (or a modified checkout) would run different tasks under the same
+  names. It must be a git checkout installed in editable mode, as the README
+  says; anything else cannot be verified and is refused.
+  """
+  root = pathlib.Path(android_world.__file__).resolve().parent.parent
+
+  def git(*args):
+    r = subprocess.run(['git', '-C', str(root), *args], capture_output=True,
+                       text=True)
+    return r.stdout.strip() if r.returncode == 0 else None
+
+  head = git('rev-parse', 'HEAD')
+  if head is None:
+    sys.exit(f'AndroidWorld at {root} is not a git checkout, so its version '
+             'cannot be checked; install it from a clone with pip install -e')
+  if head != expected:
+    sys.exit(f'AndroidWorld at {root} is at {head}, the task list needs '
+             f'{expected}: git -C "{root}" checkout {expected}')
+  edits = git('status', '--porcelain', '--untracked-files=no')
+  if edits:
+    sys.exit(f'AndroidWorld at {root} has local changes to tracked files, '
+             'which can change the tasks: ' + edits.replace('\n', '; '))
+
+
+check_android_world(a.commit)
 
 out = pathlib.Path(a.dir)
 out.mkdir(parents=True, exist_ok=True)
