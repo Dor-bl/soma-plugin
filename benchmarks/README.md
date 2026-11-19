@@ -93,3 +93,32 @@ Whole run: 24.3 minutes, USD 1.61 for the plain arm and USD 1.78 for the SOMA ar
 - Why plain grew: with `NO_UI` the screenshots are readable, and the plain arm now looks at them. Over nine runs it read 16 screenshots and fetched page source 10 times, against 7 and 5 for SOMA. Tool results added up to 3.7 MB of text for plain and 0.9 MB for SOMA. The skill's "find the element, screenshot once per visual check" guidance is doing what it should.
 - What still costs SOMA: fixed prompt text. In the streams, a SOMA session sits at about 50k tokens of context after setup against about 44k for plain. The `run-manual-test` skill (12.1 KB, up from 9.2 KB at the baseline after #58 and #65) and the command are re-read on every turn, and SOMA runs take 1.6 more turns (one is the explicit session cleanup). On tasks of 10 to 20 turns, that outweighs the savings in device output. Trimming the hot path (#55) is the lever left.
 - Per task, `dark-theme` went from +74% to -2%, while `screen-timeout` (+5% to +36%) and `read-android-version` (-1% to +35%) went the other way. `dark-theme` and `read-android-version` have overlapping ranges between the arms, so with 3 runs read those as noise. `screen-timeout` does not overlap (plain 580,565–678,891, SOMA 763,229–876,150): SOMA used more tokens on every run of it, which the nine-run average hides. Three runs are too few to call that settled; rerun with more runs before acting on it.
+
+### Rerun after device-runner, 2026-11-19
+
+Same AVD, image, emulator, `appium-mcp` 1.97.1, CLI 2.1.319 and model `claude-sonnet-5-5` as the earlier runs; 3 runs per task and arm; 17 of 18 runs passed, every run with successful `appium-mcp` calls and no Bash calls. Raw data: [`results/2026-11-19T07-18-39-760Z.json`](results/2026-11-19T07-18-39-760Z.json). The change since the 2026-11-13 rerun is the `device-runner` subagent (#83): the SOMA arm's `run-manual-test` now hands the confirmed run to it. It runs in the background, so a SOMA stream has two result events, and this is the first run measured with the fix that reads both (#95); all nine SOMA runs used it.
+
+| Task | Arm | Passed | Total tokens (median, range) | vs plain | Context per turn | Turns | Output tokens | Tool calls | Bash calls | Cost (USD) | Time (s) |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| dark-theme | plain | 2/3 | 844,107 (814,200–853,098) | – | 35,171 | 23 | 2,004 | 18 | 0 | 0.23 | 51 |
+| dark-theme | soma | 3/3 | 1,035,093 (988,905–1,092,294) | 23% | 44,076 | 24 | 3,799 | 21 | 0 | 0.26 | 58 |
+| screen-timeout | plain | 3/3 | 687,031 (628,673–688,152) | – | 36,257 | 18 | 1,748 | 16 | 0 | 0.21 | 44 |
+| screen-timeout | soma | 3/3 | 862,631 (854,489–918,225) | 26% | 40,199 | 21 | 3,725 | 18 | 0 | 0.24 | 62 |
+| read-android-version | plain | 3/3 | 549,128 (449,789–710,454) | – | 42,030 | 14 | 1,415 | 12 | 0 | 0.20 | 61 |
+| read-android-version | soma | 3/3 | 743,921 (623,695–863,466) | 35% | 47,518 | 15 | 3,034 | 12 | 0 | 0.21 | 75 |
+
+Per run, averaged over all nine runs of each arm, against the 2026-11-13 rerun:
+
+| | 11-13 plain | 11-13 SOMA | 11-19 plain | 11-19 SOMA |
+| --- | --- | --- | --- | --- |
+| Cost (USD) | 0.179 | 0.198 (+11%) | 0.205 | 0.237 (+16%) |
+| Total tokens | 702k | 758k (+8%) | 692k | 887k (+28%) |
+| Turns | 17.8 | 19.4 | 17.8 | 19.8 |
+| Context per turn (mean of each run's cache reads / turns) | 38.1k | 37.7k | 37.6k | 43.4k |
+
+Whole run: 23.6 minutes, USD 1.85 for the plain arm and USD 2.14 for the SOMA arm. Reading:
+
+- The one failure is the plain arm's third `dark-theme` run: it replied that dark theme was on ("the final screenshot shows the switch on"), while `cmd uimode night` said it was off. The device check caught a wrong claim, which is what it is for.
+- The plain arm is flat in tokens and turns against 11-13; its cost per run rose (0.179 to 0.205 USD) with the same token counts, so read cost changes between dates with care.
+- SOMA's overhead grew from +8% to +28% in tokens. The streams show where: the hand-off part (the main session loading the skill and briefing `device-runner`, 4 turns) costs the same in every run, 134k tokens on average, and the `device-runner` part averages 751k, close to the plain arm's 692k for the whole task. On tasks of 10 to 20 turns that fixed hand-off is most of the gap; it should weigh less on longer tasks, which is what the AndroidWorld suite is for. Trimming the hand-off (the skill text the main session reads before it delegates) is the lever.
+- Per task the ranges do not overlap on `dark-theme` (plain 814,200–853,098, SOMA 988,905–1,092,294) or `screen-timeout`; `read-android-version` overlaps.
