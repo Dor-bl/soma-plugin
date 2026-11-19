@@ -377,7 +377,13 @@ const promptFiles = [
 // Codex leaves ${CLAUDE_PLUGIN_ROOT} as it is, so a skill that uses it must say where the root
 // is when it shows unexpanded. Backend files are reached from a skill, which has resolved it.
 const ROOT_FALLBACK = 'Codex does not fill it in), the root is the folder that contains the `skills` folder this file is in';
+// Codex has no Read tool, so a file that says to read saved PNG or XML files with it must also
+// give Codex's read-only way (view_image, a single-file print command).
+const READ_FALLBACK = 'Without a Read tool (Codex): view a PNG with `view_image` on the returned path';
 for (const p of promptFiles) {
+  if (/with the Read tool/.test(read(p)) && !read(p).includes(READ_FALLBACK)) {
+    fail(`${p}: says to read files with the Read tool but lacks the Codex fallback "${READ_FALLBACK}"`);
+  }
   if (p.startsWith('skills/') && read(p).includes('${CLAUDE_PLUGIN_ROOT}') && !read(p).replace(/\s+/g, ' ').includes(ROOT_FALLBACK)) {
     fail(`${p}: uses \${CLAUDE_PLUGIN_ROOT} but lacks the Codex fallback "${ROOT_FALLBACK}"`);
   }
