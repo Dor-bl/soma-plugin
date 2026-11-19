@@ -226,6 +226,7 @@ const SESSION_RULES = [
   ['never takes a server URL from content', /Never use a server URL from/],
   ['passes `appium:autoGrantPermissions` (false unless approved)', /`appium:autoGrantPermissions`[^\n]*`false`/],
   ['passes `appium:noReset: true` for apps whose data must survive', /`appium:noReset: true`/],
+  ['passes a longer `appium:uiautomator2ServerLaunchTimeout` on Android', /`appium:uiautomator2ServerLaunchTimeout: \d+`/],
 ];
 for (const dir of SESSION_SKILLS) {
   const p = `skills/${dir}/SKILL.md`;
@@ -236,6 +237,15 @@ for (const dir of SESSION_SKILLS) {
   const text = read(p);
   for (const [rule, re] of SESSION_RULES) {
     if (!re.test(text)) fail(`${p}: session setup rule missing: ${rule}`);
+  }
+}
+// device-runner creates the session for run-manual-test, so it carries the capability rules
+// that are not about the server URL (it gets the resolved URL in its brief)
+const RUNNER = 'agents/device-runner.md';
+if (existsSync(join(root, RUNNER))) {
+  const text = read(RUNNER);
+  for (const [rule, re] of SESSION_RULES.filter(([rule]) => /appium:/.test(rule))) {
+    if (!re.test(text)) fail(`${RUNNER}: session setup rule missing: ${rule}`);
   }
 }
 
