@@ -6,11 +6,13 @@
 //   node scripts/release.mjs 0.3.0               # today's date (UTC)
 //   node scripts/release.mjs 0.3.0 --date 2026-12-01
 //   node scripts/release.mjs --notes 0.3.0       # print that version's changelog section
+//   node scripts/release.mjs 0.3.0 --pr          # also branch from origin/develop, commit, push, open the PR into develop
+//   node scripts/release.mjs --promote 0.3.0     # after that PR merged: open the develop -> main PR
 //
 // Run with the version already in plugin.json to date a heading that was
 // prepared earlier (e.g. "## [0.2.0] - not yet tagged"). The release itself
 // (tag and GitHub release) is made by .github/workflows/release.yml when the
-// version change lands on main.
+// version change lands on main. --pr and --promote need git and a signed-in gh.
 import { readFileSync, writeFileSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
 import { dirname, join } from 'node:path';
@@ -111,6 +113,22 @@ export function changelogSection(text, version) {
   return { body, date };
 }
 
+export const releaseBranch = (version) => `release/v${version}`;
+
+// Why develop cannot be promoted to main for this version, or null if it can.
+// developManifest and mainManifest are plugin.json as text; developChangelog is CHANGELOG.md.
+export function promoteProblem(version, developManifest, mainManifest, developChangelog) {
+  const onDevelop = JSON.parse(developManifest).version;
+  const onMain = JSON.parse(mainManifest).version;
+  if (onDevelop !== version) return `origin/develop has version ${onDevelop}, not ${version}; merge the release PR into develop first`;
+  if (compareVersions(version, onMain) <= 0) return `origin/main already has version ${onMain}; nothing to promote`;
+  const section = changelogSection(developChangelog.replace(/\r\n/g, '\n'), version);
+  if (!section?.date) return `CHANGELOG.md on origin/develop has no dated ${version} heading`;
+  // release.yml publishes these notes with --notes, which refuses an empty section
+  if (!section.body) return `CHANGELOG.md on origin/develop has an empty ${version} section`;
+  return null;
+}
+
 function main(argv) {
   const root = join(dirname(fileURLToPath(import.meta.url)), '..');
   const path = (f) => join(root, f);
@@ -118,6 +136,31 @@ function main(argv) {
     console.error(`✘ ${msg}`);
     process.exit(1);
   };
+  // Runs git or gh in the repo; exits with its output on failure.
+  const run = (cmd, args) => {
+    const r = spawnSync(cmd, args, { cwd: root, encoding: 'utf8' });
+    if (r.error) fail(`${cmd} not found or failed to start: ${r.error.message}`);
+    if (r.status !== 0) fail(`${cmd} ${args.slice(0, 2).join(' ')} failed:\n${(r.stderr || r.stdout).trim()}`);
+    return r.stdout.trim();
+  };
+  const notesFor = (changelog, version) => changelogSection(changelog.replace(/\r\n/g, '\n'), version).body;
+
+  if (argv[0] === '--promote') {
+    const version = argv[1];
+    if (!isValidSemver(version)) fail('usage: release.mjs --promote <version>');
+    run('git', ['fetch', '--quiet', 'origin', 'develop', 'main']);
+    const show = (ref, f) => run('git', ['show', `${ref}:${f}`]);
+    const changelog = show('origin/develop', 'CHANGELOG.md');
+    const problem = promoteProblem(version, show('origin/develop', '.claude-plugin/plugin.json'), show('origin/main', '.claude-plugin/plugin.json'), changelog);
+    if (problem) fail(problem);
+    const open = run('gh', ['pr', 'list', '--base', 'main', '--head', 'develop', '--state', 'open', '--json', 'url', '--jq', '.[].url']);
+    if (open) fail(`a develop -> main PR is already open: ${open}`);
+    const body = `Promotes develop to main for ${version}. When this merges, release.yml tags v${version} and publishes the release.\n\n` +
+      `**Merge with "Create a merge commit"**, not squash or rebase, so develop and main keep a shared history.\n\n## ${version}\n\n${notesFor(changelog, version)}\n`;
+    const url = run('gh', ['pr', 'create', '--base', 'main', '--head', 'develop', '--title', `Release v${version}`, '--body', body]);
+    console.log(`✔ Opened ${url}\nMerge it with a merge commit: gh pr merge ${url} --merge`);
+    return;
+  }
 
   if (argv[0] === '--notes') {
     const version = argv[1];
@@ -133,8 +176,17 @@ function main(argv) {
   const version = argv[0];
   const dateIdx = argv.indexOf('--date');
   const date = dateIdx === -1 ? new Date().toISOString().slice(0, 10) : argv[dateIdx + 1];
-  if (!isValidSemver(version)) fail('usage: release.mjs <version> [--date YYYY-MM-DD]');
+  const pr = argv.includes('--pr');
+  if (!isValidSemver(version)) fail('usage: release.mjs <version> [--date YYYY-MM-DD] [--pr]');
   if (!isValidDate(date)) fail(`--date must be a real date in YYYY-MM-DD form, got ${date}`);
+
+  const branch = releaseBranch(version);
+  if (pr) {
+    if (run('git', ['status', '--porcelain'])) fail('the working tree has changes; commit or set them aside first');
+    run('git', ['fetch', '--quiet', 'origin', 'develop']);
+    run('git', ['switch', '--quiet', '--no-track', '-c', branch, 'origin/develop']);
+    console.log(`✔ On ${branch}, from origin/develop`);
+  }
 
   const manifestPath = path('.claude-plugin/plugin.json');
   const manifest = readFileSync(manifestPath, 'utf8');
@@ -155,7 +207,17 @@ function main(argv) {
 
   const check = spawnSync(process.execPath, [path('scripts/check-plugin.mjs')], { stdio: 'inherit' });
   if (check.status !== 0) process.exit(check.status ?? 1);
-  console.log('Next: review the diff, open a PR, and merge it; the release workflow tags and publishes v' + version);
+  if (!pr) {
+    console.log(`Next: review the diff, open a PR into develop and merge it, then run release.mjs --promote ${version}`);
+    return;
+  }
+
+  run('git', ['add', '--', ...Object.keys(files)]);
+  run('git', ['commit', '--quiet', '-m', `Release ${version}`]);
+  run('git', ['push', '--quiet', '-u', 'origin', branch]);
+  const body = `Bumps the version to ${version} and dates its changelog section. After this merges, run \`node scripts/release.mjs --promote ${version}\` to open the develop -> main PR.\n\n## ${version}\n\n${notesFor(files[path('CHANGELOG.md')], version)}\n`;
+  const url = run('gh', ['pr', 'create', '--base', 'develop', '--head', branch, '--title', `Release ${version}`, '--body', body]);
+  console.log(`✔ Opened ${url}\nReview and merge it, then: node scripts/release.mjs --promote ${version}`);
 }
 
 if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) main(process.argv.slice(2));
