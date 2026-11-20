@@ -42,7 +42,7 @@ With `--keep-streams`, each run's raw `stream-json` is also saved to `benchmarks
 
 ## The README chart
 
-The chart near the top of the main README is drawn from one results file by `scripts/benchmark-chart.mjs`: per-arm means of context per turn, total tokens, cost and wall time, SOMA as a percentage of plain, and every run's pass or fail. To show a new run, set `results` in [`assets/benchmark-chart.json`](../assets/benchmark-chart.json) to its JSON (and `note` to a short reason for any plain failures, or leave it empty), run `node scripts/benchmark-chart.mjs`, and update the README's alt text and link to match. CI fails if the committed SVGs do not match the config. Publish only a run that has its own section here, with 3 or more runs per arm.
+The chart near the top of the main README is drawn from one results file by `scripts/benchmark-chart.mjs`: per-arm means of context per turn, total tokens, cost and wall time, SOMA as a percentage of plain, and every run's pass or fail. To show a new run, set `results` in [`assets/benchmark-chart.json`](../assets/benchmark-chart.json) to its JSON (and `note` to a short reason for any plain failures, or leave it empty), run `node scripts/benchmark-chart.mjs`, and update the README's alt text and link to match. CI fails if the committed SVGs do not match the config. The script refuses a results file with a task short of its runs in either arm, a run with a missing measurement, or more than 56 runs per arm (one tile per run no longer fits). Publish only a run that has its own section here, with 3 or more runs per arm.
 
 ## Reading the table
 

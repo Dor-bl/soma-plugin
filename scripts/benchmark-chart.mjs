@@ -11,6 +11,7 @@ import { fileURLToPath } from 'node:url';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 export const CONFIG = 'assets/benchmark-chart.json';
+export const MAX_RUNS = 56; // per arm: 560 px / 56 = 10 px per run, a 6 px tile and a 4 px gap
 export const THEMES = {
   light: { bg: '#FFFFFF', border: '#D0D7DE', text: '#1F2328', muted: '#656D76', grid: '#E5E7EB', link: '#AFB8C1', pill: '#F6F8FA', ok: '#1A7F37', bad: '#CF222E' },
   dark: { bg: '#0D1117', border: '#30363D', text: '#E6EDF3', muted: '#8B949E', grid: '#21262D', link: '#484F58', pill: '#161B22', ok: '#238636', bad: '#DA3633' },
@@ -123,8 +124,10 @@ export function renderChart(data, t) {
   const ry = 506;
   body += `\n  <line x1="40" y1="${ry - 48}" x2="${W - 40}" y2="${ry - 48}" stroke="${t.grid}"/>`;
   body += `\n  <text x="40" y="${ry - 14}" class="metric">Runs passed</text>`;
-  // Up to 20 runs per arm get full-size tiles; more shrink to fit 560 px, so no tile covers another.
+  // Up to 20 runs per arm get full-size tiles; more shrink to fit 560 px, so no tile covers another,
+  // down to 6 px tiles at MAX_RUNS. Past that a tile per run is no longer readable.
   const most = Math.max(data.passed.plain.length, data.passed.soma.length);
+  if (most > MAX_RUNS) throw new Error(`the chart shows one tile per run and fits at most ${MAX_RUNS} runs per arm; this file has ${most}`);
   const gap = Math.min(28, 560 / most), size = r1(Math.min(22, gap - 4));
   const noteFits = (end) => end + 42 + data.note.length * 6.4 <= W - 40;
   let noteBelow = false;

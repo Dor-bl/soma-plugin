@@ -5,7 +5,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { buildAll, chartData, fmtTokens, renderChart, THEMES } from './benchmark-chart.mjs';
+import { buildAll, chartData, fmtTokens, MAX_RUNS, renderChart, THEMES } from './benchmark-chart.mjs';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const run = (arm, task, passed, n, i = 1) => ({ arm, task, run: i, passed, contextPerTurn: 1000 * n, total: 100000 * n, costUsd: 0.1 * n, wallSec: 10 * n });
@@ -72,6 +72,18 @@ const tests = [
     const count = Number(svg.match(/<text x="([\d.]+)" y="\d+" class="val">32\/48</)[1]);
     assert.ok(count > lastX + lastSize, 'the count starts inside the last tile');
     assert.match(svg, />Plain: a fairly long note/);
+  }],
+  ['MAX_RUNS per arm still draws readable 6 px tiles; one more is refused', () => {
+    const arms = (n) => {
+      const r = { runsPerCell: n, date: 'x', results: [] };
+      for (let i = 1; i <= n; i++) r.results.push(run('plain', 't', i > 1, 2, i), run('soma', 't', true, 1, i));
+      return chartData(r);
+    };
+    const boxes = tiles(renderChart(arms(MAX_RUNS), THEMES.light));
+    assert.equal(boxes.length, 2 * MAX_RUNS);
+    assert.ok(boxes.every(([, size]) => size >= 6), 'a tile is smaller than 6 px');
+    for (let i = 1; i < MAX_RUNS; i++) assert.ok(boxes[i][0] >= boxes[i - 1][0] + boxes[i - 1][1], `tile ${i} overlaps the one before`);
+    assert.throws(() => renderChart(arms(MAX_RUNS + 1), THEMES.light), new RegExp(`at most ${MAX_RUNS} runs per arm`));
   }],
   ['a short run count keeps full-size tiles', () => {
     assert.ok(tiles(renderChart(chartData(results), THEMES.light)).every(([, size]) => size === 22));
