@@ -13,6 +13,12 @@
     { "id": "TurnOffWifiAndTurnOnBluetooth", "app": "Settings", "package": "com.android.settings" },
     { "id": "RecipeAddSingleRecipe", "app": "Broccoli", "package": "com.flauschcode.broccoli" },
     { "id": "SimpleCalendarAddOneEvent", "app": "Simple Calendar Pro", "package": "com.simplemobiletools.calendar.pro" },
-    { "id": "ExpenseAddMultiple", "app": "Pro Expense", "package": "com.arduia.expense" }
+    { "id": "ExpenseAddMultiple", "app": "Pro Expense", "package": "com.arduia.expense" },
+    { "id": "RecipeAddMultipleRecipesFromImage", "app": "Broccoli, Simple Gallery Pro", "package": "com.flauschcode.broccoli, com.simplemobiletools.gallery.pro" },
+    { "id": "SimpleCalendarAddRepeatingEvent", "app": "Simple Calendar Pro", "package": "com.simplemobiletools.calendar.pro" },
+    { "id": "RecipeDeleteMultipleRecipesWithConstraint", "app": "Broccoli", "package": "com.flauschcode.broccoli" },
+    { "id": "VlcCreateTwoPlaylists", "app": "VLC", "package": "org.videolan.vlc" },
+    { "id": "ExpenseAddMultipleFromMarkor", "app": "Pro Expense, Markor", "package": "com.arduia.expense, net.gsantner.markor" },
+    { "id": "MarkorMergeNotes", "app": "Markor", "package": "net.gsantner.markor" }
   ]
 }
