@@ -33,22 +33,35 @@ const METRICS = [
   { key: 'wallSec', name: 'Wall time', fmt: fmtSec },
 ];
 
-// Per-arm means over every run, as in the benchmark README's per-arm tables.
+// Per-arm means over every run, as in the benchmark README's per-arm tables. Refuses an
+// interrupted or partial file: every task needs runsPerCell runs in each arm, and every
+// run a value for each metric, so both arms are averaged over the same task mix.
 export function chartData(results, { note = '' } = {}) {
   const runs = results.results ?? [];
   const arm = (name) => runs.filter((r) => r.arm === name);
   const plain = arm('plain'), soma = arm('soma');
   if (!plain.length || !soma.length) throw new Error('results need runs for both the plain and soma arms');
+  const perCell = results.runsPerCell;
+  if (!Number.isInteger(perCell) || perCell < 1) throw new Error('results need a whole-number runsPerCell');
+  for (const task of new Set(runs.map((r) => r.task))) {
+    for (const [name, rs] of [['plain', plain], ['soma', soma]]) {
+      const n = rs.filter((r) => r.task === task).length;
+      if (n !== perCell) throw new Error(`task ${task} has ${n} ${name} runs, expected ${perCell}: the results file looks incomplete`);
+    }
+  }
   const metrics = METRICS.map((m) => {
+    for (const r of runs) {
+      if (typeof r[m.key] !== 'number' || !Number.isFinite(r[m.key])) throw new Error(`run ${r.run ?? '?'} of ${r.task} (${r.arm}) has no ${m.key}`);
+    }
     const p = mean(plain.map((r) => r[m.key])), s = mean(soma.map((r) => r[m.key]));
-    if (!Number.isFinite(p) || !Number.isFinite(s) || p <= 0) throw new Error(`missing or zero ${m.key} in the results`);
+    if (p <= 0) throw new Error(`the plain arm's mean ${m.key} is zero`);
     return { name: m.name, plain: m.fmt(p), soma: m.fmt(s), pct: Math.round((s / p) * 100) };
   });
   const passes = (rs) => rs.map((r) => Boolean(r.passed)).sort((a, b) => b - a);
   return {
     suite: results.suite === 'androidworld' ? 'AndroidWorld' : 'Android Settings app',
     tasks: new Set(runs.map((r) => r.task)).size,
-    runsPerCell: results.runsPerCell,
+    runsPerCell: perCell,
     date: String(results.date).slice(0, 10),
     metrics,
     passed: { plain: passes(plain), soma: passes(soma) },
@@ -73,11 +86,14 @@ const LOGO = `<g transform="translate(40 34) scale(0.1875)">
   </g>`;
 const r1 = (n) => Math.round(n * 10) / 10;
 
-function tile(t, x, y, ok) {
+// One run's pass/fail tile, size px square; the mark is drawn on a 22 px grid and scaled.
+function tile(t, x, y, ok, size) {
   const mark = ok
-    ? `<path d="M${r1(x + 6)} ${y + 11.5} l4 4 l8 -9" fill="none" stroke="#FFFFFF" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>`
-    : `<path d="M${r1(x + 7)} ${y + 7} l8 8 M${r1(x + 15)} ${y + 7} l-8 8" fill="none" stroke="#FFFFFF" stroke-width="2.4" stroke-linecap="round"/>`;
-  return `\n  <rect x="${r1(x)}" y="${y}" width="22" height="22" rx="5" fill="${ok ? t.ok : t.bad}"/>${mark}`;
+    ? '<path d="M6 11.5 l4 4 l8 -9" fill="none" stroke="#FFFFFF" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>'
+    : '<path d="M7 7 l8 8 M15 7 l-8 8" fill="none" stroke="#FFFFFF" stroke-width="2.4" stroke-linecap="round"/>';
+  const scale = size === 22 ? '' : ` scale(${r1(size / 22 * 100) / 100})`;
+  return `
+  <g transform="translate(${r1(x)} ${y})${scale}"><rect width="22" height="22" rx="5" fill="${ok ? t.ok : t.bad}"/>${mark}</g>`;
 }
 
 export function renderChart(data, t) {
@@ -107,15 +123,28 @@ export function renderChart(data, t) {
   const ry = 506;
   body += `\n  <line x1="40" y1="${ry - 48}" x2="${W - 40}" y2="${ry - 48}" stroke="${t.grid}"/>`;
   body += `\n  <text x="40" y="${ry - 14}" class="metric">Runs passed</text>`;
+  // Up to 20 runs per arm get full-size tiles; more shrink to fit 560 px, so no tile covers another.
+  const most = Math.max(data.passed.plain.length, data.passed.soma.length);
+  const gap = Math.min(28, 560 / most), size = r1(Math.min(22, gap - 4));
+  const noteFits = (end) => end + 42 + data.note.length * 6.4 <= W - 40;
+  let noteBelow = false;
   [['plain', 'Claude Code + appium-mcp'], ['soma', 'with SOMA']].forEach(([k, label], j) => {
-    const y = ry + j * 36, runs = data.passed[k], gap = Math.min(28, 500 / runs.length);
-    const end = X0 + runs.length * gap;
-    body += `\n  <text x="${X0 - 16}" y="${y + 16}" text-anchor="end" class="val">${label}</text>`;
-    runs.forEach((ok, n) => { body += tile(t, X0 + n * gap, y, ok); });
-    body += `\n  <text x="${r1(end + 6)}" y="${y + 16}" class="${k === 'soma' ? 'vsoma' : 'val'}">${runs.filter(Boolean).length}/${runs.length}</text>`;
-    if (k === 'plain' && data.note) body += `\n  <text x="${r1(end + 42)}" y="${y + 16}" class="note">${esc(data.note)}</text>`;
+    const y = ry + j * 36, runs = data.passed[k];
+    const end = X0 + (runs.length - 1) * gap + size;
+    body += `
+  <text x="${X0 - 16}" y="${y + 16}" text-anchor="end" class="val">${label}</text>`;
+    runs.forEach((ok, n) => { body += tile(t, X0 + n * gap, y + (22 - size) / 2, ok, size); });
+    body += `
+  <text x="${r1(end + 8)}" y="${y + 16}" class="${k === 'soma' ? 'vsoma' : 'val'}">${runs.filter(Boolean).length}/${runs.length}</text>`;
+    if (k === 'plain' && data.note) {
+      if (noteFits(end)) body += `
+  <text x="${r1(end + 44)}" y="${y + 16}" class="note">${esc(data.note)}</text>`;
+      else noteBelow = true;
+    }
   });
-  const descMetrics = data.metrics.map((m) => `${m.name} ${m.plain} to ${m.soma} (${m.pct <= 100 ? 'down' : 'up'} ${Math.abs(100 - m.pct)}%).`).join(' ');
+  if (noteBelow) body += `
+  <text x="${X0}" y="${ry + 88}" class="note">Plain: ${esc(data.note)}</text>`;
+  const descMetrics = data.metrics.map((m) => `${m.name} ${m.plain} to ${m.soma} (${m.pct === 100 ? 'unchanged' : `${m.pct < 100 ? 'down' : 'up'} ${Math.abs(100 - m.pct)}%`}).`).join(' ');
   const count = (k) => `${data.passed[k].filter(Boolean).length} of ${data.passed[k].length}`;
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" role="img" aria-labelledby="title desc">
   <!-- Generated by scripts/benchmark-chart.mjs from ${CONFIG}; do not edit by hand. -->
