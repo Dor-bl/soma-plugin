@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // Tests for scripts/release.mjs: version bump, badge, changelog cut and release notes.
 import assert from 'node:assert/strict';
-import { bumpBadge, bumpManifest, changelogSection, compareVersions, cutChangelog, isValidDate, isValidSemver, keepEol } from './release.mjs';
+import { bumpBadge, bumpManifest, changelogSection, compareVersions, cutChangelog, isValidDate, isValidSemver, keepEol, promoteProblem, releaseBranch } from './release.mjs';
 
 let passed = 0;
 const test = (name, fn) => {
@@ -107,6 +107,23 @@ test('keepEol cuts a CRLF changelog without extra lines and keeps CRLF', () => {
 
 test('version dots are matched literally', () => {
   assert.equal(changelogSection(CHANGELOG.replace('[0.1.0]', '[0x1x0]'), '0.1.0'), null);
+});
+
+test('releaseBranch names the branch after the version', () => {
+  assert.equal(releaseBranch('0.4.0'), 'release/v0.4.0');
+});
+
+test('promoteProblem allows only a dated, newer version that is on develop', () => {
+  const m = (v) => JSON.stringify({ name: 'soma', version: v }, null, 2);
+  const dated = cutChangelog(CHANGELOG, '0.2.0', '2026-11-20');
+  assert.equal(promoteProblem('0.2.0', m('0.2.0'), m('0.1.0'), dated), null);
+  assert.equal(promoteProblem('0.2.0', m('0.2.0'), m('0.1.0'), dated.replace(/\n/g, '\r\n')), null);
+  assert.match(promoteProblem('0.2.0', m('0.1.0'), m('0.1.0'), dated), /merge the release PR into develop first/);
+  assert.match(promoteProblem('0.2.0', m('0.2.0'), m('0.2.0'), dated), /already has version 0\.2\.0/);
+  assert.match(promoteProblem('0.2.0', m('0.2.0'), m('0.3.0'), dated), /already has version 0\.3\.0/);
+  assert.match(promoteProblem('0.2.0', m('0.2.0'), m('0.1.0'), CHANGELOG), /no dated 0\.2\.0 heading/);
+  const empty = CHANGELOG.replace('## [0.1.0]', '## [0.2.0] - 2026-11-20\n\n## [0.1.0]');
+  assert.match(promoteProblem('0.2.0', m('0.2.0'), m('0.1.0'), empty), /empty 0\.2\.0 section/);
 });
 
 console.log(`✔ All ${passed} release tests passed`);
