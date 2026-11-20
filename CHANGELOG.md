@@ -4,6 +4,8 @@ Notable changes to SOMA, newest first. The format follows [Keep a Changelog](htt
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-11-20
+
 ### Added
 
 - Codex support (experimental, not yet run in Codex): a Codex manifest (`.codex-plugin/plugin.json`) with SOMA's skills and `appium-mcp`, its own MCP config (`.codex-plugin/mcp.json`: paths relative to the plugin folder, the Android, Java and Xcode variables Codex does not pass by default (not the proxy variables, which can carry a password), and a 10-minute first start for the install), and a Codex marketplace (`.agents/plugins/marketplace.json`), so `codex plugin marketplace add Dor-bl/soma-plugin` works. Codex runs SOMA in local mode only, since it has no plugin settings, and with Appium only: `setup-artemis` registers Artemis through `claude mcp`, so in Codex it stops before changing anything. Skills that name plugin files say where the plugin folder is when Codex leaves `${CLAUDE_PLUGIN_ROOT}` unexpanded. Skills that read the PNG and XML files `appium-mcp` saves say what to do in Codex, which has no Read tool: `view_image` for screenshots in the plugin's own `.runtime/screenshots/` folder, no saved XML and no shell reads (elements are checked with `appium_find_element`), and any other path is asked about first. `check-plugin.mjs` checks that the Codex manifest matches the Claude one, that its paths exist and its required listing fields fit, and that its MCP config starts the same servers without Claude's variables; `release.mjs` bumps both manifests
