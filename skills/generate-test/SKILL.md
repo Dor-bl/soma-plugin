@@ -39,6 +39,7 @@ Execute only what was confirmed.
 - Capability defaults to start from:
   - Android: always pass `appium:autoGrantPermissions`, set to `false` unless the tester approved auto-granting. appium-mcp otherwise grants every runtime permission silently.
   - System or preinstalled apps (Settings, Contacts, launcher), or any app whose data must survive: pass `appium:noReset: true`. Without it, Appium clears app data first, which can hang or wipe state.
+  - Android: also pass `appium:uiautomator2ServerLaunchTimeout: 120000`. UiAutomator2's 30 s default is too short on a busy or software-rendered emulator, where session creation then fails with "instrumentation process cannot be initialized"; the limit costs nothing on a device that starts quickly. This applies to local and remote sessions.
   - Emulators: pass `appium:adbExecTimeout: 60000` and `appium:uiautomator2ServerInstallTimeout: 90000`. The 20 s defaults often time out on a freshly booted emulator. This applies to local and remote emulators.
   - Local emulators only (no `remoteServerUrl`): if the emulator just booted, wait until it settles before creating the session. Target it explicitly with `adb -s <udid> shell cat /proc/loadavg` and wait for the first value to drop below about 6. Skip this for remote sessions: the device may be on another host, and local `adb` would fail or check an unrelated device.
 - If session creation fails, stop and report the exact error. Do not retry with different capabilities unless the tester asks.
