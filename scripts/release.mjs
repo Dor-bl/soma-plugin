@@ -123,6 +123,8 @@ export function promoteProblem(version, developManifest, mainManifest, developCh
   if (compareVersions(version, onMain) <= 0) return `origin/main already has version ${onMain}; nothing to promote`;
   const section = changelogSection(developChangelog.replace(/\r\n/g, '\n'), version);
   if (!section?.date) return `CHANGELOG.md on origin/develop has no dated ${version} heading`;
+  // release.yml publishes these notes with --notes, which refuses an empty section
+  if (!section.body) return `CHANGELOG.md on origin/develop has an empty ${version} section`;
   return null;
 }
 

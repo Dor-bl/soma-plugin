@@ -122,6 +122,8 @@ test('promoteProblem allows only a dated, newer version that is on develop', () 
   assert.match(promoteProblem('0.2.0', m('0.2.0'), m('0.2.0'), dated), /already has version 0\.2\.0/);
   assert.match(promoteProblem('0.2.0', m('0.2.0'), m('0.3.0'), dated), /already has version 0\.3\.0/);
   assert.match(promoteProblem('0.2.0', m('0.2.0'), m('0.1.0'), CHANGELOG), /no dated 0\.2\.0 heading/);
+  const empty = CHANGELOG.replace('## [Unreleased]\n', '## [Unreleased]\n\n## [0.2.0] - 2026-11-20\n');
+  assert.match(promoteProblem('0.2.0', m('0.2.0'), m('0.1.0'), empty), /empty 0\.2\.0 section/);
 });
 
 console.log(`✔ All ${passed} release tests passed`);
