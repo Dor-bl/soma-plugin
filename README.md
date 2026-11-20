@@ -112,14 +112,15 @@ SOMA also ships a Codex manifest (`.codex-plugin/plugin.json`) and marketplace (
 codex plugin marketplace add Dor-bl/soma-plugin
 ```
 
-It has not been run in Codex yet, and it differs from the Claude Code plugin:
+Tested once on Windows with Codex CLI 0.171.0 and an Android 13 emulator: the marketplace install, `check-setup` and a two-step `run-manual-test` case passed. It differs from the Claude Code plugin:
 
-- **Skills and `appium-mcp`.** Ask for a skill by name, for example "use the check-setup skill" or "use the run-manual-test skill to run this test case on Android". The `/soma:*` commands and the `device-runner` agent are written for Claude Code and untested in Codex. If the agent is missing, or gets none of its tools there, `run-manual-test` runs the steps in the conversation.
+- **First start.** Start an interactive `codex` session and leave it open until `appium-mcp` has installed (several minutes). A short session, such as `codex exec`, can end the install before it finishes. After that, the `appium-mcp` tools appear about 15 seconds after a session starts, through Codex's tool search.
+- **Skills and `appium-mcp`.** Ask for a skill by name, for example "use the check-setup skill" or "use the run-manual-test skill to run this test case on Android". The `/soma:*` commands and the `device-runner` agent are written for Claude Code; in the tested run, `run-manual-test` ran the steps in the conversation.
 - **Appium only.** `setup-artemis` registers Artemis with Claude Code's `claude mcp` commands, so in Codex it stops before changing anything, and the skills use Appium.
 - **No saved screenshots or page source.** Codex has no Read tool, so the skills never open the PNG and XML files `appium-mcp` saves. They check elements with `appium_find_element`, report a check that needs a screenshot as not checked visually, and give you the saved path to open. Plugin and project files are read as usual.
 - **Local mode only.** Codex has no plugin settings, so `remote_server_url`, `capabilities_file` and `app_map_dir` are unset: local devices only, every remote server blocked, app maps off.
 - **Environment.** Codex gives MCP servers only a short list of environment variables. SOMA's Codex config also passes `ANDROID_HOME`, `ANDROID_SDK_ROOT`, `JAVA_HOME`, and `DEVELOPER_DIR`, and waits up to 10 minutes for the first start, which installs `appium-mcp`. It does not pass the proxy variables, since a proxy URL can carry a user name and password; behind a proxy, set it in your `.npmrc` for the install.
-- **Install location.** Codex gives the server no data folder, so `appium-mcp` installs into the plugin's own folder (`.runtime/`), and each new SOMA version installs it again.
+- **Install location.** Codex gives the server no data folder, so `appium-mcp` installs into the plugin's own folder (`.runtime/`), and each new SOMA version installs it again. While that folder is in use (seen during the first install), Codex may fail to refresh the marketplace and warn "Access is denied"; the installed plugin keeps working.
 
 To try a checkout without installing it, start Claude from the folder *above* the clone (inside it, `.mcp.json` loads as a project server and cannot start):
 
