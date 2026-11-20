@@ -40,6 +40,10 @@ This spends model calls and takes a while. Runs alternate between arms, so drift
 
 With `--keep-streams`, each run's raw `stream-json` is also saved to `benchmarks/results/<timestamp>/<task>-<arm>-<run>.jsonl`, and the run's `stream` field in the JSON names that file (relative to the results folder). Use it to read tool-result errors after the fact, such as a denied read of a saved page-source file. A stream holds every tool result in full (page source, screenshot paths, on-screen text), so it can be large: the folders are git-ignored, and review one before sharing it.
 
+## The README chart
+
+The chart near the top of the main README is drawn from one results file by `scripts/benchmark-chart.mjs`: per-arm means of context per turn, total tokens, cost and wall time, SOMA as a percentage of plain, and every run's pass or fail. To show a new run, set `results` in [`assets/benchmark-chart.json`](../assets/benchmark-chart.json) to its JSON (and `note` to a short reason for any plain failures, or leave it empty), run `node scripts/benchmark-chart.mjs`, and update the README's alt text and link to match. CI fails if the committed SVGs do not match the config. The script refuses a results file with a task short of its runs in either arm, a run with a missing measurement, or more than 56 runs per arm (one tile per run no longer fits). Publish only a run that has its own section here, with 3 or more runs per arm.
+
 ## Reading the table
 
 - **Total tokens** is input + cache reads + cache writes + output over the whole session. Cache reads are most of it in a long session and are billed far below fresh input, so also look at **Cost (USD)**.
