@@ -7,7 +7,7 @@
       "env": {
         "NO_UI": "1"
       },
-      "env_vars": ["ANDROID_HOME", "ANDROID_SDK_ROOT", "JAVA_HOME", "DEVELOPER_DIR"],
+      "env_vars": ["ANDROID_HOME", "ANDROID_SDK_ROOT", "JAVA_HOME", "DEVELOPER_DIR", "APPIUM_MCP_WDA_APP_PATH", "SOMA_DATA_DIR", "SCREENSHOTS_DIR", "PAGE_SOURCES_DIR"],
       "startup_timeout_sec": 600
     }
   }
