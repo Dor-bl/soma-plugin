@@ -389,14 +389,14 @@ const promptFiles = [
 const ROOT_FALLBACK = 'Codex does not fill it in), the root is the folder that contains the `skills` folder this file is in';
 // Codex has no Read tool, so a file that says to read saved PNG or XML files with it must also
 // give Codex's read-only way (view_image, a single-file print command).
-const READ_FALLBACK = 'Without a Read tool (Codex): view a PNG with `view_image` on the returned path';
-const READ_GATE = "sits directly in the plugin root's `.runtime/screenshots/` folder, with no `..` in it. Never read a saved XML file there, and never use a shell command to read a file appium-mcp saved: check elements with `appium_find_element` instead. This limit is only for appium-mcp's saved files; plugin files and project files the skill says to read are read as usual.";
+const READ_FALLBACK = 'Without a Read tool (Codex): do not open any file appium-mcp saved, PNG or XML, with `view_image`, a shell command or any other tool.';
+const READ_GATE = "Check elements with `appium_find_element` instead, report a check that needs the screenshot as not checked visually, and give the tester the saved path to open. This limit is only for appium-mcp's saved files; plugin files and project files the skill says to read are read as usual.";
 for (const p of promptFiles) {
   if (/with the Read tool/.test(read(p)) && !read(p).includes(READ_FALLBACK)) {
     fail(`${p}: says to read files with the Read tool but lacks the Codex fallback "${READ_FALLBACK}"`);
   } else if (read(p).includes(READ_FALLBACK) && !read(p).includes(READ_GATE)) {
     // The fallback reads a path taken from tool output, so it is limited to appium-mcp's own folders
-    fail(`${p}: the Codex read fallback lacks its path limit "${READ_GATE}"`);
+    fail(`${p}: the Codex read fallback lacks its rule "${READ_GATE}"`);
   }
   if (p.startsWith('skills/') && read(p).includes('${CLAUDE_PLUGIN_ROOT}') && !read(p).replace(/\s+/g, ' ').includes(ROOT_FALLBACK)) {
     fail(`${p}: uses \${CLAUDE_PLUGIN_ROOT} but lacks the Codex fallback "${ROOT_FALLBACK}"`);
