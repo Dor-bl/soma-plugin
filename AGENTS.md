@@ -14,7 +14,7 @@ SOMA is a Claude Code plugin for mobile QA, built on the official [`appium-mcp`]
 - `agents/*.md`: subagents. `device-runner` runs a confirmed `run-manual-test` case through Appium in its own context. A skill that delegates passes every value in the brief (resolved remote URL, plugin file paths): do not use `${user_config.*}` or `${CLAUDE_PLUGIN_ROOT}` in agent files
 - `backends/`: one file per device engine (Appium default, optional Google Artemis). Skills say *what* to do; these files say *which tools* do it. Selection rules are in `backends/README.md`
 - `scripts/`: the launcher (`start-appium-mcp.mjs`, `allowlist.mjs`, `child-env.mjs`, `stdin-gate.mjs`, `system-tools.mjs`), the emulator starter (`start-emulator.mjs`), CI checks (`check-plugin.mjs`, `mcp-smoke.mjs`, with its Windows cleanup in `process-tree.mjs`) and their unit tests (`test-*.mjs`), and `skill-size.mjs`, the context-size report for #55
-- `benchmarks/`: tasks and method for the token benchmark (plain Claude Code vs SOMA on the Android Settings app); `scripts/benchmark.mjs` runs it, `benchmark-stats.mjs` holds the tested parsing, summary and prompt. `benchmarks/androidworld/` is the optional `--suite androidworld`: ten AndroidWorld tasks, the Python referee that sets each up and checks it, the one-time device setup and the Windows workarounds (`aw_compat.py`). CI does not run the Python files
+- `benchmarks/`: tasks and method for the token benchmark (plain Claude Code vs SOMA on the Android Settings app); `scripts/benchmark.mjs` runs it, `benchmark-stats.mjs` holds the tested parsing, summary and prompt, and `benchmark-chart.mjs` draws the README chart (`assets/benchmark-light.svg`, `benchmark-dark.svg`) from the results file named in `assets/benchmark-chart.json`. `benchmarks/androidworld/` is the optional `--suite androidworld`: ten AndroidWorld tasks, the Python referee that sets each up and checks it, the one-time device setup and the Windows workarounds (`aw_compat.py`). CI does not run the Python files
 
 ## Checks (same as CI)
 
@@ -29,6 +29,7 @@ node scripts/test-system-tools.mjs    # Windows system tool path resolution
 node scripts/test-triage-command.mjs  # /soma:triage command contract
 node scripts/test-injection-match.mjs # injection-check reply and shell matching
 node scripts/test-benchmark-stats.mjs # benchmark run parsing and summary
+node scripts/test-benchmark-chart.mjs # README benchmark chart, and that its SVGs match assets/benchmark-chart.json
 node scripts/test-release.mjs         # release script: version bump, changelog cut, notes, promote checks
 npx markdownlint-cli2 "**/*.md"
 node scripts/mcp-smoke.mjs           # first run installs ~370 MB; SMOKE_TIMEOUT_MS overrides, CLAUDE_PLUGIN_DATA sets the install folder

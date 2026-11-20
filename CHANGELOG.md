@@ -4,6 +4,10 @@ Notable changes to SOMA, newest first. The format follows [Keep a Changelog](htt
 
 ## [Unreleased]
 
+### Added
+
+- Benchmark: `scripts/benchmark-chart.mjs` draws the README chart (`assets/benchmark-light.svg` and `benchmark-dark.svg`) from the results file named in `assets/benchmark-chart.json`, instead of the SVGs being edited by hand. It refuses a results file with a task short of its runs in either arm, a run with a missing measurement, or more than 56 runs per arm, and its test in CI fails when the committed SVGs no longer match the config
+
 ## [0.3.0] - 2026-11-20
 
 ### Added

@@ -49,6 +49,8 @@ jobs:
         run: node scripts/test-stdin-gate.mjs
       - name: Benchmark statistics tests
         run: node scripts/test-benchmark-stats.mjs
+      - name: Benchmark chart tests
+        run: node scripts/test-benchmark-chart.mjs
       - name: Release script tests
         run: node scripts/test-release.mjs
 
