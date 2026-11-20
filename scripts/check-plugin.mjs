@@ -380,7 +380,7 @@ const ROOT_FALLBACK = 'Codex does not fill it in), the root is the folder that c
 // Codex has no Read tool, so a file that says to read saved PNG or XML files with it must also
 // give Codex's read-only way (view_image, a single-file print command).
 const READ_FALLBACK = 'Without a Read tool (Codex): view a PNG with `view_image` on the returned path';
-const READ_GATE = "sits directly in the plugin root's `.runtime/screenshots/` or `.runtime/page-sources/` folder, with no `..` and no single quote in it. For any other path, read nothing: quote the path to the tester and ask first. Before the first such command in a run, ask the tester once, naming the command and the two folders, and run it only after a yes";
+const READ_GATE = "sits directly in the plugin root's `.runtime/screenshots/` folder, with no `..` in it. Never read a saved XML file there, and never use a shell command to read any file: check elements with `appium_find_element` instead.";
 for (const p of promptFiles) {
   if (/with the Read tool/.test(read(p)) && !read(p).includes(READ_FALLBACK)) {
     fail(`${p}: says to read files with the Read tool but lacks the Codex fallback "${READ_FALLBACK}"`);
