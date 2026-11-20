@@ -4,6 +4,8 @@ Notable changes to SOMA, newest first. The format follows [Keep a Changelog](htt
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-11-20
+
 ### Added
 
 - `scripts/skill-size.mjs`: a report of how much text each skill and agent puts into context, for the token work in #55: the description that is in every session's skill listing, the whole `SKILL.md` loaded when the skill runs, and the plugin Markdown files it reads only when needed, in bytes with a rough token estimate. Skills over the 4 KB hot-path target are marked, `--base <ref>` adds the change against a git ref, `--max-bytes <n>` exits 1 when a skill is larger and `--json` prints the rows. Tested in `scripts/test-skill-size.mjs`
