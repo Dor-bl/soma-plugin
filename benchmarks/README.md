@@ -164,7 +164,37 @@ What the run does show:
 
 - A SOMA weakness on slow devices: the plain session recovers from a slow UiAutomator2 start by itself, SOMA stops and asks. With a tester present that costs one reply; unattended it fails the run. A default launch timeout for emulators, or one automatic retry with a longer one, would close it.
 - The plain arm passed 4 of 6, using 2.2M to 11.1M tokens and USD 0.41 to 1.67 per task. Both failures were wrong claims that AndroidWorld's check caught: on `ExpenseAddMultipleFromMarkor` it reported logging the two reimbursable transactions, and on `MarkorMergeNotes` it reported a saved, read-back note. The blank lines it put between the notes are what the check expects. By its reply, though, it saved the note as `bH6xnAbn.txt`, while the check looks for a file named exactly `bH6xnAbn`. That is the likely cause, but the device state was not kept, so it is not confirmed.
-- Rerun these six once the SOMA arm can start a session on this emulator.
+- The SOMA arm was rerun after the fix; see the next section.
+
+### Harder tasks: SOMA rerun after the launch-timeout fix, 2026-11-20
+
+The SOMA arm alone, on the six tasks above, after every Android session started passing `appium:uiautomator2ServerLaunchTimeout: 120000`. Each run got the same goal as the plain run before it, so the plain rows are the 2026-11-19 run's. Same emulator and `claude-sonnet-5-5`. Raw data: [`results/2026-11-20T12-43-09-795Z.json`](results/2026-11-20T12-43-09-795Z.json). USD 4.47 for the SOMA arm.
+
+| Task | Arm | Passed | Total tokens (median, range) | vs plain | Context per turn | Turns | Output tokens | Tool calls | Bash calls | Cost (USD) | Time (s) |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| SimpleCalendarAddRepeatingEvent | plain | 1/1 | 5,720,527 (5,720,527–5,720,527) | – | 65,943 | 85 | 7,838 | 84 | 0 | 1.07 | 386 |
+| SimpleCalendarAddRepeatingEvent | soma | 0/1 | 2,881,076 (2,881,076–2,881,076) | -50% | 33,237 | 84 | 13,055 | 103 | 0 | 0.63 | 244 |
+| RecipeDeleteMultipleRecipesWithConstraint | plain | 1/1 | 11,146,939 (11,146,939–11,146,939) | – | 64,167 | 172 | 21,293 | 171 | 0 | 1.67 | 679 |
+| RecipeDeleteMultipleRecipesWithConstraint | soma | 1/1 | 13,309,579 (13,309,579–13,309,579) | +19% | 63,039 | 209 | 28,119 | 215 | 0 | 1.89 | 632 |
+| VlcCreateTwoPlaylists | plain | 1/1 | 4,848,021 (4,848,021–4,848,021) | – | 49,864 | 96 | 11,070 | 95 | 0 | 0.79 | 463 |
+| VlcCreateTwoPlaylists | soma | 1/1 | 3,066,592 (3,066,592–3,066,592) | -37% | 31,813 | 94 | 12,832 | 105 | 0 | 0.62 | 302 |
+| ExpenseAddMultipleFromMarkor | plain | 0/1 | 3,265,469 (3,265,469–3,265,469) | – | 41,619 | 77 | 9,094 | 76 | 0 | 0.62 | 260 |
+| ExpenseAddMultipleFromMarkor | soma | 0/1 | 2,404,851 (2,404,851–2,404,851) | -26% | 35,673 | 65 | 12,017 | 86 | 0 | 0.57 | 232 |
+| RecipeAddMultipleRecipesFromImage | plain | 1/1 | 5,102,425 (5,102,425–5,102,425) | – | 38,635 | 130 | 15,040 | 129 | 0 | 0.91 | 465 |
+| RecipeAddMultipleRecipesFromImage | soma | 1/1 | 1,988,679 (1,988,679–1,988,679) | -61% | 35,450 | 54 | 12,031 | 86 | 0 | 0.50 | 216 |
+| MarkorMergeNotes | plain | 0/1 | 2,151,799 (2,151,799–2,151,799) | – | 45,886 | 46 | 6,504 | 45 | 5 | 0.41 | 514 |
+| MarkorMergeNotes | soma | 0/1 | 871,366 (871,366–871,366) | -60% | 22,941 | 36 | 6,026 | 37 | 0 | 0.27 | 139 |
+
+Reading:
+
+- The fix works: every SOMA run created its session on the first try and did the device work. Before it, all six stopped at session creation.
+- SOMA passed 3 of 6, plain 4 of 6. Over the six tasks SOMA used 24.5M tokens against 32.2M (-24%) and USD 4.47 against 5.47 (-18%), and finished in 29 minutes of run time against 46. With one run per task, the pass counts are too few to rank the arms.
+- Every failure in both arms was a success claim that AndroidWorld's check rejected:
+  - `ExpenseAddMultipleFromMarkor`: both arms report logging the same two entries, Sportswear 147.59 and Interest Income 87.27.
+  - `MarkorMergeNotes`: both arms saved `bH6xnAbn.txt`, and the check looks for a file named exactly `bH6xnAbn`. SOMA also put a single newline between the notes, where the check wants a blank line.
+  - `SimpleCalendarAddRepeatingEvent`: SOMA reports the event with the right title, time, length and daily repeat, and plain passed it. The device state was not kept, so what differed is not known.
+- In `RecipeDeleteMultipleRecipesWithConstraint`, `claude -p` stopped the background `device-runner` about 600 s into its work (the stream records the task as `killed`). The session ended on the hand-off message, so there is no final report. The deletions were already done, so the check passed. A long SOMA run under `claude -p` can lose its report this way.
+- An earlier rerun the same evening ran without `--model`, so it used the CLI's default model, `claude-opus-5-5`, and is not compared here ([`results/2026-11-19T21-12-52-464Z.json`](results/2026-11-19T21-12-52-464Z.json), USD 10.40, 1 of 6 passed). It also confirmed the fix: every run that had the device tools got a session. In its first run `appium-mcp` failed to connect within 120 s, so that run had no device tools. Pass `--model` on every run.
 
 ## Results
 
