@@ -29,7 +29,8 @@ Unless you are reusing a test just run and confirmed with `run-manual-test` in t
 Execute only what was confirmed.
 
 ## Session setup
-- This skill always uses the Appium engine because it writes Appium scripts: read and follow `${CLAUDE_PLUGIN_ROOT}/backends/appium.md` for tool names and setup. If the test was run with Artemis, reuse its steps but explore the screens again with Appium, after the fresh confirmation above.
+- This skill always uses the Appium engine because it writes Appium scripts. If the test was run with Artemis, reuse its steps but explore the screens again with Appium, after the fresh confirmation above.
+- On a local Android device, the tools under "Appium tools" below are all you need: do not read the backend files first. Read `${CLAUDE_PLUGIN_ROOT}/backends/appium.md` before the session only for iOS (simulator or real device preparation and WebDriverAgent), for a remote server (how to target a device there), or when a step needs a tool not listed below.
 - The appium-mcp session that finds the locators is independent of whether the tester has an Appium server to run the script against. Always open it (local device or the configured remote server) to verify every locator on the live app, even when the script will not be run now; without a session, write no script.
 - Remote Appium server URL configured for this plugin: `${user_config.remote_server_url}`
 - If that value is empty, or still shows as a literal `${user_config...}` placeholder (the setting was never filled in), it is not set: create the session in local mode (do not pass `remoteServerUrl`). Local mode needs the platform toolchain installed (Android SDK/ADB, or Xcode on macOS).
@@ -43,6 +44,14 @@ Execute only what was confirmed.
   - Emulators: pass `appium:adbExecTimeout: 60000` and `appium:uiautomator2ServerInstallTimeout: 90000`. The 20 s defaults often time out on a freshly booted emulator. This applies to local and remote emulators.
   - Local emulators only (no `remoteServerUrl`): if the emulator just booted, wait until it settles before creating the session. Target it explicitly with `adb -s <udid> shell cat /proc/loadavg` and wait for the first value to drop below about 6. Skip this for remote sessions: the device may be on another host, and local `adb` would fail or check an unrelated device.
 - If session creation fails, stop and report the exact error. Do not retry with different capabilities unless the tester asks.
+
+## Appium tools
+- Pick a local device: `select_device` (skip it with a remote server). List, start and close sessions: `appium_session_management` with `action=list` / `create` / `delete`.
+- Plan: `appium_generate_tests` with the steps, as step 1 of "Generation" says.
+- Find: `appium_find_element` per step; `generate_locators` only as step 3 of "Generation" allows.
+- Act: `appium_gesture` to tap or swipe (`action=scroll_to_element` for off-screen elements), `appium_set_value` to type, `appium_app_lifecycle` to install, launch or stop the app.
+- Read: `appium_get_text` on one element, or `appium_get_page_source` with `saveToFile=true` and a `selector`. Read saved files with the Read tool on the returned path.
+- Right after an action, a find by text can miss once while the screen settles: retry once. Element ids go stale after a re-render (a toggle, a dialog): find the element again. Page source read right after navigation can be empty: read it again.
 
 ## Generation
 1. Call `appium_generate_tests` with `steps`: one plain-language string per step, expected result included. It returns a workflow, not finished code: follow it to execute the scenario with the appium-mcp tools.

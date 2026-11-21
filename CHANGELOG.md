@@ -8,6 +8,10 @@ Notable changes to SOMA, newest first. The format follows [Keep a Changelog](htt
 
 - Benchmark: `scripts/benchmark-chart.mjs` draws the README chart (`assets/benchmark-light.svg` and `benchmark-dark.svg`) from the results file named in `assets/benchmark-chart.json`, instead of the SVGs being edited by hand. It refuses a results file with a task short of its runs in either arm, a run with a missing measurement, or more than 56 runs per arm, and its test in CI fails when the committed SVGs no longer match the config
 
+### Changed
+
+- `generate-test` lists the Appium tools it needs inline and reads `backends/appium.md` only for iOS, a remote server or a tool not listed, instead of on every session, as `run-manual-test`, `explore-app` and `triage-failure` already do (#54)
+
 ## [0.3.0] - 2026-11-20
 
 ### Added
