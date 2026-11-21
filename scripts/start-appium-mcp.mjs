@@ -180,10 +180,14 @@ function startedAt(pid) {
 async function runInstaller() {
   // The session can end while the install runs. Exit as soon as the client closes stdin, so
   // Claude Code has no process tree left to kill and the detached installer finishes.
-  stdinGate ??= holdStdin(process.stdin, () => {
-    log(`the session closed while ${APPIUM_MCP} was installing; the install keeps running in the background and the next start uses it`);
-    process.exit(0);
-  });
+  // No logical assignment operator here: Node 14 cannot parse it, and every file this one
+  // imports must parse for the Node version check at the top to run (test-node-range.mjs)
+  if (stdinGate === null) {
+    stdinGate = holdStdin(process.stdin, () => {
+      log(`the session closed while ${APPIUM_MCP} was installing; the install keeps running in the background and the next start uses it`);
+      process.exit(0);
+    });
+  }
   let pid = liveInstaller();
   if (pid) {
     log(`waiting for another launcher's install of ${APPIUM_MCP} to finish`);

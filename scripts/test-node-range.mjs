@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
-import { mkdtempSync, readdirSync, rmSync, symlinkSync } from 'node:fs';
+import { mkdtempSync, readdirSync, readFileSync, rmSync, symlinkSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -65,6 +65,18 @@ try {
   rmSync(linkRoot, { recursive: true, force: true });
 }
 console.log('✔ node-range.mjs reports when run directly, also through a linked folder');
+
+// Node parses the launcher and everything it imports before the version check runs, so that
+// chain must not use syntax old runtimes reject. Logical assignment (Node 15) is the one
+// that crept in before; grep for it, since no old Node runs in CI.
+const launcherChain = ['start-appium-mcp.mjs', 'allowlist.mjs', 'child-env.mjs', 'stdin-gate.mjs', 'system-tools.mjs', 'node-range.mjs'];
+const launcherImports = [...readFileSync(new URL('./start-appium-mcp.mjs', import.meta.url), 'utf8').matchAll(/^import .* from '\.\/([\w.-]+)';$/gm)].map((m) => m[1]);
+assert.deepEqual([...launcherImports].sort(), launcherChain.slice(1).sort(), 'update launcherChain when the launcher imports change');
+for (const file of launcherChain) {
+  const code = readFileSync(new URL(`./${file}`, import.meta.url), 'utf8').replace(/\/\/.*$/gm, '');
+  assert.doesNotMatch(code, /(\?\?|\|\||&&)=/, `${file} uses a logical assignment operator, which Node 14 cannot parse`);
+}
+console.log('✔ the launcher and its imports avoid syntax old Node versions cannot parse');
 
 // The launcher refuses an unsupported Node before it installs or writes anything
 const data = mkdtempSync(join(tmpdir(), 'soma-node-range-'));
