@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // Unit tests for the benchmark's run parsing and summary (scripts/benchmark-stats.mjs).
 import assert from 'node:assert/strict';
-import { measure, median, parseEvents, streamFileName, summarise, toMarkdown } from './benchmark-stats.mjs';
+import { cleanGoal, consolePort, GOAL_MAX, measure, median, parseEvents, promptFor, redactHome, refereeOutcome, streamFileName, summarise, toMarkdown } from './benchmark-stats.mjs';
 
 const stream = [
   { type: 'system', subtype: 'init', model: 'claude-test' },
@@ -42,6 +42,57 @@ const tests = [
     assert.equal(m.model, 'claude-test');
     assert.equal(m.reply, 'done');
     assert.equal(m.isError, false);
+  }],
+  ['a background subagent hand-off: tokens and cost from the last result, turns and time summed', () => {
+    // Shaped like a run-manual-test run since device-runner (#83): the first result ends the
+    // hand-off turn, the second comes after the subagent reported back. Each event's usage is
+    // only its own part; the last event's modelUsage and total_cost_usd are the session's.
+    const session = { 'claude-test': { inputTokens: 46, outputTokens: 4201, cacheReadInputTokens: 1_042_337, cacheCreationInputTokens: 42_164 } };
+    // The hand-off event carries smaller running totals, so reading it instead of the last one fails
+    const soFar = { 'claude-test': { inputTokens: 8, outputTokens: 862, cacheReadInputTokens: 115_535, cacheCreationInputTokens: 17_367 } };
+    const handOff = [
+      { type: 'system', subtype: 'init', model: 'claude-test' },
+      { type: 'assistant', message: { content: [{ type: 'tool_use', id: 'a1', name: 'Agent' }] } },
+      { type: 'user', message: { content: [{ type: 'tool_result', tool_use_id: 'a1' }] } },
+      { type: 'result', is_error: false, result: 'The test is running.', num_turns: 4, duration_ms: 9000, total_cost_usd: 0.05,
+        usage: { input_tokens: 8, cache_read_input_tokens: 115_535, cache_creation_input_tokens: 17_367, output_tokens: 862 }, modelUsage: soFar },
+      // device-runner's turns: two content blocks of one turn share a message id
+      { type: 'assistant', parent_tool_use_id: 'a1', message: { id: 'msg_s1', content: [{ type: 'text', text: 'Step 1' }] } },
+      { type: 'assistant', parent_tool_use_id: 'a1', message: { id: 'msg_s1', content: [{ type: 'tool_use', id: 'a2', name: 'mcp__plugin_soma_appium-mcp__appium_find_element' }] } },
+      { type: 'user', parent_tool_use_id: 'a1', message: { content: [{ type: 'tool_result', tool_use_id: 'a2' }] } },
+      { type: 'assistant', parent_tool_use_id: 'a1', message: { id: 'msg_s2', content: [{ type: 'text', text: 'PASS' }] } },
+      { type: 'result', is_error: false, result: 'PASS: contact saved', num_turns: 22, duration_ms: 56_000, total_cost_usd: 0.3,
+        usage: { input_tokens: 36, cache_read_input_tokens: 926_802, cache_creation_input_tokens: 19_150, output_tokens: 2707 }, modelUsage: session },
+    ].map((e) => JSON.stringify(e)).join('\n');
+    const m = measure(parseEvents(handOff));
+    assert.equal(m.total, 46 + 4201 + 1_042_337 + 42_164);
+    assert.equal(m.cacheRead, 1_042_337);
+    assert.equal(m.costUsd, 0.3);
+    // 4 + 22 main-session turns, plus the subagent's 2
+    assert.equal(m.turns, 28);
+    assert.equal(m.durationSec, 65);
+    assert.equal(m.reply, 'PASS: contact saved');
+    assert.equal(m.appiumOk, 1);
+    assert.equal(m.isError, false);
+    // A single result with modelUsage gives the same numbers as its usage (the plain arm)
+    const single = measure(parseEvents(JSON.stringify({ type: 'result', num_turns: 2, usage: { input_tokens: 1, cache_read_input_tokens: 2, cache_creation_input_tokens: 3, output_tokens: 4 },
+      modelUsage: { a: { inputTokens: 1, cacheReadInputTokens: 2, cacheCreationInputTokens: 3, outputTokens: 4 } } })));
+    assert.equal(single.total, 10);
+    assert.equal(single.turns, 2);
+  }],
+  ['without modelUsage, a multi-result stream sums each part\'s usage; none reported stays null', () => {
+    const parts = [
+      { type: 'result', num_turns: 4, usage: { input_tokens: 1, cache_read_input_tokens: 100, cache_creation_input_tokens: 10, output_tokens: 5 } },
+      { type: 'result', num_turns: 6, usage: { input_tokens: 2, cache_read_input_tokens: 300, cache_creation_input_tokens: 20, output_tokens: 7 } },
+    ];
+    const m = measure(parseEvents(parts.map((e) => JSON.stringify(e)).join('\n')));
+    assert.equal(m.total, 1 + 100 + 10 + 5 + 2 + 300 + 20 + 7);
+    assert.equal(m.cacheRead, 400);
+    assert.equal(m.turns, 10);
+    assert.equal(m.contextPerTurn, 40);
+    const none = measure(parseEvents([{ type: 'result', num_turns: 1 }, { type: 'result', num_turns: 2 }].map((e) => JSON.stringify(e)).join('\n')));
+    assert.equal(none.total, null);
+    assert.equal(none.cacheRead, null);
   }],
   ['a stream without a result event is an error run', () => {
     assert.equal(measure(parseEvents('{"type":"system","subtype":"init"}')).isError, true);
@@ -99,6 +150,74 @@ const tests = [
   ['stream file names are <task>-<arm>-<run>.jsonl and cannot leave the folder', () => {
     assert.equal(streamFileName('dark-theme', 'soma', 2), 'dark-theme-soma-2.jsonl');
     assert.equal(streamFileName('../x/y', 'plain', 1), '___x_y-plain-1.jsonl');
+  }],
+  ['the home folder is redacted from replies in either slash direction and any case', () => {
+    const home = 'C:\\Users\\Some.User';
+    assert.equal(redactHome('Saved C:\\Users\\Some.User\\AppData\\Local\\Temp\\a.png', home), 'Saved ~\\AppData\\Local\\Temp\\a.png');
+    assert.equal(redactHome('c:/users/some.user/x and C:\\Users\\Some.User\\y', home), '~/x and ~\\y');
+    assert.equal(redactHome('/home/u/x', '/home/u/'), '~/x');
+    // A dot in the name is literal, not "any character"
+    assert.equal(redactHome('C:\\Users\\SomexUser\\x', home), 'C:\\Users\\SomexUser\\x');
+    // Only the complete home path: not a sibling home with the same prefix, not a path that embeds it
+    assert.equal(redactHome('/home/user2/a.png and /mnt/home/user/a.png', '/home/user'), '/home/user2/a.png and /mnt/home/user/a.png');
+    assert.equal(redactHome('C:\\Users\\Some.User2\\a.png', home), 'C:\\Users\\Some.User2\\a.png');
+    assert.equal(redactHome('see /home/user, then "/home/user/a.png"', '/home/user'), 'see ~, then "~/a.png"');
+    // Siblings whose name continues with "+", ".x" or a non-ASCII letter stay as they are
+    assert.equal(redactHome('/home/useré/a.png /home/user+x/a.png /home/user.old/a.png', '/home/user'), '/home/useré/a.png /home/user+x/a.png /home/user.old/a.png');
+    // Inside a file URL too
+    // (the home path's leading slash also takes the URL's slashes; the name is gone either way)
+    assert.equal(redactHome('file:///home/user/a.png', '/home/user'), 'file:~/a.png');
+    assert.equal(redactHome('file:///C:/Users/Some.User/a.png', home), 'file:///~/a.png');
+    // Markdown around the path does not hide it
+    for (const [wrapped, out] of [['`/home/user/a.png`', '`~/a.png`'], ['**/home/user/a.png**', '**~/a.png**'], ['_/home/user_', '_~_'], ['~~/home/user/a.png~~', '~~~/a.png~~'], ['[a](/home/user/a.png)', '[a](~/a.png)']])
+      assert.equal(redactHome(wrapped, '/home/user'), out);
+    // Repeated separators in a longer path do not let the home match inside it
+    assert.equal(redactHome('/mnt//home/user/a.png', '/home/user'), '/mnt//home/user/a.png');
+    // A sentence's final period ends the path, so the name is not left exposed
+    assert.equal(redactHome('Files are under /home/user.', '/home/user'), 'Files are under ~.');
+    assert.equal(redactHome('Saved in C:\\Users\\Some.User.', home), 'Saved in ~.');
+    // A space ends it too: a sibling named after the home folder plus a space is redacted (privacy first)
+    assert.equal(redactHome('"C:\\Users\\Some.User Backup\\a.png"', home), '"~ Backup\\a.png"');
+    // A bare home path followed by ordinary words is still redacted
+    assert.equal(redactHome('files under /home/user and nowhere else', '/home/user'), 'files under ~ and nowhere else');
+    assert.equal(redactHome('/home/user', '/home/user'), '~');
+    assert.equal(redactHome(null, home), null);
+    assert.equal(redactHome('no paths', ''), 'no paths');
+  }],
+  ['prompts: the Settings suite keeps its published wording; a note goes before the confirmation', () => {
+    const settings = { steps: 'Open Settings, tap Display.', app: 'Settings', pkg: 'com.android.settings' };
+    assert.equal(promptFor('plain', settings), 'Using the Appium tools, on an Android device: Open Settings, tap Display. Platform Android, app Settings (com.android.settings) on the running emulator. I confirm the steps and the app: run it now without asking again, and finish with a one-line result.');
+    assert.equal(promptFor('soma', settings), '/soma:run-test android Open Settings, tap Display. Platform Android, app Settings (com.android.settings) on the running emulator. I confirm the steps and the app: run it now without asking again, and finish with a one-line result.');
+    const aw = promptFor('soma', { steps: 'Create a contact.', app: 'Contacts', pkg: 'com.google.android.contacts', note: 'Dismiss first-run screens.' });
+    assert.match(aw, /^\/soma:run-test android Create a contact\. Platform Android, app Contacts \(com\.google\.android\.contacts\) on the running emulator\. Dismiss first-run screens\. I confirm/);
+  }],
+  ['consolePort reads emulator serials only', () => {
+    assert.equal(consolePort('emulator-5554'), 5554);
+    assert.equal(consolePort('emulator-5556'), 5556);
+    assert.equal(consolePort('R58M123'), null);
+    assert.equal(consolePort('emulator-5554x'), null);
+    assert.equal(consolePort(undefined), null);
+  }],
+  ['refereeOutcome: only a full score without an error passes', () => {
+    assert.deepEqual(refereeOutcome({ success: 1, error: null }), { ok: true });
+    assert.deepEqual(refereeOutcome({ success: 0, error: null }), { ok: false });
+    assert.deepEqual(refereeOutcome({ success: 0.5, error: null }), { ok: false });
+    assert.equal(refereeOutcome({ success: 1, error: 'KeyError()' }).ok, false);
+    assert.match(refereeOutcome({ success: 0, error: 'KeyError()' }).error, /raised: KeyError/);
+    assert.match(refereeOutcome(null).error, /no result/);
+    assert.match(refereeOutcome({}).error, /no result/);
+  }],
+  ['cleanGoal keeps a goal as written, removes control characters, refuses empty or overlong text', () => {
+    const table = 'Add the following expenses:\nname|amount\nRent|$10';
+    assert.equal(cleanGoal(table), table);
+    assert.equal(cleanGoal('Turn wifi off.'), 'Turn wifi off.');
+    assert.equal(cleanGoal('a\r\nb\rc'), 'a\nb\nc');
+    assert.equal(cleanGoal('Turn\u0000 wifi\u001b off.\u007f'), 'Turn wifi off.');
+    assert.equal(cleanGoal('tab\tkept'), 'tab\tkept');
+    assert.throws(() => cleanGoal(''), /empty/);
+    assert.throws(() => cleanGoal(undefined), /empty/);
+    assert.throws(() => cleanGoal('x'.repeat(GOAL_MAX + 1)), /over the/);
+    assert.equal(cleanGoal('x'.repeat(GOAL_MAX)).length, GOAL_MAX);
   }],
 ];
 

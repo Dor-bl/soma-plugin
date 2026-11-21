@@ -15,11 +15,47 @@ export function parseEvents(stdout) {
   });
 }
 
-// Everything a run reports that the benchmark compares. `result.usage` is the session
-// total, summed over every turn, so cache reads and writes are included.
+// Session-wide token counts from a result event's `modelUsage` (summed over models), in
+// `usage`'s field names; null when the event has none
+function sessionUsage(result) {
+  const models = Object.values(result.modelUsage ?? {});
+  if (!models.length) return null;
+  const sum = (key) => models.reduce((n, m) => n + (m[key] ?? 0), 0);
+  return {
+    input_tokens: sum('inputTokens'),
+    cache_read_input_tokens: sum('cacheReadInputTokens'),
+    cache_creation_input_tokens: sum('cacheCreationInputTokens'),
+    output_tokens: sum('outputTokens'),
+  };
+}
+
+// Without `modelUsage`, each result event's `usage` covers only its own part, so the parts
+// are added up; null when no event reports usage
+function summedUsage(resultEvents) {
+  const parts = resultEvents.map((e) => e.usage).filter(Boolean);
+  if (!parts.length) return null;
+  const sum = (key) => parts.reduce((n, u) => n + (u[key] ?? 0), 0);
+  return {
+    input_tokens: sum('input_tokens'),
+    cache_read_input_tokens: sum('cache_read_input_tokens'),
+    cache_creation_input_tokens: sum('cache_creation_input_tokens'),
+    output_tokens: sum('output_tokens'),
+  };
+}
+
+// Everything a run reports that the benchmark compares.
+// A run can emit more than one result event: when a skill hands the work to a background
+// subagent (run-manual-test's device-runner), the first turn ends with the hand-off and the
+// session goes on when the subagent reports back. So the last result event holds the reply,
+// and its `modelUsage` and `total_cost_usd` cover the whole session, while each event's
+// `usage`, `num_turns` and `duration_ms` cover only its own part, so those are summed
+// (`usage` only as the fallback for streams without `modelUsage`).
 export function measure(events) {
-  const result = events.find((e) => e.type === 'result') ?? {};
-  const usage = result.usage ?? {};
+  const resultEvents = events.filter((e) => e.type === 'result');
+  const result = resultEvents.at(-1) ?? {};
+  const reported = sessionUsage(result) ?? summedUsage(resultEvents);
+  const hasUsage = Boolean(reported);
+  const usage = reported ?? {};
   const toolUses = events.filter((e) => e.type === 'assistant').flatMap((e) => e.message?.content ?? []).filter((c) => c.type === 'tool_use');
   const results = events.filter((e) => e.type === 'user').flatMap((e) => e.message?.content ?? []).filter((c) => c?.type === 'tool_result');
   const failedIds = new Set(results.filter((r) => r.is_error).map((r) => r.tool_use_id));
@@ -27,33 +63,42 @@ export function measure(events) {
   // pending call with no result at all, which is not a success
   const okIds = new Set(results.filter((r) => !r.is_error).map((r) => r.tool_use_id));
   // The device-server calls: a run that did its task without one bypassed the measured work
-  const appium = toolUses.filter((t) => typeof t.name === 'string' && t.name.startsWith('mcp__appium-mcp__'));
+  // Both server names: the plugin's own (runs since the device-runner fix) and `appium-mcp`
+  // (earlier runs, whose results files are re-read)
+  const appium = toolUses.filter((t) => typeof t.name === 'string' && /^mcp__(plugin_soma_)?appium-mcp__/.test(t.name));
   // Shell use per arm: a tester without a shell has no such fallback (e.g. sideloading APKs)
   const bash = toolUses.filter((t) => t.name === 'Bash');
   // No result event (a timeout) means no usage was reported: null, never 0, so it stays out of
   // the medians. A run that ended in an error still reports its usage, which is kept.
-  const field = (key) => (result.usage ? usage[key] ?? 0 : null);
+  const field = (key) => (hasUsage ? usage[key] ?? 0 : null);
   const input = field('input_tokens');
   const cacheRead = field('cache_read_input_tokens');
   const cacheWrite = field('cache_creation_input_tokens');
   const output = field('output_tokens');
-  const turns = result.num_turns ?? null;
+  const sumOf = (key) => (resultEvents.some((e) => e[key] != null) ? resultEvents.reduce((n, e) => n + (e[key] ?? 0), 0) : null);
+  // num_turns counts the main session only. A subagent's turns (device-runner) arrive as
+  // assistant events with a parent_tool_use_id, one message id per turn (a turn with several
+  // content blocks repeats its id), so they are added here
+  const subagentTurns = new Set(events.filter((e) => e.type === 'assistant' && e.parent_tool_use_id && e.message?.id).map((e) => e.message.id)).size;
+  const mainTurns = sumOf('num_turns');
+  const turns = mainTurns == null && !subagentTurns ? null : (mainTurns ?? 0) + subagentTurns;
+  const durationMs = sumOf('duration_ms');
   return {
     model: events.find((e) => e.type === 'system' && e.subtype === 'init')?.model ?? null,
     input, cacheRead, cacheWrite, output,
     // All tokens the model processed or produced; cache reads are the bulk of a long session
-    total: result.usage ? input + cacheRead + cacheWrite + output : null,
+    total: hasUsage ? input + cacheRead + cacheWrite + output : null,
     costUsd: result.total_cost_usd ?? null,
     turns,
     // Every turn re-reads the cached context, so cost is roughly this times the turns
     contextPerTurn: cacheRead != null && turns > 0 ? cacheRead / turns : null,
-    durationSec: result.duration_ms == null ? null : result.duration_ms / 1000,
+    durationSec: durationMs == null ? null : durationMs / 1000,
     toolCalls: toolUses.length,
     toolErrors: toolUses.filter((t) => failedIds.has(t.id)).length,
     appiumCalls: appium.length,
     appiumOk: appium.filter((t) => okIds.has(t.id)).length,
     bashCalls: bash.length,
-    isError: Boolean(result.is_error) || !result.type,
+    isError: resultEvents.some((e) => e.is_error) || !result.type,
     reply: typeof result.result === 'string' ? result.result : '',
   };
 }
@@ -103,4 +148,65 @@ export function toMarkdown(rows, baselineArm = 'plain') {
 export function streamFileName(task, arm, run) {
   const safe = (v) => String(v).replace(/[^A-Za-z0-9_-]/g, '_');
   return `${safe(task)}-${safe(arm)}-${safe(run)}.jsonl`;
+}
+
+// Replies quote evidence paths (screenshots under the temp folder), which carry the local
+// user name. The results JSON is committed, so the home folder becomes "~" before saving.
+// Either slash direction and any letter case match, as Windows paths come in both. Only a
+// complete home path is replaced: not one embedded in a longer path (/mnt/home/user) and not
+// a sibling whose name continues the home folder's (/home/user2, /home/useré, /home/user.old).
+// Anything else ends it, including a space and a sentence's final period. A sibling whose
+// name continues after a space ("C:\Users\Some.User Backup") is therefore redacted too: this
+// errs toward hiding the user name, since a missed match would publish it. For the same
+// reason "_" and "~" count as boundaries, so Markdown _italics_ and ~~strikethrough~~ around
+// a path do not hide it from the match (a sibling like /home/user_old is redacted as well).
+export function redactHome(text, home) {
+  if (typeof text !== 'string' || !home) return text;
+  const trimmed = home.replace(/[\\/]+$/, '');
+  if (!trimmed) return text;
+  const pattern = trimmed.split(/[\\/]+/).map((part) => part.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('[\\\\/]+');
+  // A slash may come before a home that starts with a drive (file:///C:/Users/...). A home
+  // that starts with a slash already takes all of a URL's slashes (file:///home/user), so a
+  // slash before it means a longer path (/mnt//home/user). A letter may never come before it.
+  const before = /^[\\/]/.test(trimmed) ? '(?<![\\p{L}\\p{N}.+\\\\/-])' : '(?<![\\p{L}\\p{N}.+-])';
+  const after = '(?![\\p{L}\\p{N}+-]|\\.[\\p{L}\\p{N}])';
+  return text.replace(new RegExp(`${before}${pattern}${after}`, 'giu'), '~');
+}
+
+// What the tester says. Skills stop to confirm the plan, which -p cannot answer, so both arms
+// carry the confirmation up front. `note` is extra text both arms get (the AndroidWorld suite
+// pre-approves first-run dialogs there); the Settings suite has none, so its prompts are
+// unchanged from the published runs.
+export function promptFor(arm, { steps, app, pkg, note = '' }) {
+  const confirm = `Platform Android, app ${app} (${pkg}) on the running emulator.${note ? ` ${note}` : ''} I confirm the steps and the app: run it now without asking again, and finish with a one-line result.`;
+  return arm === 'soma'
+    ? `/soma:run-test android ${steps} ${confirm}`
+    : `Using the Appium tools, on an Android device: ${steps} ${confirm}`;
+}
+
+// The emulator console port in an emulator serial ("emulator-5554" -> 5554), which is what
+// AndroidWorld connects to; null for anything else
+export function consolePort(serial) {
+  const m = /^emulator-(\d+)$/.exec(serial ?? '');
+  return m ? Number(m[1]) : null;
+}
+
+// An AndroidWorld referee's result.json -> the same shape as an adb check: a pass needs a
+// full score (1.0) and no error; a check that raised is reported, never counted as a pass
+export function refereeOutcome(result) {
+  if (!result || typeof result.success !== 'number') return { ok: false, error: 'the referee wrote no result' };
+  if (result.error) return { ok: false, error: `the AndroidWorld check raised: ${result.error}` };
+  return { ok: result.success === 1 };
+}
+
+// An AndroidWorld goal before it goes into the prompt: line endings normalised and control
+// characters other than newline and tab removed. A goal is a sentence or a short table; one
+// longer than GOAL_MAX is refused rather than cut, since a cut goal would be another task.
+export const GOAL_MAX = 4000;
+export function cleanGoal(text) {
+  if (typeof text !== 'string' || !text.trim()) throw new Error('the AndroidWorld goal is empty');
+  // eslint-disable-next-line no-control-regex
+  const cleaned = text.replace(/\r\n?/g, '\n').replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/g, '').trim();
+  if (cleaned.length > GOAL_MAX) throw new Error(`the AndroidWorld goal is ${cleaned.length} characters, over the ${GOAL_MAX} allowed`);
+  return cleaned;
 }

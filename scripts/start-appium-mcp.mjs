@@ -12,7 +12,22 @@ import { basename, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { allowRegexFor } from './allowlist.mjs';
 import { childEnv } from './child-env.mjs';
+import { holdStdin } from './stdin-gate.mjs';
+import { nodeProblem } from './node-range.mjs';
 import { POWERSHELL, TASKKILL } from './system-tools.mjs';
+
+// First, before anything is installed: on an unsupported Node the ~370 MB install would run
+// and the server would then fail in ways that are hard to trace back to the Node version.
+let nodeIssue = null;
+try {
+  nodeIssue = nodeProblem();
+} catch (err) {
+  console.error(`[soma] skipped the Node.js version check: ${err.message}`);
+}
+if (nodeIssue) {
+  console.error(`[soma] ${nodeIssue}`);
+  process.exit(1);
+}
 
 const runtimeDir = fileURLToPath(new URL('../runtime/', import.meta.url));
 const manifest = JSON.parse(readFileSync(join(runtimeDir, 'package.json'), 'utf8'));
@@ -64,6 +79,9 @@ if (process.argv[2] === '--install') {
   }
   process.exit(0);
 }
+
+// Set while this launcher waits for an install (see runInstaller and stdin-gate.mjs)
+let stdinGate = null;
 
 // The marker also keeps the install while this server runs: the server loads some
 // modules only when a tool first needs them.
@@ -160,6 +178,16 @@ function startedAt(pid) {
 // install ready instead of starting over. A launcher that finds an installer already
 // running waits for that one.
 async function runInstaller() {
+  // The session can end while the install runs. Exit as soon as the client closes stdin, so
+  // Claude Code has no process tree left to kill and the detached installer finishes.
+  // No logical assignment operator here: Node 14 cannot parse it, and every file this one
+  // imports must parse for the Node version check at the top to run (test-node-range.mjs)
+  if (stdinGate === null) {
+    stdinGate = holdStdin(process.stdin, () => {
+      log(`the session closed while ${APPIUM_MCP} was installing; the install keeps running in the background and the next start uses it`);
+      process.exit(0);
+    });
+  }
   let pid = liveInstaller();
   if (pid) {
     log(`waiting for another launcher's install of ${APPIUM_MCP} to finish`);
@@ -378,7 +406,12 @@ for (const [name, folder] of [['SCREENSHOTS_DIR', 'screenshots'], ['PAGE_SOURCES
 delete env.SOMA_DATA_DIR;
 
 // Run the entry point with this same node, so no shell is involved on any platform.
-const child = spawn(process.execPath, [entry], { stdio: 'inherit', env });
+// After a wait for an install, stdin was read by the gate: pass on what it held.
+const child = spawn(process.execPath, [entry], { stdio: [stdinGate ? 'pipe' : 'inherit', 'inherit', 'inherit'], env });
+if (stdinGate && child.stdin) {
+  child.stdin.on('error', () => {}); // the server exited; its exit handler below reports it
+  stdinGate.release(child.stdin);
+}
 
 // Mark the install with the server's own PID too. If this launcher is force-killed
 // (SIGKILL runs no handlers), the server keeps running, and this marker keeps a

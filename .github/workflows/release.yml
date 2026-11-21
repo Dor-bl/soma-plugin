@@ -1,0 +1,98 @@
+name: Release
+
+# Tags v<version> and publishes a GitHub release when a push to main changes
+# the version in plugin.json and no release exists for it yet. The notes are
+# that version's CHANGELOG.md section, which must carry a date (set by
+# scripts/release.mjs). Plugin users get updates from the version field, not
+# from tags; this keeps the repository's releases in step with it.
+on:
+  push:
+    branches: [main]
+    paths: [.claude-plugin/plugin.json]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# One group per commit: GitHub keeps only one pending run per group, so a shared
+# group could let a later push replace a pending version bump's run.
+concurrency:
+  group: release-${{ github.sha }}
+  cancel-in-progress: false
+
+jobs:
+  release:
+    name: Tag and publish
+    # workflow_dispatch can target any branch; publish from main only
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        with:
+          node-version: 22
+      - name: Read the version
+        id: version
+        env:
+          # The branch tip before the push (not HEAD^, which is wrong for a
+          # multi-commit push); empty for workflow_dispatch.
+          BEFORE_SHA: ${{ github.event.before }}
+        run: |
+          version=$(node -p "require('./.claude-plugin/plugin.json').version")
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "tag=v$version" >> "$GITHUB_OUTPUT"
+          before=""
+          if [ -n "$BEFORE_SHA" ] && [ "$BEFORE_SHA" != "0000000000000000000000000000000000000000" ]; then
+            git fetch --quiet --depth=1 origin "$BEFORE_SHA"
+            before=$(git show "$BEFORE_SHA:.claude-plugin/plugin.json" | node -e "let s='';process.stdin.on('data',d=>s+=d).on('end',()=>console.log(JSON.parse(s).version))")
+          fi
+          echo "before=$before" >> "$GITHUB_OUTPUT"
+      - name: Skip if the version did not change or the release exists
+        id: exists
+        env:
+          GH_TOKEN: ${{ github.token }}
+          EVENT: ${{ github.event_name }}
+          TAG: ${{ steps.version.outputs.tag }}
+          VERSION: ${{ steps.version.outputs.version }}
+          BEFORE: ${{ steps.version.outputs.before }}
+        run: |
+          if [ "$EVENT" = "push" ] && [ "$VERSION" = "$BEFORE" ]; then
+            echo "plugin.json changed but its version is still $VERSION; nothing to do."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          elif gh release view "$TAG" > /dev/null 2>&1; then
+            echo "Release $TAG exists; nothing to do."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          else
+            # --exit-code: 0 = tag found, 2 = no such tag, anything else = the lookup failed
+            status=0
+            git ls-remote --exit-code --tags origin "refs/tags/$TAG" > /dev/null || status=$?
+            if [ "$status" -eq 0 ]; then
+              echo "::error::Tag $TAG exists without a release. Publish it by hand or delete the tag."
+              exit 1
+            elif [ "$status" -ne 2 ]; then
+              echo "::error::Could not check whether tag $TAG exists (git exit $status)."
+              exit "$status"
+            fi
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Check the plugin
+        if: steps.exists.outputs.skip == 'false'
+        run: node scripts/check-plugin.mjs
+      - name: Release notes from CHANGELOG.md
+        if: steps.exists.outputs.skip == 'false'
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: node scripts/release.mjs --notes "$VERSION" > "$RUNNER_TEMP/notes.md"
+      - name: Tag and publish the release
+        if: steps.exists.outputs.skip == 'false'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.version.outputs.tag }}
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          prerelease=""
+          case "$VERSION" in *-*) prerelease="--prerelease" ;; esac
+          gh release create "$TAG" --target "$GITHUB_SHA" --title "SOMA $TAG" \
+            --notes-file "$RUNNER_TEMP/notes.md" $prerelease
