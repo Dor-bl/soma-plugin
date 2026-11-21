@@ -53,6 +53,8 @@ jobs:
         run: node scripts/test-benchmark-chart.mjs
       - name: Release script tests
         run: node scripts/test-release.mjs
+      - name: Node.js range tests
+        run: node scripts/test-node-range.mjs
 
   docs:
     name: Markdown lint and links
@@ -98,3 +100,9 @@ jobs:
           # too tight for a cold install would mean the cache is never filled.
           SMOKE_TIMEOUT_MS: "720000"
         timeout-minutes: 15
+      # Uses the install the smoke step just made: fails when an appium-mcp bump needs a
+      # newer Node than supportedNode in runtime/package.json allows
+      - name: supportedNode covers every runtime package
+        run: node scripts/check-node-range.mjs
+        env:
+          CLAUDE_PLUGIN_DATA: ${{ runner.temp }}/soma-plugin-data

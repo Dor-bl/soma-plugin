@@ -5,15 +5,16 @@
 *A Claude plugin for mobile QA testers: run manual test cases on real devices, triage failures, and write bug reports.*
 
 [![CI](https://github.com/Dor-bl/soma-plugin/actions/workflows/ci.yml/badge.svg)](https://github.com/Dor-bl/soma-plugin/actions/workflows/ci.yml)
-[![Version](https://img.shields.io/badge/version-0.3.0-blue.svg)](.claude-plugin/plugin.json)
+[![Version](https://img.shields.io/badge/version-0.4.0-blue.svg)](.claude-plugin/plugin.json)
 [![License](https://img.shields.io/badge/license-Apache%202.0-green.svg)](https://www.apache.org/licenses/LICENSE-2.0)
 [![Claude Plugin](https://img.shields.io/badge/Claude-plugin-D97757?logo=anthropic&logoColor=white)](https://docs.claude.com/en/docs/claude-code/plugins)
+[![Codex Plugin](https://img.shields.io/badge/Codex-plugin%20(experimental)-412991)](#in-codex-experimental)
 [![Powered by appium-mcp](https://img.shields.io/badge/powered%20by-appium--mcp-662d91?logo=appium&logoColor=white)](https://github.com/appium/appium-mcp)
 ![Status](https://img.shields.io/badge/status-beta-yellow.svg)
 
 ![Android](https://img.shields.io/badge/Android-3DDC84?logo=android&logoColor=white)
 ![iOS](https://img.shields.io/badge/iOS-000000?logo=apple&logoColor=white)
-![Node.js](https://img.shields.io/badge/Node.js-22%2B-339933?logo=nodedotjs&logoColor=white)
+![Node.js](https://img.shields.io/badge/Node.js-22.19%2B%20%7C%2024%2B-339933?logo=nodedotjs&logoColor=white)
 [![Engine: Appium](https://img.shields.io/badge/engine-Appium%20(default)-662d91?logo=appium&logoColor=white)](backends/appium.md)
 [![Engine: Google Artemis](https://img.shields.io/badge/engine-Google%20Artemis%20(optional)-4285F4?logo=google&logoColor=white)](backends/artemis.md)
 
@@ -85,7 +86,7 @@ Without Artemis installed, SOMA behaves exactly as before. Artemis is an autonom
 
 | Platform | Needs |
 |----------|-------|
-| All | [Node.js](https://nodejs.org/) 22 or newer (required by `appium-mcp`) |
+| All | [Node.js](https://nodejs.org/) 22.19 or newer within Node 22, or 24 or newer (`^22.19.0 \|\| >=24.0.0`, required by `appium-mcp` and its dependencies; Node 23 is not supported). SOMA checks this before it installs `appium-mcp` |
 | 🤖 Android | Android SDK, `adb`, an emulator or physical device |
 | 🍎 iOS | macOS with Xcode and a simulator *(iOS isn't available locally on Windows/Linux)* |
 
@@ -103,6 +104,26 @@ Or in two steps: `/plugin marketplace add Dor-bl/soma-plugin`, then `/plugin ins
 > The first start installs `appium-mcp` and its locked dependencies (about 370 MB) from `registry.npmjs.org`, which can take minutes. Claude Code waits 30 seconds for an MCP server, so `appium-mcp` may show as *failed to connect* at first. The install keeps running in the background: reconnect with `/mcp` once it has finished, or run `/soma:setup` first and let it install the server before your first test.
 
 `/soma:setup` (the `check-setup` skill) checks Node, the SDKs and your devices and explains how to fix what is missing. Add a focus such as `android`, `ios`, `artemis` or `app map` to check one area.
+
+### In Codex (experimental)
+
+SOMA also ships a Codex manifest (`.codex-plugin/plugin.json`) and marketplace (`.agents/plugins/marketplace.json`). Add the marketplace, then install SOMA from `/plugins` in Codex or from the ChatGPT desktop app:
+
+```bash
+codex plugin marketplace add Dor-bl/soma-plugin
+```
+
+Tested with Codex CLI 0.171.0 on Windows (Android 13 emulator) and on macOS (Android emulator and iOS 27 simulator): the marketplace install, `check-setup` and short `run-manual-test` cases passed. It differs from the Claude Code plugin:
+
+- **First start.** Start an interactive `codex` session and leave it open until `appium-mcp` has installed (several minutes). A short session, such as `codex exec`, can end the install before it finishes. After that, the `appium-mcp` tools appear about 15 seconds after a session starts, through Codex's tool search.
+- **Skills and `appium-mcp`.** Ask for a skill by name, for example "use the check-setup skill" or "use the run-manual-test skill to run this test case on Android". The `/soma:*` commands and the `device-runner` agent are written for Claude Code; in the tested run, `run-manual-test` ran the steps in the conversation.
+- **Tool approvals.** Codex asks before each `appium-mcp` tool call; approve them in an interactive session. `codex exec` cannot ask, so by default it rejects every call (`MCP tool call requires approval, but approval policy is never`) and the skills report their steps as BLOCKED. Run `codex exec --approve-for-me`, which sends approval requests to Codex's automatic review, or use an interactive session. With Codex CLI 0.171.0, a `default_tools_approval_mode` setting did not apply to the plugin's server.
+- **Sandbox (macOS).** Codex's `workspace-write` sandbox blocks `xcrun simctl` (`CoreSimulatorService connection became invalid`) and makes `~/.appium` read-only, so `appium driver list` fails. `appium-mcp` runs outside the sandbox, so device steps are not affected, and `check-setup` checks simulators through `appium-mcp` instead.
+- **Appium only.** `setup-artemis` registers Artemis with Claude Code's `claude mcp` commands, so in Codex it stops before changing anything, and the skills use Appium.
+- **No saved screenshots or page source.** Codex has no Read tool, so the skills never open the PNG and XML files `appium-mcp` saves. They check elements with `appium_find_element`, report a check that needs a screenshot as not checked visually, and give you the saved path to open. Plugin and project files are read as usual.
+- **Local mode only.** Codex has no plugin settings, so `remote_server_url`, `capabilities_file` and `app_map_dir` are unset: local devices only, every remote server blocked, app maps off.
+- **Environment.** Codex gives MCP servers only a short list of environment variables. SOMA's Codex config also passes `ANDROID_HOME`, `ANDROID_SDK_ROOT`, `JAVA_HOME`, `DEVELOPER_DIR`, `APPIUM_MCP_WDA_APP_PATH` (the iOS WebDriverAgent fallback) and SOMA's folder overrides (`SOMA_DATA_DIR`, `SCREENSHOTS_DIR`, `PAGE_SOURCES_DIR`), and waits up to 10 minutes for the first start, which installs `appium-mcp`. It does not pass the proxy variables, since a proxy URL can carry a user name and password; behind a proxy, set it in your `.npmrc` for the install.
+- **Install location.** Codex gives the server no data folder, so unless you set `SOMA_DATA_DIR` to an absolute path, `appium-mcp` installs into the plugin's own folder (`.runtime/`), and each new SOMA version installs it again. While any Codex session is running SOMA's server from that folder, Codex cannot update the plugin: `codex plugin marketplace upgrade` and the automatic refresh fail with "Access is denied", and the installed copy keeps working. Close your Codex sessions, then upgrade.
 
 To try a checkout without installing it, start Claude from the folder *above* the clone (inside it, `.mcp.json` loads as a project server and cannot start):
 
