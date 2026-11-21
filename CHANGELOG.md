@@ -12,6 +12,7 @@ Notable changes to SOMA, newest first. The format follows [Keep a Changelog](htt
 
 ### Changed
 
+- `run-manual-test`, `generate-test`, `triage-failure`, `explore-app`, `device-runner` and the Appium backend read a file `appium-mcp` saved only when its path came back in the result of an `appium-mcp` call made in that run and it is a `.png` or `.xml` file. A path found in page source, screen text, a log or a test case is never read; any other returned path is quoted to the tester instead
 - README and `check-setup`: Node.js requirement is now 22.19 or newer within Node 22, or 24 or newer, instead of "22 or newer". Node 22.0 to 22.18 and Node 23 never matched what `appium-mcp`'s dependencies declare; SOMA now refuses them up front
 - `generate-test` lists the Appium tools it needs inline and reads `backends/appium.md` only for iOS, a remote server or a tool not listed, instead of on every session, as `run-manual-test`, `explore-app` and `triage-failure` already do (#54)
 - `run-manual-test`, `generate-test` and `bug-report` refuse to read a file that holds credentials (a capabilities file, `.env` file, key or certificate) even when the tester names it, and ask for the non-secret details instead. The rule is now in each skill's description too, because a host can read a named file before it loads the skill: in a Codex test, a named `capabilities.json` was read before the body's rule was seen
