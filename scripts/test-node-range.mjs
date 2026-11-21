@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
-import { mkdtempSync, readdirSync, rmSync } from 'node:fs';
+import { mkdtempSync, readdirSync, rmSync, symlinkSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -49,6 +49,22 @@ assert.match(oldRuntime.stdout, /^Node\.js v16\.5\.0 is not supported .*26\.12\.
 assert.doesNotThrow(() => parseRange(supportedRange()));
 assert.equal(nodeProblem(process.version, supportedRange()), null, `CI's Node ${process.version} should be supported`);
 console.log('✔ supportedNode parses and versions are checked against it');
+
+// Run directly, it reports, also when the plugin folder is reached through a link (a junction
+// on Windows, which needs no extra rights; a directory symlink elsewhere)
+const linkRoot = mkdtempSync(join(tmpdir(), 'soma-node-range-link-'));
+try {
+  const link = join(linkRoot, 'scripts');
+  symlinkSync(fileURLToPath(new URL('.', import.meta.url)), link, 'junction');
+  for (const script of [fileURLToPath(new URL('./node-range.mjs', import.meta.url)), join(link, 'node-range.mjs')]) {
+    const direct = spawnSync(process.execPath, [script], { encoding: 'utf8', timeout: 30_000 });
+    assert.equal(direct.status, 0, `${script}: ${direct.stderr}`);
+    assert.match(direct.stdout, /^OK: Node\.js v\d+\.\d+\.\d+ is supported/, `${script} printed nothing`);
+  }
+} finally {
+  rmSync(linkRoot, { recursive: true, force: true });
+}
+console.log('✔ node-range.mjs reports when run directly, also through a linked folder');
 
 // The launcher refuses an unsupported Node before it installs or writes anything
 const data = mkdtempSync(join(tmpdir(), 'soma-node-range-'));

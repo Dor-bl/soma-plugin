@@ -7,7 +7,7 @@
 // package in the installed runtime (check-node-range.mjs).
 //
 // Run directly, it prints whether this Node satisfies the range and exits 1 if it does not.
-import { readFileSync } from 'node:fs';
+import { readFileSync, realpathSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -63,7 +63,18 @@ export function nodeProblem(version = process.version, range = supportedRange())
   return `Node.js ${version} is not supported by the appium-mcp runtime SOMA pins. It needs ${describeRange(range)} (${range}). Install a supported version, restart Claude Code, then reconnect with /mcp.`;
 }
 
-if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+// Run directly? Compare real paths: when the plugin folder is reached through a symlink,
+// argv[1] keeps the link while import.meta.url is the resolved file.
+function isMain() {
+  if (!process.argv[1]) return false;
+  try {
+    return realpathSync(resolve(process.argv[1])) === realpathSync(fileURLToPath(import.meta.url));
+  } catch {
+    return false;
+  }
+}
+
+if (isMain()) {
   const range = supportedRange();
   const problem = nodeProblem(process.version, range);
   console.log(problem ?? `OK: Node.js ${process.version} is supported (${describeRange(range)}).`);
