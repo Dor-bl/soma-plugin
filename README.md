@@ -113,10 +113,12 @@ SOMA also ships a Codex manifest (`.codex-plugin/plugin.json`) and marketplace (
 codex plugin marketplace add Dor-bl/soma-plugin
 ```
 
-Tested once on Windows with Codex CLI 0.171.0 and an Android 13 emulator: the marketplace install, `check-setup` and a two-step `run-manual-test` case passed. It differs from the Claude Code plugin:
+Tested with Codex CLI 0.171.0 on Windows (Android 13 emulator) and on macOS (Android emulator and iOS 27 simulator): the marketplace install, `check-setup` and short `run-manual-test` cases passed. It differs from the Claude Code plugin:
 
 - **First start.** Start an interactive `codex` session and leave it open until `appium-mcp` has installed (several minutes). A short session, such as `codex exec`, can end the install before it finishes. After that, the `appium-mcp` tools appear about 15 seconds after a session starts, through Codex's tool search.
 - **Skills and `appium-mcp`.** Ask for a skill by name, for example "use the check-setup skill" or "use the run-manual-test skill to run this test case on Android". The `/soma:*` commands and the `device-runner` agent are written for Claude Code; in the tested run, `run-manual-test` ran the steps in the conversation.
+- **Tool approvals.** Codex asks before each `appium-mcp` tool call; approve them in an interactive session. `codex exec` cannot ask, so by default it rejects every call (`MCP tool call requires approval, but approval policy is never`) and the skills report their steps as BLOCKED. Run `codex exec --approve-for-me`, which sends approval requests to Codex's automatic review, or use an interactive session. With Codex CLI 0.171.0, a `default_tools_approval_mode` setting did not apply to the plugin's server.
+- **Sandbox (macOS).** Codex's `workspace-write` sandbox blocks `xcrun simctl` (`CoreSimulatorService connection became invalid`) and makes `~/.appium` read-only, so `appium driver list` fails. `appium-mcp` runs outside the sandbox, so device steps are not affected, and `check-setup` checks simulators through `appium-mcp` instead.
 - **Appium only.** `setup-artemis` registers Artemis with Claude Code's `claude mcp` commands, so in Codex it stops before changing anything, and the skills use Appium.
 - **No saved screenshots or page source.** Codex has no Read tool, so the skills never open the PNG and XML files `appium-mcp` saves. They check elements with `appium_find_element`, report a check that needs a screenshot as not checked visually, and give you the saved path to open. Plugin and project files are read as usual.
 - **Local mode only.** Codex has no plugin settings, so `remote_server_url`, `capabilities_file` and `app_map_dir` are unset: local devices only, every remote server blocked, app maps off.
