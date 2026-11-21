@@ -1,0 +1,34 @@
+{
+  "name": "soma",
+  "version": "0.3.0",
+  "description": "Mobile QA workflows on top of the official appium-mcp server: run manual test cases on a device, triage failures, write bug reports.",
+  "author": {
+    "name": "Dor Blayzer",
+    "url": "https://github.com/Dor-bl"
+  },
+  "homepage": "https://github.com/Dor-bl/soma-plugin",
+  "repository": "https://github.com/Dor-bl/soma-plugin",
+  "license": "Apache-2.0",
+  "keywords": ["appium", "qa", "mobile", "testing", "android", "ios"],
+  "skills": "./skills/",
+  "mcpServers": "./.codex-plugin/mcp.json",
+  "interface": {
+    "displayName": "SOMA",
+    "shortDescription": "Mobile QA on Android and iOS",
+    "longDescription": "Drive Android and iOS devices with plain language through the official appium-mcp server: run manual test cases step by step, triage failed runs, explore an app area for suspected issues, write bug reports and test cases, and turn manual test cases into automated Appium tests. Runs on local emulators, simulators and devices.",
+    "developerName": "Dor Blayzer",
+    "category": "Developer Tools",
+    "capabilities": ["Interactive", "Read", "Write"],
+    "websiteURL": "https://github.com/Dor-bl/soma-plugin",
+    "supportURL": "https://github.com/Dor-bl/soma-plugin/issues",
+    "privacyPolicyURL": "https://github.com/Dor-bl/soma-plugin#-what-soma-runs-sends-and-fetches",
+    "defaultPrompt": [
+      "Check that my machine is ready for SOMA.",
+      "Run this manual test case on my Android emulator.",
+      "Draft a bug report for what I just saw on the device."
+    ],
+    "brandColor": "#2563EB",
+    "composerIcon": "./assets/logo-icon.svg",
+    "logo": "./.claude-plugin/icon.png"
+  }
+}
