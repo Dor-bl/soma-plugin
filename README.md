@@ -5,7 +5,7 @@
 *A Claude plugin for mobile QA testers: run manual test cases on real devices, triage failures, and write bug reports.*
 
 [![CI](https://github.com/Dor-bl/soma-plugin/actions/workflows/ci.yml/badge.svg)](https://github.com/Dor-bl/soma-plugin/actions/workflows/ci.yml)
-[![Version](https://img.shields.io/badge/version-0.3.0-blue.svg)](.claude-plugin/plugin.json)
+[![Version](https://img.shields.io/badge/version-0.4.0-blue.svg)](.claude-plugin/plugin.json)
 [![License](https://img.shields.io/badge/license-Apache%202.0-green.svg)](https://www.apache.org/licenses/LICENSE-2.0)
 [![Claude Plugin](https://img.shields.io/badge/Claude-plugin-D97757?logo=anthropic&logoColor=white)](https://docs.claude.com/en/docs/claude-code/plugins)
 [![Codex Plugin](https://img.shields.io/badge/Codex-plugin%20(experimental)-412991)](#in-codex-experimental)
