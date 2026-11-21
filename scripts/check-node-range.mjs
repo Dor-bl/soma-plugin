@@ -8,15 +8,18 @@
 import { createHash } from 'node:crypto';
 import { existsSync, readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
-import { join } from 'node:path';
+import { join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parseRange, satisfies, supportedRange } from './node-range.mjs';
 
 const runtimeDir = fileURLToPath(new URL('../runtime/', import.meta.url));
 const lockBytes = readFileSync(join(runtimeDir, 'package-lock.json'));
 const lock = JSON.parse(lockBytes);
-// Same folder the launcher installs into (start-appium-mcp.mjs)
-const dataDir = process.env.CLAUDE_PLUGIN_DATA || fileURLToPath(new URL('../.runtime/', import.meta.url));
+// Same folder the launcher installs into (start-appium-mcp.mjs): unset or a literal
+// placeholder falls back to the plugin's .runtime/, and a relative path is taken from the
+// current folder, as the launcher started by mcp-smoke.mjs does. createRequire needs it absolute.
+const configured = process.env.CLAUDE_PLUGIN_DATA;
+const dataDir = resolve(configured && !configured.includes('${') ? configured : fileURLToPath(new URL('../.runtime/', import.meta.url)));
 const installDir = join(dataDir, `appium-mcp-${createHash('sha256').update(lockBytes).digest('hex').slice(0, 16)}`);
 if (!existsSync(join(installDir, 'node_modules', 'semver'))) {
   console.error(`✘ no runtime install with semver in ${installDir}; run scripts/mcp-smoke.mjs first`);
