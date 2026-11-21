@@ -13,7 +13,21 @@ import { fileURLToPath } from 'node:url';
 import { allowRegexFor } from './allowlist.mjs';
 import { childEnv } from './child-env.mjs';
 import { holdStdin } from './stdin-gate.mjs';
+import { nodeProblem } from './node-range.mjs';
 import { POWERSHELL, TASKKILL } from './system-tools.mjs';
+
+// First, before anything is installed: on an unsupported Node the ~370 MB install would run
+// and the server would then fail in ways that are hard to trace back to the Node version.
+let nodeIssue = null;
+try {
+  nodeIssue = nodeProblem();
+} catch (err) {
+  console.error(`[soma] skipped the Node.js version check: ${err.message}`);
+}
+if (nodeIssue) {
+  console.error(`[soma] ${nodeIssue}`);
+  process.exit(1);
+}
 
 const runtimeDir = fileURLToPath(new URL('../runtime/', import.meta.url));
 const manifest = JSON.parse(readFileSync(join(runtimeDir, 'package.json'), 'utf8'));

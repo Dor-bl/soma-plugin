@@ -8,8 +8,11 @@ Notable changes to SOMA, newest first. The format follows [Keep a Changelog](htt
 
 - Benchmark: `scripts/benchmark-chart.mjs` draws the README chart (`assets/benchmark-light.svg` and `benchmark-dark.svg`) from the results file named in `assets/benchmark-chart.json`, instead of the SVGs being edited by hand. It refuses a results file with a task short of its runs in either arm, a run with a missing measurement, or more than 56 runs per arm, and its test in CI fails when the committed SVGs no longer match the config
 
+- The launcher checks the Node.js version before it installs or starts `appium-mcp`, against `supportedNode` in `runtime/package.json`: `^22.19.0 || >=24.0.0` for the pinned `appium-mcp` 1.97.1, whose dependencies need Node 22.19 (`fastmcp` → `@apidevtools/swagger-parser`) and do not support Node 23. On any other version it exits with one line in the server log saying which versions to install, instead of installing about 370 MB and then failing. `check-setup` runs the same check (`scripts/node-range.mjs`), CI checks the range against every package in the installed runtime (`scripts/check-node-range.mjs`), so a bump that needs a newer Node fails until the range is raised, and `check-plugin.mjs` checks that the README shows the same range
+
 ### Changed
 
+- README and `check-setup`: Node.js requirement is now 22.19 or newer within Node 22, or 24 or newer, instead of "22 or newer". Node 22.0 to 22.18 and Node 23 never matched what `appium-mcp`'s dependencies declare; SOMA now refuses them up front
 - `generate-test` lists the Appium tools it needs inline and reads `backends/appium.md` only for iOS, a remote server or a tool not listed, instead of on every session, as `run-manual-test`, `explore-app` and `triage-failure` already do (#54)
 
 ## [0.3.0] - 2026-11-20

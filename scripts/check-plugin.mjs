@@ -5,6 +5,7 @@
 import { readFileSync, readdirSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { parseRange } from './node-range.mjs';
 
 const root = fileURLToPath(new URL('..', import.meta.url));
 const errors = [];
@@ -141,6 +142,18 @@ if (!pinned || !/^\d+\.\d+\.\d+$/.test(pinned)) {
   }
   const readmePin = read('README.md').match(/pinned to an exact version \(`([^`]+)`\)/)?.[1];
   if (readmePin && readmePin !== pinned) fail(`README.md: pinned version ${readmePin} != ${pinned}`);
+}
+
+// supportedNode (runtime/package.json) is what the launcher enforces: it must parse, and the
+// README requirements table must show the same range (pipes escaped inside the table)
+try {
+  parseRange(runtimePkg.supportedNode);
+  const shown = read('README.md').replaceAll('\\|', '|');
+  if (!shown.includes(`\`${runtimePkg.supportedNode}\``)) {
+    fail(`README.md: the Node.js requirement must show supportedNode \`${runtimePkg.supportedNode}\` from runtime/package.json`);
+  }
+} catch (err) {
+  fail(`runtime/package.json: ${err.message}`);
 }
 
 // Skills
