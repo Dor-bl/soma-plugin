@@ -16,8 +16,10 @@ const today = '^22.19.0 || >=24.0.0';
 const cases = {
   '20.19.0': false, '22.0.0': false, '22.18.9': false, '22.19.0': true, 'v22.23.4': true,
   '23.0.0': false, '23.11.1': false, '24.0.0': true, '25.2.0': true, '27.0.0': true,
-  // A prerelease or nightly counts as its release
-  '22.19.0-nightly20261101': true, 'v24.0.0-rc.1': true, 'v22.18.0-rc.1': false,
+  // As in semver, a prerelease or nightly comes before its release and satisfies none of these
+  '22.19.0-nightly20261101': false, 'v22.20.0-rc.1': false, 'v24.0.0-rc.1': false, 'v26.0.0-nightly20270101': false,
+  // Build metadata is ignored
+  'v22.19.0+build.5': true,
 };
 for (const [version, expected] of Object.entries(cases)) assert.equal(satisfies(version, today), expected, `${version} vs ${today}`);
 
@@ -32,6 +34,16 @@ assert.equal(describeRange(wdio), '22.23.4 or newer within Node 22, 24.22.1 or n
 assert.equal(describeRange('^24.0.0'), 'any Node 24');
 assert.equal(nodeProblem('v22.19.0', today), null);
 assert.match(nodeProblem('v23.11.1', today), /^Node\.js v23\.11\.1 is not supported .*22\.19 or newer within Node 22, or 24 or newer \(\^22\.19\.0 \|\| >=24\.0\.0\)/);
+
+// The rejection is built without newer built-ins (here Array.prototype.at, missing before
+// Node 16.6), so it explains itself on the old runtimes it rejects instead of throwing
+const oldRuntime = spawnSync(process.execPath, [
+  '--import', 'data:text/javascript,delete Array.prototype.at;delete String.prototype.at;delete String.prototype.replaceAll',
+  '--input-type=module', '-e',
+  `import { nodeProblem } from ${JSON.stringify(new URL('./node-range.mjs', import.meta.url).href)}; console.log(nodeProblem('v16.5.0', '${wdio}'))`,
+], { encoding: 'utf8', timeout: 30_000 });
+assert.equal(oldRuntime.status, 0, oldRuntime.stderr);
+assert.match(oldRuntime.stdout, /^Node\.js v16\.5\.0 is not supported .*26\.12\.1 or newer \(/);
 
 // The committed range parses, and the Node running the checks satisfies it
 assert.doesNotThrow(() => parseRange(supportedRange()));

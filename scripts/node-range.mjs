@@ -23,18 +23,24 @@ export function parseRange(range) {
   });
 }
 
-// A prerelease or nightly (22.19.0-nightly…) counts as its release: only the numbers are compared
+// [major, minor, patch, isPrerelease]; build metadata (+…) is ignored, as semver does
 export function parseVersion(version) {
-  const m = /^v?(\d+)\.(\d+)\.(\d+)/.exec(version);
+  const m = /^v?(\d+)\.(\d+)\.(\d+)(-[0-9A-Za-z.-]+)?(\+[0-9A-Za-z.-]+)?$/.exec(String(version).trim());
   if (!m) throw new Error(`cannot read the Node.js version "${version}"`);
-  return m.slice(1).map(Number);
+  return [Number(m[1]), Number(m[2]), Number(m[3]), Boolean(m[4])];
 }
 
 const compare = (a, b) => a[0] - b[0] || a[1] - b[1] || a[2] - b[2];
 
+// Written for old runtimes too (no Array.prototype.at and the like): this has to run, and
+// explain, on exactly the Node versions it rejects.
 export function satisfies(version, range) {
+  const terms = parseRange(range);
   const v = parseVersion(version);
-  return parseRange(range).some(({ op, min }) => compare(v, min) >= 0 && (op === '>=' || v[0] === min[0]));
+  // As in semver, a prerelease or nightly (22.19.0-nightly…) comes before its release and
+  // satisfies none of these ranges, whose bounds are all releases
+  if (v[3]) return false;
+  return terms.some(({ op, min }) => compare(v, min) >= 0 && (op === '>=' || v[0] === min[0]));
 }
 
 // "22.19 or newer within Node 22, or 24 or newer"
@@ -44,7 +50,7 @@ export function describeRange(range) {
     if (op === '>=') return `${shown === `${min[0]}.0` ? min[0] : shown} or newer`;
     return shown === `${min[0]}.0` ? `any Node ${min[0]}` : `${shown} or newer within Node ${min[0]}`;
   });
-  return parts.length > 1 ? `${parts.slice(0, -1).join(', ')}, or ${parts.at(-1)}` : parts[0];
+  return parts.length > 1 ? `${parts.slice(0, -1).join(', ')}, or ${parts[parts.length - 1]}` : parts[0];
 }
 
 export function supportedRange(runtimeDir = fileURLToPath(new URL('../runtime/', import.meta.url))) {

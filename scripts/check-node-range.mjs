@@ -50,9 +50,11 @@ if (narrower.length) {
 
 // 2. node-range.mjs agrees with semver around every bound and across majors
 const probes = new Set();
-for (let major = 18; major <= 30; major++) probes.add(`${major}.0.0`).add(`${major}.99.99`);
+for (let major = 18; major <= 30; major++) probes.add(`${major}.0.0`).add(`${major}.99.99`).add(`${major}.0.0-nightly20260101`);
 for (const { min: [a, b, c] } of parseRange(range)) {
-  for (const v of [[a, b, c], [a, b, c + 1], [a, b + 1, 0], c ? [a, b, c - 1] : b ? [a, b - 1, 99] : [a - 1, 99, 99]]) probes.add(v.join('.'));
+  for (const v of [[a, b, c], [a, b, c + 1], [a, b + 1, 0], c ? [a, b, c - 1] : b ? [a, b - 1, 99] : [a - 1, 99, 99]]) {
+    probes.add(v.join('.')).add(`${v.join('.')}-rc.1`);
+  }
 }
 const disagree = [...probes].filter((v) => satisfies(v, range) !== semver.satisfies(v, range));
 if (disagree.length) {
