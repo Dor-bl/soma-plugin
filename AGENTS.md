@@ -13,7 +13,7 @@ SOMA is a Claude Code plugin for mobile QA, built on the official [`appium-mcp`]
 - `commands/*.md`: slash commands (`/soma:<file>`), each a one-line hand-off to a skill
 - `agents/*.md`: subagents. `device-runner` runs a confirmed `run-manual-test` case through Appium in its own context. A skill that delegates passes every value in the brief (resolved remote URL, plugin file paths): do not use `${user_config.*}` or `${CLAUDE_PLUGIN_ROOT}` in agent files
 - `backends/`: one file per device engine (Appium default, optional Google Artemis). Skills say *what* to do; these files say *which tools* do it. Selection rules are in `backends/README.md`
-- `scripts/`: the launcher (`start-appium-mcp.mjs`, `allowlist.mjs`, `child-env.mjs`, `stdin-gate.mjs`, `system-tools.mjs`), the emulator starter (`start-emulator.mjs`), CI checks (`check-plugin.mjs`, `mcp-smoke.mjs`, with its Windows cleanup in `process-tree.mjs`) and their unit tests (`test-*.mjs`), and `skill-size.mjs`, the context-size report for #55
+- `scripts/`: the launcher (`start-appium-mcp.mjs`, `allowlist.mjs`, `child-env.mjs`, `stdin-gate.mjs`, `system-tools.mjs`, and `node-range.mjs`, which checks Node against `supportedNode` in `runtime/package.json`), the emulator starter (`start-emulator.mjs`), CI checks (`check-plugin.mjs`, `mcp-smoke.mjs`, with its Windows cleanup in `process-tree.mjs`, and `check-node-range.mjs`) and their unit tests (`test-*.mjs`), and `skill-size.mjs`, the context-size report for #55
 - `benchmarks/`: tasks and method for the token benchmark (plain Claude Code vs SOMA on the Android Settings app); `scripts/benchmark.mjs` runs it, `benchmark-stats.mjs` holds the tested parsing, summary and prompt, and `benchmark-chart.mjs` draws the README chart (`assets/benchmark-light.svg`, `benchmark-dark.svg`) from the results file named in `assets/benchmark-chart.json`. `benchmarks/androidworld/` is the optional `--suite androidworld`: ten AndroidWorld tasks, the Python referee that sets each up and checks it, the one-time device setup and the Windows workarounds (`aw_compat.py`). CI does not run the Python files
 
 ## Checks (same as CI)
@@ -31,8 +31,10 @@ node scripts/test-injection-match.mjs # injection-check reply and shell matching
 node scripts/test-benchmark-stats.mjs # benchmark run parsing and summary
 node scripts/test-benchmark-chart.mjs # README benchmark chart, and that its SVGs match assets/benchmark-chart.json
 node scripts/test-release.mjs         # release script: version bump, changelog cut, notes, promote checks
+node scripts/test-node-range.mjs      # supportedNode parsing; the launcher stops on an unsupported Node before installing
 npx markdownlint-cli2 "**/*.md"
 node scripts/mcp-smoke.mjs           # first run installs ~370 MB; SMOKE_TIMEOUT_MS overrides, CLAUDE_PLUGIN_DATA sets the install folder
+node scripts/check-node-range.mjs    # after mcp-smoke: every runtime package supports supportedNode (same CLAUDE_PLUGIN_DATA)
 ```
 
 CI also runs a link check (lychee) on all Markdown, so links must resolve.
@@ -75,7 +77,8 @@ The entry passes no remote URL, so remote servers stay blocked and only local de
 - Every `${CLAUDE_PLUGIN_ROOT}/<path>` in a skill, command or backend file must exist in the repo (an `#anchor` is ignored; `..` is rejected). Folders the plugin creates at run time, such as `.runtime/`, are listed in `RUNTIME_PATHS`. When you rename, move or split a backend file or script, update every reference in the same change.
 - The README version badge must match `plugin.json` `version`. `scripts/release.mjs` bumps both and dates the changelog (see "Releasing").
 - `marketplace.json` must list `plugin.json`'s `name` with `source: "./"` and no `version`; `plugin.json` must carry `author.name`, `homepage` and `repository` (the GitHub URL); the README must contain the one-line install command and the `soma@soma-plugin` install id; `LICENSE`, `NOTICE`, `CHANGELOG.md`, `SECURITY.md` and `.claude-plugin/icon.png` must exist.
-- Every `appium-mcp@<version>` in the README and skills must match the version pinned in `runtime/package.json`, and so must the lockfile. To bump: edit `runtime/package.json`, run `npm install --package-lock-only --ignore-scripts` in `runtime/`, review the lockfile diff, then update the docs.
+- Every `appium-mcp@<version>` in the README and skills must match the version pinned in `runtime/package.json`, and so must the lockfile. To bump: edit `runtime/package.json`, run `npm install --package-lock-only --ignore-scripts` in `runtime/`, review the lockfile diff, then update the docs. Then run `mcp-smoke.mjs` and `check-node-range.mjs`: if the new tree needs a newer Node, raise `supportedNode` in `runtime/package.json` and the README's Node.js row and badge (`check-plugin.mjs` checks the row shows the same range).
+- `supportedNode` in `runtime/package.json` takes only `^X.Y.Z` and `>=X.Y.Z` terms joined by `||`, so the launcher can check it with no dependencies before installing. npm does not copy it into the lockfile, so changing it does not force a reinstall.
 
 ## Dependency alerts
 
@@ -98,7 +101,7 @@ Feed findings from real runs back into the skills (see #17). Examples already ca
 - Device labels can contain look-alike Unicode (Android renders "Wi-Fi" with a U+2011 non-breaking hyphen). Copy text exactly; write escapes in generated code.
 - `generate_locators` output is tens of KB per screen. Prefer `appium_find_element` per step.
 - Freshly booted emulators need longer `adbExecTimeout` / `uiautomator2ServerInstallTimeout`; system apps need `noReset`.
-- `appium-mcp` requires Node 22+; older versions crash on startup and show as disconnected.
+- `appium-mcp` requires Node 22+; older versions crash on startup and show as disconnected. The real floor is set by its dependencies and moves with them: with `appium-mcp` 1.97.1 it is 22.19 (`fastmcp` → `@apidevtools/swagger-parser`), and Node 23 is excluded by the Appium 3 packages. `supportedNode` records it, and the launcher refuses other versions with a message instead.
 - iOS simulator (first live run, #31): WDA launched by `prepare_ios_simulator` stopped about a minute later, before any session, and session creation failed with `ECONNREFUSED`. Check WDA's `/status` right before creating a session and prepare again if it is down.
 - `appium-mcp` 1.99.3 (Mac retest on #51, held at 1.97.1 for 0.2.0): on iOS 18.2 simulators the first `prepare_ios_simulator` fails with `wda_install: failed` because WDA crashes at launch (`lib_TestingInterop.dylib` not loaded, probably the coresim launch path from 1.97.2); a second prepare works, 1.97.1 does not have it. Reported as appium/appium-mcp#608. Since 1.97.2 `@appium/coresim` ships only a `darwin-arm64` prebuild, and `--ignore-scripts` skips its compile, so iOS on Intel Macs may not work. Before the next bump, retest iOS 18.2 on a fresh WDA install (remove WDA from the simulator first: a prepare with WDA already installed passes even with the bug) and, if possible, an Intel Mac.
 - Android, all skills headless (phase 2 run, 2026-11-07): `appium-mcp` 1.97.1 attaches an HTML viewer to every screenshot and session result unless `NO_UI=1` is set, which overflowed the tool-result limit and hid the saved PNG path, so runs had no screenshots or decoded them with ad-hoc shell commands. `.mcp.json` now sets `NO_UI`. Also: a find by text can miss once right after an action, element ids go stale after a re-render, page source right after navigation can be empty, and `pattern` misses off-screen rows. The skills now say to read saved files with the Read tool, never a shell.

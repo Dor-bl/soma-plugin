@@ -13,7 +13,7 @@
 
 ![Android](https://img.shields.io/badge/Android-3DDC84?logo=android&logoColor=white)
 ![iOS](https://img.shields.io/badge/iOS-000000?logo=apple&logoColor=white)
-![Node.js](https://img.shields.io/badge/Node.js-22%2B-339933?logo=nodedotjs&logoColor=white)
+![Node.js](https://img.shields.io/badge/Node.js-22.19%2B%20%7C%2024%2B-339933?logo=nodedotjs&logoColor=white)
 [![Engine: Appium](https://img.shields.io/badge/engine-Appium%20(default)-662d91?logo=appium&logoColor=white)](backends/appium.md)
 [![Engine: Google Artemis](https://img.shields.io/badge/engine-Google%20Artemis%20(optional)-4285F4?logo=google&logoColor=white)](backends/artemis.md)
 
@@ -85,7 +85,7 @@ Without Artemis installed, SOMA behaves exactly as before. Artemis is an autonom
 
 | Platform | Needs |
 |----------|-------|
-| All | [Node.js](https://nodejs.org/) 22 or newer (required by `appium-mcp`) |
+| All | [Node.js](https://nodejs.org/) 22.19 or newer within Node 22, or 24 or newer (`^22.19.0 \|\| >=24.0.0`, required by `appium-mcp` and its dependencies; Node 23 is not supported). SOMA checks this before it installs `appium-mcp` |
 | 🤖 Android | Android SDK, `adb`, an emulator or physical device |
 | 🍎 iOS | macOS with Xcode and a simulator *(iOS isn't available locally on Windows/Linux)* |
 

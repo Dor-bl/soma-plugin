@@ -14,7 +14,7 @@ Remote URL checks (report each as OK / MISSING):
 - A self-hosted Appium server must not be reachable unauthenticated from a shared network: anyone who can reach it controls its devices and host. Recommend putting it behind an authenticating reverse proxy or VPN.
 
 ## Local checks (run what applies, report each as OK / MISSING / UNKNOWN)
-- Node.js 22 or newer (`node --version`). `appium-mcp` requires `>=22`; older versions crash on startup and the server shows as disconnected. Fix: install Node 22 LTS (e.g. `winget install OpenJS.NodeJS.LTS` on Windows, or via nvm), then restart Claude.
+- Node.js in the range the pinned runtime supports: run `node "${CLAUDE_PLUGIN_ROOT}/scripts/node-range.mjs"`. It prints `OK: ...` or why this Node is not supported, with the range (`supportedNode` in `runtime/package.json`, today 22.19 or newer within Node 22, or 24 or newer; Node 23 is not supported). On an unsupported Node the launcher refuses to start and the server shows as disconnected. Fix: install a supported version (e.g. the current Node 22 or 24 LTS with `winget install OpenJS.NodeJS.LTS` on Windows, or via nvm), then restart Claude.
 - npm 10 or newer (`npm --version`). Node 22 ships npm 10, so an older number means an old npm is in the way. Find out which case it is before suggesting a fix:
   - Windows, and `%APPDATA%\npm\node_modules\npm` exists: a leftover global npm is shadowing Node's own (`npm.cmd` prefers it). Fix: `npm uninstall -g npm`, then check `npm --version` again.
   - Otherwise (macOS/Linux, nvm, or Windows without that folder): the old npm replaced Node's own copy, so uninstalling it would leave no npm at all. Never suggest `npm uninstall -g npm` here. Fix: `npm install -g npm@10`, or reinstall Node 22.
