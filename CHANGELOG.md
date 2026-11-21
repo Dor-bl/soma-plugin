@@ -1,4 +1,5 @@
-# Changelog
+# Cha- `run-manual-test`, `generate-test` and `bug-report` refuse to read a file that holds credentials (a capabilities file, `.env` file, key or certificate) even when the tester names it, and ask for the non-secret details instead. The rule is now in each skill's description too, because a host can read a named file before it loads the skill: in a Codex test, a named `capabilities.json` was read before the body's rule was seen
+ngelog
 
 Notable changes to SOMA, newest first. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html). Plugin users receive a new copy only when `version` in `plugin.json` changes.
 
