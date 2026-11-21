@@ -1,6 +1,6 @@
 ---
 name: write-test-case
-description: Draft a manual test case (preconditions, numbered steps with expected results, test data) from a feature description, user story, acceptance criteria or bug report, ready to run with run-manual-test. Use when a tester asks to "write a test case", "turn this story into tests" or needs a regression test for a bug fix.
+description: Draft a manual test case (preconditions, numbered steps with expected results, test data) from a feature description, user story, acceptance criteria or bug report, ready to run with run-manual-test. Use when a tester asks to "write a test case", "turn this story into tests" or needs a regression test for a bug fix. Never read a file that holds credentials (a capabilities file, .env file, key or certificate), even when the tester names it; ask for the non-secret details instead.
 ---
 
 # Write a manual test case
