@@ -156,6 +156,17 @@ test('changelogProblems flags long entries, a long summary and blank lines insid
   assert.match(changelogProblems(CHANGELOG.replace('- New thing\n', '- New thing\n\n- Other thing\n')).join(), /blank line between Unreleased entries/);
   assert.deepEqual(changelogProblems(CHANGELOG.replace('- First thing', `- ${long}`)), [], 'released sections are not checked');
   assert.deepEqual(changelogProblems('# Changelog\n'), ['"## [Unreleased]" heading not found']);
+  const wrapped = `- ${'x'.repeat(160)}\n  ${'y'.repeat(180)}`;
+  assert.match(changelogProblems(CHANGELOG.replace('- New thing', wrapped)).join(), /entry is 343 characters/);
+  assert.match(changelogProblems(CHANGELOG.replace('- New thing\n', '- New thing\n  wrapped\n\n- Other thing\n')).join(), /blank line between Unreleased entries/);
+  assert.deepEqual(changelogProblems(CHANGELOG.replace('- New thing\n', '- New thing\n  wrapped\n- Other thing\n')), []);
+});
+
+test('cutChangelog refuses Unreleased content that breaks the style rules', () => {
+  const long = CHANGELOG.replace('One new thing.', `${'x'.repeat(MAX_ENTRY)}.`);
+  assert.throws(() => cutChangelog(long, '0.2.0', '2026-11-20'), /summary is 301 characters/);
+  const wrapped = CHANGELOG.replace('- New thing', `- ${'x'.repeat(160)}\n  ${'y'.repeat(180)}`);
+  assert.throws(() => cutChangelog(wrapped, '0.2.0', '2026-11-20'), /entry is 343 characters/);
 });
 
 console.log(`✔ All ${passed} release tests passed`);

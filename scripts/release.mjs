@@ -99,6 +99,9 @@ export function cutChangelog(text, version, date) {
   const body = next === -1 ? text.slice(start) : text.slice(start, start + next);
   if (!body.trim()) throw new Error('CHANGELOG.md: nothing under Unreleased to release');
   if (!sectionSummary(body)) throw new Error('CHANGELOG.md: add a one-line summary of the release under "## [Unreleased]", above its first "###" heading');
+  // Checked here because check-plugin.mjs, run after the cut, skips released sections
+  const problems = changelogProblems(text);
+  if (problems.length) throw new Error(`CHANGELOG.md: ${problems.join('; ')}`);
   return `${text.slice(0, start)}\n${dated}\n${body.startsWith('\n') ? '' : '\n'}${text.slice(start)}`;
 }
 
@@ -136,12 +139,26 @@ export function changelogProblems(text) {
   const problems = [];
   const summary = sectionSummary(lines.join('\n'));
   if (summary.length > MAX_ENTRY) problems.push(`the Unreleased summary is ${summary.length} characters; keep it under ${MAX_ENTRY}`);
+  // An entry is its "- " line plus any wrapped continuation lines under it, measured
+  // joined; a blank line ends it, and one directly followed by another entry is flagged.
+  const entries = [];
+  let open = false;
   lines.forEach((line, i) => {
-    if (line.startsWith('- ') && line.length > MAX_ENTRY) {
-      problems.push(`Unreleased entry is ${line.length} characters (max ${MAX_ENTRY}); move the detail to the PR: "${line.slice(0, 60)}…"`);
+    if (line.startsWith('- ')) {
+      entries.push(line);
+      open = true;
+    } else if (open && line.trim() && !line.startsWith('#')) {
+      entries[entries.length - 1] += ` ${line.trim()}`;
+    } else {
+      if (open && line === '' && lines[i + 1]?.startsWith('- ')) {
+        problems.push(`blank line between Unreleased entries, before "${lines[i + 1].slice(0, 60)}…"`);
+      }
+      open = false;
     }
-    if (line === '' && lines[i - 1]?.startsWith('- ') && lines[i + 1]?.startsWith('- ')) {
-      problems.push(`blank line between Unreleased entries, before "${lines[i + 1].slice(0, 60)}…"`);
+  });
+  entries.forEach((entry) => {
+    if (entry.length > MAX_ENTRY) {
+      problems.push(`Unreleased entry is ${entry.length} characters (max ${MAX_ENTRY}); move the detail to the PR: "${entry.slice(0, 60)}…"`);
     }
   });
   return problems;
