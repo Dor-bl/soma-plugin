@@ -4,6 +4,10 @@ Notable changes to SOMA, newest first. The format follows [Keep a Changelog](htt
 
 ## [Unreleased]
 
+### Added
+
+- `write-test-case` writes the test case as Markdown (default), Jira wiki markup (Jira Server or Data Center: a `||`-header steps table, with `|` and Jira markup characters escaped) or plain text (email, chat or Jira Cloud: numbered steps, each with an `Expected:` line), as `bug-report` already does. The tester names the format in chat; it is never taken from the story or ticket being turned into a test, and every format stays runnable with `run-manual-test`
+
 ## [0.4.0] - 2026-11-21
 
 ### Added
