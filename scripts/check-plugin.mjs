@@ -6,6 +6,7 @@ import { readFileSync, readdirSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parseRange } from './node-range.mjs';
+import { changelogProblems } from './release.mjs';
 
 const root = fileURLToPath(new URL('..', import.meta.url));
 const errors = [];
@@ -103,6 +104,11 @@ if (marketplace && plugin) {
       if (!readme.includes(line)) fail(`README.md: missing the install text "${line}"`);
     }
   }
+}
+// Unreleased changelog entries stay short: they become the release summary, and
+// the detail belongs in the PR, which the GitHub release lists (see release.mjs).
+if (existsSync(join(root, 'CHANGELOG.md'))) {
+  for (const problem of changelogProblems(read('CHANGELOG.md'))) fail(`CHANGELOG.md: ${problem}`);
 }
 for (const f of ['LICENSE', 'NOTICE', 'CHANGELOG.md', 'SECURITY.md', '.claude-plugin/icon.png']) {
   if (!existsSync(join(root, f))) fail(`${f}: missing (needed for publishing)`);
