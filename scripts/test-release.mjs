@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // Tests for scripts/release.mjs: version bump, badge, changelog cut and release notes.
 import assert from 'node:assert/strict';
-import { bumpBadge, bumpManifest, changelogSection, compareVersions, cutChangelog, isValidDate, isValidSemver, keepEol, promoteProblem, releaseBranch } from './release.mjs';
+import { bumpBadge, bumpManifest, changelogProblems, changelogSection, compareVersions, cutChangelog, isValidDate, isValidSemver, keepEol, MAX_ENTRY, promoteProblem, releaseBranch, releaseNotes, sectionSummary } from './release.mjs';
 
 let passed = 0;
 const test = (name, fn) => {
@@ -15,6 +15,8 @@ const CHANGELOG = `# Changelog
 Intro.
 
 ## [Unreleased]
+
+One new thing.
 
 ### Added
 
@@ -75,8 +77,8 @@ test('bumpBadge rewrites the version badge only', () => {
 
 test('cutChangelog moves Unreleased entries under a dated heading', () => {
   const out = cutChangelog(CHANGELOG, '0.2.0', '2026-11-20');
-  assert.match(out, /## \[Unreleased\]\n\n## \[0\.2\.0\] - 2026-11-20\n\n### Added\n\n- New thing\n\n## \[0\.1\.0\]/);
-  assert.deepEqual(changelogSection(out, '0.2.0'), { body: '### Added\n\n- New thing', date: '2026-11-20' });
+  assert.match(out, /## \[Unreleased\]\n\n## \[0\.2\.0\] - 2026-11-20\n\nOne new thing\.\n\n### Added\n\n- New thing\n\n## \[0\.1\.0\]/);
+  assert.deepEqual(changelogSection(out, '0.2.0'), { body: 'One new thing.\n\n### Added\n\n- New thing', date: '2026-11-20' });
 });
 
 test('cutChangelog dates a heading prepared earlier and leaves Unreleased alone', () => {
@@ -87,7 +89,7 @@ test('cutChangelog dates a heading prepared earlier and leaves Unreleased alone'
 });
 
 test('cutChangelog refuses an empty Unreleased section', () => {
-  const empty = CHANGELOG.replace('### Added\n\n- New thing\n\n', '');
+  const empty = CHANGELOG.replace('One new thing.\n\n### Added\n\n- New thing\n\n', '');
   assert.throws(() => cutChangelog(empty, '0.2.0', '2026-11-20'), /nothing under Unreleased/);
 });
 
@@ -124,6 +126,36 @@ test('promoteProblem allows only a dated, newer version that is on develop', () 
   assert.match(promoteProblem('0.2.0', m('0.2.0'), m('0.1.0'), CHANGELOG), /no dated 0\.2\.0 heading/);
   const empty = CHANGELOG.replace('## [0.1.0]', '## [0.2.0] - 2026-11-20\n\n## [0.1.0]');
   assert.match(promoteProblem('0.2.0', m('0.2.0'), m('0.1.0'), empty), /empty 0\.2\.0 section/);
+});
+
+test('cutChangelog refuses Unreleased entries without a summary line', () => {
+  const bare = CHANGELOG.replace('One new thing.\n\n', '');
+  assert.throws(() => cutChangelog(bare, '0.2.0', '2026-11-20'), /one-line summary/);
+});
+
+test('sectionSummary returns the text above the first heading or entry', () => {
+  assert.equal(sectionSummary('One new thing.\n\n### Added\n\n- New thing'), 'One new thing.');
+  assert.equal(sectionSummary('Two\nlines.\n\n- Entry'), 'Two\nlines.');
+  assert.equal(sectionSummary('### Added\n\n- First thing'), '');
+  assert.equal(sectionSummary('Only a summary.'), 'Only a summary.');
+});
+
+test('releaseNotes uses the summary, or the whole older section, and links the changelog', () => {
+  const repo = 'https://github.com/o/r';
+  assert.equal(releaseNotes({ body: 'One new thing.\n\n### Added\n\n- New thing' }, '0.2.0', repo),
+    'One new thing.\n\nDetails: [CHANGELOG.md](https://github.com/o/r/blob/v0.2.0/CHANGELOG.md)\n');
+  assert.match(releaseNotes({ body: '### Added\n\n- First thing' }, '0.1.0', repo), /^### Added\n\n- First thing\n\nDetails: /);
+});
+
+test('changelogProblems flags long entries, a long summary and blank lines inside a list', () => {
+  assert.deepEqual(changelogProblems(CHANGELOG), []);
+  assert.deepEqual(changelogProblems(CHANGELOG.replace(/\n/g, '\r\n')), []);
+  const long = 'x'.repeat(MAX_ENTRY);
+  assert.match(changelogProblems(CHANGELOG.replace('- New thing', `- ${long}`)).join(), /characters \(max 300\)/);
+  assert.match(changelogProblems(CHANGELOG.replace('One new thing.', `${long}.`)).join(), /summary is 301 characters/);
+  assert.match(changelogProblems(CHANGELOG.replace('- New thing\n', '- New thing\n\n- Other thing\n')).join(), /blank line between Unreleased entries/);
+  assert.deepEqual(changelogProblems(CHANGELOG.replace('- First thing', `- ${long}`)), [], 'released sections are not checked');
+  assert.deepEqual(changelogProblems('# Changelog\n'), ['"## [Unreleased]" heading not found']);
 });
 
 console.log(`✔ All ${passed} release tests passed`);
