@@ -160,6 +160,9 @@ test('changelogProblems flags long entries, a long summary and blank lines insid
   assert.match(changelogProblems(CHANGELOG.replace('- New thing', wrapped)).join(), /entry is 343 characters/);
   assert.match(changelogProblems(CHANGELOG.replace('- New thing\n', '- New thing\n  wrapped\n\n- Other thing\n')).join(), /blank line between Unreleased entries/);
   assert.deepEqual(changelogProblems(CHANGELOG.replace('- New thing\n', '- New thing\n  wrapped\n- Other thing\n')), []);
+  for (const gap of ['\n\n\n', '\n  \n', '\n \n\n']) {
+    assert.equal(changelogProblems(CHANGELOG.replace('- New thing\n', `- New thing${gap}- Other thing\n`)).length, 1, JSON.stringify(gap));
+  }
 });
 
 test('cutChangelog refuses Unreleased content that breaks the style rules', () => {

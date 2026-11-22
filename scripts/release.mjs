@@ -150,8 +150,11 @@ export function changelogProblems(text) {
     } else if (open && line.trim() && !line.startsWith('#')) {
       entries[entries.length - 1] += ` ${line.trim()}`;
     } else {
-      if (open && line === '' && lines[i + 1]?.startsWith('- ')) {
-        problems.push(`blank line between Unreleased entries, before "${lines[i + 1].slice(0, 60)}…"`);
+      // Any run of empty or whitespace-only lines between two entries
+      if (open && !line.trim()) {
+        let j = i + 1;
+        while (j < lines.length && !lines[j].trim()) j++;
+        if (lines[j]?.startsWith('- ')) problems.push(`blank line between Unreleased entries, before "${lines[j].slice(0, 60)}…"`);
       }
       open = false;
     }
