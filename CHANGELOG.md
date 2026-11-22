@@ -10,6 +10,7 @@ Notable changes to SOMA, newest first. The format follows [Keep a Changelog](htt
 - Benchmark: `scripts/benchmark-chart.mjs` draws the README chart (`assets/benchmark-light.svg` and `benchmark-dark.svg`) from the results file named in `assets/benchmark-chart.json`, instead of the SVGs being edited by hand. It refuses a results file with a task short of its runs in either arm, a run with a missing measurement, or more than 56 runs per arm, and its test in CI fails when the committed SVGs no longer match the config
 
 - The launcher checks the Node.js version before it installs or starts `appium-mcp`, against `supportedNode` in `runtime/package.json`: `^22.19.0 || >=24.0.0` for the pinned `appium-mcp` 1.97.1, whose dependencies need Node 22.19 (`fastmcp` → `@apidevtools/swagger-parser`) and do not support Node 23. On any other version it exits with one line in the server log saying which versions to install, instead of installing about 370 MB and then failing. As with npm's own range checks, prerelease and nightly builds are refused. `check-setup` runs the same check (`scripts/node-range.mjs`), CI checks the range against every package in the installed runtime (`scripts/check-node-range.mjs`), so a bump that needs a newer Node fails until the range is raised, and `check-plugin.mjs` checks that the README shows the same range
+- `generate-test` can write native Swift XCUITest for iOS: Appium still verifies every locator on the live app, then the skill maps them to XCUITest queries and reports the `xcodebuild test` command
 
 ### Changed
 
@@ -57,7 +58,6 @@ The first marketplace release. Status moves from experimental to beta.
 - `.claude-plugin/marketplace.json`, so the plugin installs with `/plugin install soma --marketplace Dor-bl/soma-plugin`
 - `LICENSE` (Apache 2.0), `NOTICE`, `SECURITY.md`, this changelog and a listing icon
 - `homepage`, `repository` and a full `author` in the manifest; `check-plugin.mjs` checks the publishing files and the README install line
-- `generate-test` can write native Swift XCUITest for iOS: Appium still verifies every locator on the live app, then the skill maps them to XCUITest queries and reports the `xcodebuild test` command
 - Benchmark: context per turn, turns and Bash calls per arm in the summary table, and `--keep-streams` to save each run's raw stream (#57)
 - `check-plugin.mjs` fails when the "Sensitive data (redaction)" section of `bug-report`, `run-manual-test`, `explore-app` and `triage-failure` drifts apart, and names the first line that differs
 - `bug-report` formats the draft for the tester's tracker: Markdown by default, Jira wiki markup or plain text on request, with device text and logs kept inside code or `{noformat}` blocks so trackers do not turn them into mentions, issue links or markup. An excerpt cannot close its own block, and plain text keeps them out of the body
