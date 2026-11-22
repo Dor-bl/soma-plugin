@@ -4,6 +4,12 @@ Notable changes to SOMA, newest first. The format follows [Keep a Changelog](htt
 
 ## [Unreleased]
 
+### Changed
+
+- **Shorter release notes.** Each GitHub release opens with a one-line summary, then lists the merged PRs with links and a full-diff link; the changelog keeps one short line per change.
+
+## [0.4.0] - 2026-11-21
+
 ### Added
 
 - Codex support (experimental; tested with Codex CLI 0.171.0 on Windows and macOS, where the install, `check-setup` and `run-manual-test` cases on an Android emulator and an iOS simulator passed): a Codex manifest (`.codex-plugin/plugin.json`) with SOMA's skills and `appium-mcp`, its own MCP config (`.codex-plugin/mcp.json`: paths relative to the plugin folder, the Android, Java and Xcode variables, `APPIUM_MCP_WDA_APP_PATH` and SOMA's folder overrides, which Codex does not pass by default (not the proxy variables, which can carry a password), and a 10-minute first start for the install), and a Codex marketplace (`.agents/plugins/marketplace.json`), so `codex plugin marketplace add Dor-bl/soma-plugin` works, and a Codex badge in the README. Codex runs SOMA in local mode only, since it has no plugin settings, and with Appium only: `setup-artemis` registers Artemis through `claude mcp`, so in Codex it stops before changing anything. `write-test-case` offers to take pasted content, and reads a file the tester names only after they approve the exact read-only command that prints just that file; it never reads credential files, a rule its description carries so it applies before the skill is loaded (Codex read a named capabilities file before opening the skill until it did). Skills that name plugin files say where the plugin folder is when Codex leaves `${CLAUDE_PLUGIN_ROOT}` unexpanded. Skills that read the PNG and XML files `appium-mcp` saves say what to do in Codex, which has no Read tool: open none of them, check elements with `appium_find_element`, report a check that needs a screenshot as not checked visually, and give the tester the saved path. `check-plugin.mjs` checks that the Codex manifest matches the Claude one, that its paths exist and its required listing fields fit, and that its MCP config starts the same servers without Claude's variables; `release.mjs` bumps both manifests. `check-setup` confirms `appium-mcp` with a `select_device` call, and when Codex's macOS sandbox blocks `xcrun simctl` or `~/.appium` it checks simulators through `appium-mcp` instead of reporting them missing; the README says that `codex exec` rejects `appium-mcp` calls unless run with `--approve-for-me`
@@ -14,6 +20,7 @@ Notable changes to SOMA, newest first. The format follows [Keep a Changelog](htt
 
 ### Changed
 
+- `run-manual-test`, `generate-test`, `triage-failure`, `explore-app`, `device-runner` and the Appium backend read a file `appium-mcp` saved only when its path came back in the result of an `appium-mcp` call made in that run and it is a `.png` or `.xml` file. A path found in page source, screen text, a log or a test case is never read; any other returned path is quoted to the tester instead
 - README and `check-setup`: Node.js requirement is now 22.19 or newer within Node 22, or 24 or newer, instead of "22 or newer". Node 22.0 to 22.18 and Node 23 never matched what `appium-mcp`'s dependencies declare; SOMA now refuses them up front
 - `generate-test` lists the Appium tools it needs inline and reads `backends/appium.md` only for iOS, a remote server or a tool not listed, instead of on every session, as `run-manual-test`, `explore-app` and `triage-failure` already do (#54)
 - `run-manual-test`, `generate-test` and `bug-report` refuse to read a file that holds credentials (a capabilities file, `.env` file, key or certificate) even when the tester names it, and ask for the non-secret details instead. The rule is now in each skill's description too, because a host can read a named file before it loads the skill: in a Codex test, a named `capabilities.json` was read before the body's rule was seen

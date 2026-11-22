@@ -1,8 +1,8 @@
 name: Release
 
 # Tags v<version> and publishes a GitHub release when a push to main changes
-# the version in plugin.json and no release exists for it yet. The notes are
-# that version's CHANGELOG.md section, which must carry a date (set by
+# the version in plugin.json and no release exists for it yet. The notes are the
+# summary of that version's CHANGELOG.md section, which must carry a date (set by
 # scripts/release.mjs). Plugin users get updates from the version field, not
 # from tags; this keeps the repository's releases in step with it.
 on:
@@ -80,7 +80,7 @@ jobs:
       - name: Check the plugin
         if: steps.exists.outputs.skip == 'false'
         run: node scripts/check-plugin.mjs
-      - name: Release notes from CHANGELOG.md
+      - name: Release summary from CHANGELOG.md
         if: steps.exists.outputs.skip == 'false'
         env:
           VERSION: ${{ steps.version.outputs.version }}
@@ -94,5 +94,7 @@ jobs:
         run: |
           prerelease=""
           case "$VERSION" in *-*) prerelease="--prerelease" ;; esac
+          # --generate-notes appends the merged PRs (grouped by .github/release.yml)
+          # and the compare link to the summary in notes.md
           gh release create "$TAG" --target "$GITHUB_SHA" --title "SOMA $TAG" \
-            --notes-file "$RUNNER_TEMP/notes.md" $prerelease
+            --notes-file "$RUNNER_TEMP/notes.md" --generate-notes $prerelease
