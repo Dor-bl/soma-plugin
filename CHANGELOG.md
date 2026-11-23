@@ -4,6 +4,10 @@ Notable changes to SOMA, newest first. The format follows [Keep a Changelog](htt
 
 ## [Unreleased]
 
+### Added
+
+- `start-device` can stop an emulator (`start-emulator.mjs --stop <avd>`) or simulator (`xcrun simctl shutdown`) the tester names, and offers it when retry flags need a fresh start
+
 ### Changed
 
 - **Shorter release notes.** Each GitHub release opens with a one-line summary, then lists the merged PRs with links and a full-diff link; the changelog keeps one short line per change.

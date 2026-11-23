@@ -1,5 +1,5 @@
 ---
-description: Start an Android emulator or iOS simulator and wait until it is ready, or diagnose why it fails
+description: Start an Android emulator or iOS simulator and wait until it is ready, diagnose why it fails, or stop one
 argument-hint: "[avd or simulator name]"
 ---
 
