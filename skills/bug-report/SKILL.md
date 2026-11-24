@@ -6,7 +6,7 @@ description: Write a clear, reproducible mobile bug report from a failed test, o
 # Write a bug report
 
 ## Collect (ask only for what is missing)
-App name and build/version, platform and OS version, device or emulator model, environment (staging/prod), account type used, exact steps, expected vs actual, frequency, screenshots or logs.
+App name and build/version, platform and OS version, device or emulator model, environment (staging/prod), account type used, exact steps, expected vs actual, frequency, screenshots or logs. Optional, if the tester knows: the last build where it worked, and a workaround.
 
 Do not ask for the tracker. Use the format the tester names, or the one their tracker maps to under "Format for the tracker"; if they name neither, Markdown.
 
@@ -18,6 +18,8 @@ Do not ask for the tracker. Use the format the tester names, or the one their tr
 **Expected result**
 **Actual result**
 **Frequency**: e.g. 3/3 runs. Only state a number that was actually observed.
+**Regression**: only when the tester says it worked on an earlier build, e.g. "Worked in 4.2.0 (1234), broken since 4.3.0 (1240)". Name only builds the tester tested; otherwise leave the field out, never "unknown" or a guess.
+**Workaround**: only when the tester found one, in one line. It informs the severity: a core flow with a workaround is not blocked.
 **Evidence**: screenshot and log references. If a screenshot shows something to redact, write it as a to-do for the tester, e.g. "(mask the serial number before attaching)", never as already done.
 **Severity (suggested)**: crash/data loss, blocks a core flow, workaround exists, cosmetic. Mark it as a suggestion for the team to confirm.
 

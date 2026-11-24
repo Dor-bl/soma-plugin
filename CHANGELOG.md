@@ -4,6 +4,10 @@ Notable changes to SOMA, newest first. The format follows [Keep a Changelog](htt
 
 ## [Unreleased]
 
+### Added
+
+- `bug-report` has optional **Regression** (last working and first broken build) and **Workaround** fields, filled only from what the tester observed and otherwise left out, never guessed
+
 ### Changed
 
 - **Shorter release notes.** Each GitHub release opens with a one-line summary, then lists the merged PRs with links and a full-diff link; the changelog keeps one short line per change.
