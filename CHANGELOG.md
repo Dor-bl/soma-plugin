@@ -4,6 +4,10 @@ Notable changes to SOMA, newest first. The format follows [Keep a Changelog](htt
 
 ## [Unreleased]
 
+### Changed
+
+- **Updating SOMA in Codex.** The README says how to move Codex to a new SOMA version (remove and add the plugin) and to start a new session after the first `appium-mcp` install. (#127)
+
 ## [0.5.0] - 2026-11-25
 
 The Windows first-start install now survives a tree kill of the server, and GitHub releases get shorter notes.
@@ -14,7 +18,6 @@ The Windows first-start install now survives a tree kill of the server, and GitH
 
 ### Changed
 
-- **Updating SOMA in Codex.** The README says how to move Codex to a new SOMA version (remove and add the plugin) and to start a new session after the first `appium-mcp` install.
 - **Shorter release notes.** Each GitHub release opens with a one-line summary, then lists the merged PRs with links and a full-diff link; the changelog keeps one short line per change.
 
 ## [0.4.0] - 2026-11-21
