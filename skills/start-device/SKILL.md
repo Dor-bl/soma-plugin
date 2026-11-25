@@ -9,7 +9,7 @@ Plugin files below are written as `${CLAUDE_PLUGIN_ROOT}/<path>`, under the plug
 
 Local mode only. Remote Appium server URL configured: `${user_config.remote_server_url}`. If it is empty, or still shows as a literal `${user_config...}` placeholder, it is not set: continue. If it is set, devices come from that server, not this machine: say so and stop. Starting a local emulator or simulator, or running `adb` or `xcrun` here, would not affect the remote session and could act on the wrong device. The one exception: the tester explicitly asks for a local device anyway (for example to use an engine that only reaches local `adb` devices, see `${CLAUDE_PLUGIN_ROOT}/backends/README.md`); then continue, and say the device is local, not on the remote server.
 
-Starting an emulator or simulator changes the tester's machine. If they asked for it directly (for example `/soma:device`), go ahead; if another skill sent you here, get their yes first. Stopping one is covered in "Stop a device" at the end.
+Starting an emulator or simulator changes the tester's machine. If they asked for it directly (for example `/soma:device`), go ahead; if another skill sent you here, get their yes first. If the tester wants a device stopped, go straight to "Stop a device" at the end and do only what it says; do not start, boot or prepare anything (no emulator start, `bootstatus` or WebDriverAgent) first.
 
 Pick the platform from what the tester said (an AVD name means Android; an iPhone or iPad name, or "simulator", means iOS). If it is unclear, ask. Then follow the matching section.
 
