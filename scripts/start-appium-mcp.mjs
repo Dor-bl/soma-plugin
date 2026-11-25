@@ -225,13 +225,21 @@ async function startInstaller() {
     });
     let printed = '';
     helper.stdout.on('data', (d) => { printed += d; });
-    const status = await new Promise((resolve) => {
-      const timer = setTimeout(() => resolve('timed out'), 15_000);
-      helper.on('error', (err) => { clearTimeout(timer); resolve(err.message); });
-      helper.on('close', (code) => { clearTimeout(timer); resolve(code === 0 ? null : `exit code ${code}`); });
+    const exited = new Promise((resolve) => {
+      helper.on('error', (err) => resolve(err.message));
+      helper.on('close', (code) => resolve(code === 0 ? null : `exit code ${code}`));
     });
-    const pid = Number(printed.trim());
-    if (status === null && Number.isInteger(pid) && pid > 0) return pid;
+    const status = await Promise.race([exited, new Promise((r) => setTimeout(() => r('timed out'), 15_000))]);
+    const printedPid = Number(printed.trim());
+    if (status === null && Number.isInteger(printedPid) && printedPid > 0) return printedPid;
+    if (status === 'timed out') {
+      // Stop the helper and any installer it started, so only one install runs
+      killTree(helper.pid, true);
+      await Promise.race([exited, new Promise((r) => setTimeout(r, 5000))]);
+    }
+    // An installer the helper started that is still running: wait for that one
+    const running = liveInstaller() || (isRunning(printedPid) ? printedPid : 0);
+    if (running) return running;
     log(`could not start the installer through a helper process (${status ?? `no PID: "${printed.trim()}"`}); starting it directly, so it stops if Claude Code kills this server's process tree`);
     return spawnInstallerProcess(out).pid;
   } finally {
