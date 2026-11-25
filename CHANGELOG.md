@@ -4,6 +4,10 @@ Notable changes to SOMA, newest first. The format follows [Keep a Changelog](htt
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-11-25
+
+The Windows first-start install now survives a tree kill of the server, and GitHub releases get shorter notes.
+
 ### Fixed
 
 - **Windows: the first-start install survives a tree kill.** The launcher starts the background installer through a short-lived helper process, so a client that kills the server's process tree (`taskkill /T /F`) without closing stdin first no longer stops the `appium-mcp` install (#77)
