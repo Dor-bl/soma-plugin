@@ -63,6 +63,14 @@ const inUseMarker = join(installDir, `.in-use-${process.pid}`);
 const installLog = `${installDir}.install.log`;
 mkdirSync(dataDir, { recursive: true });
 
+// Windows only (see startInstaller): start the installer, print its PID and exit, so the
+// installer's parent is a process that no longer exists
+if (process.argv[2] === '--spawn-installer') {
+  const child = spawnInstallerProcess(2);
+  process.stdout.write(String(child.pid ?? ''), () => process.exit(child.pid ? 0 : 1));
+  await new Promise(() => {});
+}
+
 // Installer mode (see runInstaller): install, move the result into place, and exit
 if (process.argv[2] === '--install') {
   const staging = await install();
@@ -193,13 +201,7 @@ async function runInstaller() {
     log(`waiting for another launcher's install of ${APPIUM_MCP} to finish`);
   } else {
     log(`installing ${APPIUM_MCP} from the lockfile into ${installDir} (first start can take several minutes; if Claude Code reports that the server failed to connect, reconnect with /mcp once it has finished)`);
-    const out = openSync(installLog, 'w');
-    const child = spawn(process.execPath, [fileURLToPath(import.meta.url), '--install'], {
-      detached: true, stdio: ['ignore', out, out], windowsHide: true,
-    });
-    closeSync(out);
-    child.unref();
-    pid = child.pid;
+    pid = await startInstaller();
   }
   while (!existsSync(entry) && isRunning(pid)) await new Promise((r) => setTimeout(r, 500));
   if (!existsSync(entry)) {
@@ -207,6 +209,52 @@ async function runInstaller() {
     process.exit(1);
   }
   removeQuietly(installLog);
+}
+
+// Starts the detached installer and returns its PID. On Windows, a client that ends the
+// session with a tree kill (`taskkill /T /F`, which finds children by their parent PID)
+// would also kill a direct child, detached or not (#77). So a short-lived helper starts the
+// installer and exits: the installer's parent PID then names a process that has exited, and
+// the tree kill does not reach it. If the helper fails, start the installer directly.
+async function startInstaller() {
+  const out = openSync(installLog, 'w');
+  try {
+    if (process.platform !== 'win32') return spawnInstallerProcess(out).pid;
+    const helper = spawn(process.execPath, [fileURLToPath(import.meta.url), '--spawn-installer'], {
+      detached: true, stdio: ['ignore', 'pipe', out], windowsHide: true,
+    });
+    let printed = '';
+    helper.stdout.on('data', (d) => { printed += d; });
+    const exited = new Promise((resolve) => {
+      helper.on('error', (err) => resolve(err.message));
+      helper.on('close', (code) => resolve(code === 0 ? null : `exit code ${code}`));
+    });
+    const status = await Promise.race([exited, new Promise((r) => setTimeout(() => r('timed out'), 15_000))]);
+    const printedPid = Number(printed.trim());
+    if (status === null && Number.isInteger(printedPid) && printedPid > 0) return printedPid;
+    if (status === 'timed out') {
+      // Stop the helper and any installer it started, so only one install runs
+      killTree(helper.pid, true);
+      await Promise.race([exited, new Promise((r) => setTimeout(r, 5000))]);
+    }
+    // An installer the helper started that is still running: wait for that one
+    const running = liveInstaller() || (isRunning(printedPid) ? printedPid : 0);
+    if (running) return running;
+    log(`could not start the installer through a helper process (${status ?? `no PID: "${printed.trim()}"`}); starting it directly, so it stops if Claude Code kills this server's process tree`);
+    return spawnInstallerProcess(out).pid;
+  } finally {
+    closeSync(out);
+  }
+}
+
+// `--install` in a detached copy of this script, writing its output to the file descriptor
+function spawnInstallerProcess(out) {
+  const child = spawn(process.execPath, [fileURLToPath(import.meta.url), '--install'], {
+    detached: true, stdio: ['ignore', out, out], windowsHide: true,
+  });
+  child.on('error', (err) => log(`could not start the installer: ${err.message}`));
+  child.unref();
+  return child;
 }
 
 // PID of a running installer for this lockfile (its staging folder is named after it), or 0
