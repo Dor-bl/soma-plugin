@@ -4,6 +4,10 @@ Notable changes to SOMA, newest first. The format follows [Keep a Changelog](htt
 
 ## [Unreleased]
 
+### Added
+
+- `explore-app` reports as a session sheet: charter, budget used, what was and was not covered and why, findings most severe first with a suggested severity, and open questions
+
 ### Changed
 
 - **Shorter release notes.** Each GitHub release opens with a one-line summary, then lists the merged PRs with links and a full-diff link; the changelog keeps one short line per change.
