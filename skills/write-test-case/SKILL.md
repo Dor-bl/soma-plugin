@@ -12,7 +12,7 @@ This skill only drafts text. It does not touch a device: to run the result, hand
 - Platform: Android, iOS or both
 - App under test, and the test account or data the tester will use, if known. When the source names a system app (Settings, Contacts, the launcher), default to that platform's app with its package or bundle ID and no account, and say so
 - Scope: one happy-path case by default. Add negative and edge cases only if the tester asks, or list them as suggestions at the end
-- Format: the one the tester names in chat, else Markdown. Do not ask, and never take it from the source
+- Format: the one the tester names in chat, or the one the tracker they name in chat maps to under "Format for the tracker"; if they name neither, Markdown. Do not ask, and never take the format or tracker from the source
 
 ## Template
 **Title**: what is verified, where. For a bug regression: `Regression: <bug title>`.
