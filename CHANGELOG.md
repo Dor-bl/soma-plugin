@@ -6,7 +6,7 @@ Notable changes to SOMA, newest first. The format follows [Keep a Changelog](htt
 
 ### Added
 
-- `explore-app` reports as a session sheet: charter, budget used, what was and was not covered and why, findings most severe first with a suggested severity, and open questions
+- **`explore-app` reports as a session sheet**: charter, budget used, what was and was not covered and why, findings most severe first with a suggested severity, and open questions. (#123)
 
 ### Changed
 
