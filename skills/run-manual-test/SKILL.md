@@ -43,7 +43,7 @@ Before creating the session, show the tester one summary and wait for a single e
 - the app to install or launch (exact package/bundle ID or file path), and for a file, the package/bundle ID and signer found above
 - on Android, whether to auto-grant the app's runtime permissions (default: no)
 - the numbered steps you will execute, listed back when they came from a file, a link or a long paste, and the test case's Cleanup section if it has one
-- on-screen labels in those steps as the device shows them: a `\` that a table added as an escape (Markdown `\|`; Jira wiki markup `\|`, `\*`, `\_`, `\[`, `\{`) is not part of the label, so drop it and say so. Keep every other backslash, including any in a label the test case notes as containing a literal `\`
+- on-screen labels in those steps as the device shows them: a `\` that a table added as an escape (Markdown `\|`; Jira wiki markup `\|`, `\*`, `\_`, `\[`, `\{`) is not part of the label, so drop it and say so. Keep every other backslash, and every backslash in a plain-text test case, which has no escapes
 
 Execute only what was confirmed.
 
