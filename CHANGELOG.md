@@ -4,6 +4,12 @@ Notable changes to SOMA, newest first. The format follows [Keep a Changelog](htt
 
 ## [Unreleased]
 
+`run-manual-test` reports now open with the device, OS, app version and date of the run.
+
+### Added
+
+- **Environment header in `run-manual-test` reports**: engine, device model and OS version as the session reports them, local or remote, the app ID and version, and the date, with "not known" instead of a guess. `bug-report` can reuse it for its Environment line.
+
 ## [0.5.0] - 2026-11-25
 
 The Windows first-start install now survives a tree kill of the server, and GitHub releases get shorter notes.

@@ -15,6 +15,7 @@ The calling skill gives you:
 - the app: package/bundle ID, and one of: install a confirmed local file (its path), a device-cloud app reference (e.g. `bs://...`), or launch the installed app
 - the remote server URL value, or "local"
 - `autoGrantPermissions` (true only if the tester approved it) and whether to pass `noReset: true`
+- the app version for the report header, or "not known"
 - the numbered steps with expected results, and the confirmed Cleanup section if any
 - test account values the tester gave, if a step needs them
 - the privileged actions the tester approved for the steps and for Cleanup, each as an exact action with the step (or Cleanup) it belongs to, or "none"
@@ -47,7 +48,7 @@ If any of these is missing or contradicts itself (for example a local file path 
 
 ## Report (your final message)
 Keep it short; the calling skill shows it to the tester. No raw page source, no base64, no full logs.
-- `Engine: Appium`, the device, and local or remote
+- `Engine: Appium`, the device model and OS version as the session returned them (`deviceModel`, `platformVersion`; "not known" when it did not), local or remote, and the app's package/bundle ID with the version the brief gives (or "not known"). Never guess a value, and no serial numbers or other device identifiers
 - a table: step, action, expected, observed, status (PASS, FAIL, BLOCKED)
 - for each FAIL, the screenshot path exactly as returned
 - for each BLOCKED step, what it needs from the tester
