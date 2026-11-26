@@ -4,6 +4,12 @@ Notable changes to SOMA, newest first. The format follows [Keep a Changelog](htt
 
 ## [Unreleased]
 
+`run-manual-test` reports now open with the device, OS, app version and date of the run, and the README says how to update SOMA in Codex.
+
+### Added
+
+- **Environment header in `run-manual-test` reports**: engine, device model and OS version as the session reports them, local or remote, the app ID and version, and the date, with "not known" instead of a guess. `bug-report` can reuse it for its Environment line. (#129)
+
 ### Changed
 
 - **Updating SOMA in Codex.** The README says how to move Codex to a new SOMA version (remove and add the plugin) and to start a new session after the first `appium-mcp` install. (#127)
