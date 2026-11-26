@@ -6,7 +6,7 @@ Notable changes to SOMA, newest first. The format follows [Keep a Changelog](htt
 
 ### Added
 
-- `generate-test` can write native Swift XCUITest for iOS: Appium still verifies every locator on the live app, then the skill maps them to XCUITest queries and reports the `xcodebuild test` command
+- **`generate-test` writes native Swift XCUITest for iOS**: Appium still verifies every locator on the live app, then the skill maps them to XCUITest queries and reports the `xcodebuild test` command. (#67)
 
 ### Changed
 
