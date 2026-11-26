@@ -27,7 +27,7 @@ This skill only drafts text. It does not touch a device: to run the result, hand
 - **Markdown (default)**: fields as `**bold**` labels, steps as a table with a header row. Write a `|` inside a cell as `\|`.
 - **Jira wiki markup** (Jira Server or Data Center, or when the tester asks for it): fields as `*bold*` labels, steps as a table with a `||Step||Action||Expected result||` header and `|`-separated rows. Write `|`, `*`, `_`, `[`, `{` inside a cell or label with a `\` before it, so Jira does not read them as markup.
 - **Plain text** (email, chat, Jira Cloud, a test tool's plain-text field): labels in capitals with a colon, then each step as `1. <action>` with an indented `Expected: <result>` line under it. No table.
-- Name the format above the test case and output it once, in one block the tester can copy. Any format stays runnable with `run-manual-test`. A `\` escape is markup, not part of the label: say so if you added one.
+- Name the format above the test case and output it once, in one block the tester can copy. Any format stays runnable with `run-manual-test`. A `\` escape is markup, not part of the label: say so if you added one. A label that itself contains `\` stays as it is, with a note under the test case naming that label (Jira reads `\\` as a line break and `\` before a markup character as an escape), so `run-manual-test` keeps the backslash.
 
 ## Rules
 - Write steps as a tester would do them on screen. Name elements by their visible label in quotes, copied exactly. Do not invent labels, screens or flows the source does not describe: list open questions at the end instead.
