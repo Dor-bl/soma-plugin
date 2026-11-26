@@ -1,19 +1,25 @@
 #!/usr/bin/env node
-// Lists Android emulators, or starts one and watches it boot. Used by the start-device skill.
+// Lists Android emulators, starts one and watches it boot, or stops one. Used by the
+// start-device skill.
 //
 //   node start-emulator.mjs --list
 //   node start-emulator.mjs <avd> [--cold] [--gpu <mode>] [--timeout <seconds>]
+//   node start-emulator.mjs --stop <avd> [--timeout <seconds>]
 //
 // The emulator is started detached and keeps running after this script exits. If the AVD
 // is already running (or still starting), the script waits for that instance instead.
 // Exit codes: 0 booted, 1 emulator exited before boot (crash), 2 timed out (still running),
 // 3 usage/setup error, including startup flags for an AVD that is already running.
+// With --stop: 0 stopped or not running, 2 still running after the timeout (default 60 s),
+// 3 usage/setup error, including an instance adb cannot name yet (it is not stopped) and
+// adb or the process list failing while it waits (whether it stopped is then unknown).
 import { spawn, execFileSync } from 'node:child_process';
 import { existsSync, mkdtempSync, openSync, readFileSync } from 'node:fs';
 import { createServer } from 'node:net';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { POWERSHELL } from './system-tools.mjs';
+import { parseStopArgs, stopState } from './emulator-stop.mjs';
 
 const isWindows = process.platform === 'win32';
 const sdk = process.env.ANDROID_HOME ?? process.env.ANDROID_SDK_ROOT;
@@ -37,7 +43,7 @@ const run = (cmd, args, timeout) => exec(cmd, args, timeout).out;
 
 function fail(code, msg, usageLine = false) {
   console.error(`✘ ${msg}`);
-  if (usageLine) console.error('Usage: node start-emulator.mjs --list | <avd> [--cold] [--gpu <mode>] [--timeout <seconds>]');
+  if (usageLine) console.error('Usage: node start-emulator.mjs --list | <avd> [--cold] [--gpu <mode>] [--timeout <seconds>] | --stop <avd> [--timeout <seconds>]');
   process.exit(code);
 }
 
@@ -109,13 +115,65 @@ if (args[0] === '--list') {
   process.exit(avds.length ? 0 : 3);
 }
 
-const avd = args[0];
-if (!avd || avd.startsWith('--')) fail(3, 'missing AVD name', true);
 const flag = (name) => args.includes(name);
 const option = (name) => {
   const i = args.indexOf(name);
   return i >= 0 ? args[i + 1] : undefined;
 };
+
+if (args[0] === '--stop') {
+  const parsed = parseStopArgs(args.slice(1));
+  if (parsed.error) fail(3, parsed.error, true);
+  const { name, timeoutMs: stopMs } = parsed;
+  if (!avds.includes(name)) fail(3, `AVD "${name}" not found. Run with --list to see available AVDs.`, true);
+  const started = Date.now();
+  // Only instances adb names as this AVD: never a serial guessed from a port or another AVD
+  const targets = adbEmulators(true).filter((r) => r.avd === name).map((r) => r.serial);
+  if (!targets.length) {
+    const proc = avdProcessRunning(name);
+    if (proc === null) fail(3, `SETUP: could not read the process list to check whether ${name} is running, so nothing was stopped.`);
+    if (proc) {
+      console.log(`STATUS: NOT STOPPED: ${name} is running but adb cannot name it yet (still starting or offline). Wait for it to come online and run again, or close its window.`);
+      process.exit(3);
+    }
+    console.log(`STATUS: NOT RUNNING: ${name}`);
+    process.exit(0);
+  }
+  for (const target of targets) {
+    console.log(`stopping: ${target} (${name})`);
+    // `adb emu kill` asks the emulator to exit through its console; if the console refuses
+    // (auth), power the guest off instead, which also ends the emulator process
+    if (!exec(ADB, ['-s', target, 'emu', 'kill'], 10_000).ok) {
+      console.log(`  adb emu kill failed; powering off with adb shell reboot -p`);
+      exec(ADB, ['-s', target, 'shell', 'reboot', '-p'], 10_000);
+    }
+  }
+  // Both observers must be read: a failed `adb devices` or process list is 'unknown', never
+  // 'stopped', so it can't be reported as STOPPED while the emulator is still up
+  const observe = () => {
+    const devices = exec(ADB, ['devices']);
+    const serials = devices.out.split(/\r?\n/).slice(1).map((l) => l.trim().split(/\s+/)[0]).filter(Boolean);
+    const left = serials.filter((s) => targets.includes(s));
+    return { state: stopState({ adb: { ok: devices.ok, serials }, proc: avdProcessRunning(name), targets }), left };
+  };
+  let last = { state: 'unknown', left: [] };
+  while (Date.now() - started < stopMs) {
+    await new Promise((resolve) => setTimeout(resolve, 2_000));
+    last = observe();
+    if (last.state === 'stopped') {
+      console.log(`STATUS: STOPPED: ${targets.join(', ')} (${name}) in ${Math.round((Date.now() - started) / 1000)}s`);
+      process.exit(0);
+    }
+  }
+  if (last.state === 'unknown') {
+    fail(3, `SETUP: could not read adb devices or the process list, so it is unknown whether ${name} stopped. Check with --list.`);
+  }
+  console.log(`STATUS: TIMEOUT: ${name} still running after ${stopMs / 1000}s${last.left.length ? ` (${last.left.join(', ')})` : ' (process still up)'}`);
+  process.exit(2);
+}
+
+const avd = args[0];
+if (!avd || avd.startsWith('--')) fail(3, 'missing AVD name', true);
 const cold = flag('--cold');
 const gpu = option('--gpu');
 const timeoutMs = (Number(option('--timeout')) || 300) * 1000;

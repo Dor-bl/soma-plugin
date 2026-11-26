@@ -4,6 +4,12 @@ Notable changes to SOMA, newest first. The format follows [Keep a Changelog](htt
 
 ## [Unreleased]
 
+`start-device` can stop an emulator or simulator the tester names, and the README says how to update SOMA in Codex.
+
+### Added
+
+- **`start-device` stops a named device**: an emulator (`start-emulator.mjs --stop <avd>`) or simulator (`xcrun simctl shutdown`), after the tester confirms it, and offers this when retry flags need a fresh start. (#121)
+
 ### Changed
 
 - **Updating SOMA in Codex.** The README says how to move Codex to a new SOMA version (remove and add the plugin) and to start a new session after the first `appium-mcp` install. (#127)

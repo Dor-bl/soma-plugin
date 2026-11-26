@@ -55,6 +55,8 @@ jobs:
         run: node scripts/test-release.mjs
       - name: Node.js range tests
         run: node scripts/test-node-range.mjs
+      - name: Emulator stop tests
+        run: node scripts/test-emulator-stop.mjs
 
   docs:
     name: Markdown lint and links
