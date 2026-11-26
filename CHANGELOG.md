@@ -4,9 +4,11 @@ Notable changes to SOMA, newest first. The format follows [Keep a Changelog](htt
 
 ## [Unreleased]
 
+`start-device` can stop an emulator or simulator the tester names, and the README says how to update SOMA in Codex.
+
 ### Added
 
-- `start-device` can stop an emulator (`start-emulator.mjs --stop <avd>`) or simulator (`xcrun simctl shutdown`) the tester names, and offers it when retry flags need a fresh start
+- **`start-device` stops a named device**: an emulator (`start-emulator.mjs --stop <avd>`) or simulator (`xcrun simctl shutdown`), after the tester confirms it, and offers this when retry flags need a fresh start. (#121)
 
 ### Changed
 
