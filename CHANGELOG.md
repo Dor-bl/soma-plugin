@@ -6,7 +6,7 @@ Notable changes to SOMA, newest first. The format follows [Keep a Changelog](htt
 
 ### Added
 
-- `bug-report` has optional **Regression** (last working and first broken build) and **Workaround** fields, filled only from what the tester observed and otherwise left out, never guessed
+- **`bug-report` Regression and Workaround fields** (optional): last working and first broken build, and a workaround, filled only from what the tester observed and otherwise left out, never guessed. (#122)
 
 ### Changed
 
