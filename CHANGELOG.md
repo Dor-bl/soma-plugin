@@ -4,9 +4,27 @@ Notable changes to SOMA, newest first. The format follows [Keep a Changelog](htt
 
 ## [Unreleased]
 
+`write-test-case` can write Markdown, Jira wiki markup or plain text, and the README says how to update SOMA in Codex.
+
 ### Added
 
-- `write-test-case` writes the test case as Markdown (default), Jira wiki markup (Jira Server or Data Center: a `||`-header steps table, with `|` and Jira markup characters escaped) or plain text (email, chat or Jira Cloud: numbered steps, each with an `Expected:` line), as `bug-report` already does. The tester names the format in chat; it is never taken from the story or ticket being turned into a test, and every format stays runnable with `run-manual-test`
+- **`write-test-case` output formats**: Markdown (default), Jira wiki markup or plain text, as `bug-report` already offers. The tester names the format in chat, never the story or ticket, and every format still runs with `run-manual-test`. (#120)
+
+### Changed
+
+- **Updating SOMA in Codex.** The README says how to move Codex to a new SOMA version (remove and add the plugin) and to start a new session after the first `appium-mcp` install. (#127)
+
+## [0.5.0] - 2026-11-25
+
+The Windows first-start install now survives a tree kill of the server, and GitHub releases get shorter notes.
+
+### Fixed
+
+- **Windows: the first-start install survives a tree kill.** The launcher starts the background installer through a short-lived helper process, so a client that kills the server's process tree (`taskkill /T /F`) without closing stdin first no longer stops the `appium-mcp` install (#77)
+
+### Changed
+
+- **Shorter release notes.** Each GitHub release opens with a one-line summary, then lists the merged PRs with links and a full-diff link; the changelog keeps one short line per change.
 
 ## [0.4.0] - 2026-11-21
 

@@ -5,7 +5,7 @@
 //
 //   node scripts/release.mjs 0.3.0               # today's date (UTC)
 //   node scripts/release.mjs 0.3.0 --date 2026-12-01
-//   node scripts/release.mjs --notes 0.3.0       # print that version's changelog section
+//   node scripts/release.mjs --notes 0.3.0       # print the release notes: that version's summary and a changelog link
 //   node scripts/release.mjs 0.3.0 --pr          # also branch from origin/develop, commit, push, open the PR into develop
 //   node scripts/release.mjs --promote 0.3.0     # after that PR merged: open the develop -> main PR
 //
@@ -98,6 +98,10 @@ export function cutChangelog(text, version, date) {
   const next = text.slice(start).search(/^## \[/m);
   const body = next === -1 ? text.slice(start) : text.slice(start, start + next);
   if (!body.trim()) throw new Error('CHANGELOG.md: nothing under Unreleased to release');
+  if (!sectionSummary(body)) throw new Error('CHANGELOG.md: add a one-line summary of the release under "## [Unreleased]", above its first "###" heading');
+  // Checked here because check-plugin.mjs, run after the cut, skips released sections
+  const problems = changelogProblems(text);
+  if (problems.length) throw new Error(`CHANGELOG.md: ${problems.join('; ')}`);
   return `${text.slice(0, start)}\n${dated}\n${body.startsWith('\n') ? '' : '\n'}${text.slice(start)}`;
 }
 
@@ -111,6 +115,64 @@ export function changelogSection(text, version) {
   const rawDate = m[0].match(/ - (\d{4}-\d{2}-\d{2})\s*$/)?.[1] ?? null;
   const date = isValidDate(rawDate) ? rawDate : null;
   return { body, date };
+}
+
+// The summary line(s) a section opens with: its text before the first "###" heading or entry.
+export function sectionSummary(body) {
+  const lines = body.replace(/\r\n/g, '\n').split('\n');
+  const end = lines.findIndex((l) => /^(### |- )/.test(l));
+  return (end === -1 ? lines : lines.slice(0, end)).join('\n').trim();
+}
+
+export const MAX_ENTRY = 300;
+
+// Style problems in the Unreleased section: each entry (and the summary) is one or
+// two sentences, at most MAX_ENTRY characters, and a list has no blank lines inside it.
+// Released sections are left as they were written.
+export function changelogProblems(text) {
+  text = text.replace(/\r\n/g, '\n');
+  const unreleased = /^## \[Unreleased\][^\n]*\n/m.exec(text);
+  if (!unreleased) return ['"## [Unreleased]" heading not found'];
+  const start = unreleased.index + unreleased[0].length;
+  const next = text.slice(start).search(/^## \[/m);
+  const lines = (next === -1 ? text.slice(start) : text.slice(start, start + next)).split('\n');
+  const problems = [];
+  const summary = sectionSummary(lines.join('\n'));
+  if (summary.length > MAX_ENTRY) problems.push(`the Unreleased summary is ${summary.length} characters; keep it under ${MAX_ENTRY}`);
+  // An entry is its "- " line plus any wrapped continuation lines under it, measured
+  // joined; a blank line ends it, and one directly followed by another entry is flagged.
+  const entries = [];
+  let open = false;
+  lines.forEach((line, i) => {
+    if (line.startsWith('- ')) {
+      entries.push(line);
+      open = true;
+    } else if (open && line.trim() && !line.startsWith('#')) {
+      entries[entries.length - 1] += ` ${line.trim()}`;
+    } else {
+      // Any run of empty or whitespace-only lines between two entries
+      if (open && !line.trim()) {
+        let j = i + 1;
+        while (j < lines.length && !lines[j].trim()) j++;
+        if (lines[j]?.startsWith('- ')) problems.push(`blank line between Unreleased entries, before "${lines[j].slice(0, 60)}…"`);
+      }
+      open = false;
+    }
+  });
+  entries.forEach((entry) => {
+    if (entry.length > MAX_ENTRY) {
+      problems.push(`Unreleased entry is ${entry.length} characters (max ${MAX_ENTRY}); move the detail to the PR: "${entry.slice(0, 60)}…"`);
+    }
+  });
+  return problems;
+}
+
+// The GitHub release body: the section's summary (or, for an older section with
+// none, the whole section) and a link to the changelog at the tag. release.yml
+// passes --generate-notes, so GitHub appends the merged PRs and the compare link.
+export function releaseNotes(section, version, repoUrl) {
+  const intro = sectionSummary(section.body) || section.body;
+  return `${intro}\n\nDetails: [CHANGELOG.md](${repoUrl}/blob/v${version}/CHANGELOG.md)\n`;
 }
 
 export const releaseBranch = (version) => `release/v${version}`;
@@ -157,7 +219,7 @@ function main(argv) {
     if (open) fail(`a develop -> main PR is already open: ${open}`);
     const body = `Promotes develop to main for ${version}. When this merges, release.yml tags v${version} and publishes the release.\n\n` +
       `**Merge with "Create a merge commit"**, not squash or rebase, so develop and main keep a shared history.\n\n## ${version}\n\n${notesFor(changelog, version)}\n`;
-    const url = run('gh', ['pr', 'create', '--base', 'main', '--head', 'develop', '--title', `Release v${version}`, '--body', body]);
+    const url = run('gh', ['pr', 'create', '--base', 'main', '--head', 'develop', '--title', `Release v${version}`, '--label', 'release', '--body', body]);
     console.log(`✔ Opened ${url}\nMerge it with a merge commit: gh pr merge ${url} --merge`);
     return;
   }
@@ -169,7 +231,8 @@ function main(argv) {
     if (!section) fail(`CHANGELOG.md: no section for ${version}`);
     if (!isValidDate(section.date)) fail(`CHANGELOG.md: the ${version} heading has no date; run release.mjs ${version} first`);
     if (!section.body) fail(`CHANGELOG.md: the ${version} section is empty`);
-    process.stdout.write(`${section.body}\n`);
+    const repoUrl = JSON.parse(readFileSync(path('.claude-plugin/plugin.json'), 'utf8')).repository.replace(/\/$/, '');
+    process.stdout.write(releaseNotes(section, version, repoUrl));
     return;
   }
 
@@ -216,7 +279,7 @@ function main(argv) {
   run('git', ['commit', '--quiet', '-m', `Release ${version}`]);
   run('git', ['push', '--quiet', '-u', 'origin', branch]);
   const body = `Bumps the version to ${version} and dates its changelog section. After this merges, run \`node scripts/release.mjs --promote ${version}\` to open the develop -> main PR.\n\n## ${version}\n\n${notesFor(files[path('CHANGELOG.md')], version)}\n`;
-  const url = run('gh', ['pr', 'create', '--base', 'develop', '--head', branch, '--title', `Release ${version}`, '--body', body]);
+  const url = run('gh', ['pr', 'create', '--base', 'develop', '--head', branch, '--title', `Release ${version}`, '--label', 'release', '--body', body]);
   console.log(`✔ Opened ${url}\nReview and merge it, then: node scripts/release.mjs --promote ${version}`);
 }
 

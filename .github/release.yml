@@ -1,0 +1,14 @@
+# Groups the merged PRs that GitHub adds to each release (release.yml in
+# .github/workflows passes --generate-notes). A PR goes in the first group
+# whose labels it has. Release and promote PRs carry "release" (release.mjs
+# adds it); label develop/main sync PRs "release" by hand.
+changelog:
+  exclude:
+    labels: [release]
+  categories:
+    - title: Changes
+      labels: ["*"]
+      exclude:
+        labels: [internal, dependencies, github_actions]
+    - title: For contributors
+      labels: [internal, dependencies, github_actions]
