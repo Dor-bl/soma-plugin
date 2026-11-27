@@ -62,7 +62,15 @@ Explore only what was confirmed.
 8. Close the session at the end.
 
 ## Report format
-The engine used, what was covered, then a list of findings: what happened, steps to get there, evidence, and whether it reproduced on a second try. Mark each finding as observed or suspected. Offer `bug-report` for confirmed findings and `run-manual-test` to turn a finding into a repeatable check.
+A session sheet, in this order:
+- **Charter**: the confirmed area, limits and engine, in one or two lines.
+- **Budget**: what the tester gave (screens or time) and how much was used.
+- **Covered**: the screens and paths walked, and the edge cases tried.
+- **Not covered**: what in the area was left out and why (budget, a limit, blocked by a bug, needs another account or data). Write "nothing" only if the whole area was walked.
+- **Findings**, most severe first: what happened, steps to get there, evidence (screenshot path), observed or suspected, how many tries and how many reproduced, and a suggested severity using the `bug-report` scale (crash/data loss, blocks a core flow, workaround exists, cosmetic), marked as a suggestion.
+- **Questions**: behavior that may be intended (ask the team, not a finding), and anything that blocked the session.
+
+Offer `bug-report` for confirmed findings and `run-manual-test` to turn a finding into a repeatable check.
 
 ## Rules
 - Do not enter real credentials, personal data or payment details.

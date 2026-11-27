@@ -4,6 +4,10 @@ Notable changes to SOMA, newest first. The format follows [Keep a Changelog](htt
 
 ## [Unreleased]
 
+### Added
+
+- **`explore-app` reports as a session sheet**: charter, budget used, what was and was not covered and why, findings most severe first with a suggested severity, and open questions. (#123)
+
 ### Changed
 
 - **Updating SOMA in Codex.** The README says how to move Codex to a new SOMA version (remove and add the plugin) and to start a new session after the first `appium-mcp` install. (#127)
