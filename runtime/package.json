@@ -2,9 +2,9 @@
   "name": "soma-appium-mcp-runtime",
   "private": true,
   "description": "Pins appium-mcp and, through package-lock.json, its whole dependency tree. Installed by scripts/start-appium-mcp.mjs with npm ci --ignore-scripts. supportedNode is the Node.js range the whole tree supports; the launcher refuses other versions (scripts/node-range.mjs) and CI checks it against every package (scripts/check-node-range.mjs).",
-  "supportedNode": "^22.19.0 || >=24.0.0",
+  "supportedNode": "^22.23.4 || ^24.22.1 || >=26.12.1",
   "dependencies": {
-    "appium-mcp": "1.97.1"
+    "appium-mcp": "1.99.5"
   },
   "overrides": {
     "basic-ftp": "^6.2.4",

@@ -14,7 +14,7 @@
 
 ![Android](https://img.shields.io/badge/Android-3DDC84?logo=android&logoColor=white)
 ![iOS](https://img.shields.io/badge/iOS-000000?logo=apple&logoColor=white)
-![Node.js](https://img.shields.io/badge/Node.js-22.19%2B%20%7C%2024%2B-339933?logo=nodedotjs&logoColor=white)
+![Node.js](https://img.shields.io/badge/Node.js-22.23.4%2B%20%7C%2024.22.1%2B%20%7C%2026.12.1%2B-339933?logo=nodedotjs&logoColor=white)
 [![Engine: Appium](https://img.shields.io/badge/engine-Appium%20(default)-662d91?logo=appium&logoColor=white)](backends/appium.md)
 [![Engine: Google Artemis](https://img.shields.io/badge/engine-Google%20Artemis%20(optional)-4285F4?logo=google&logoColor=white)](backends/artemis.md)
 
@@ -86,7 +86,7 @@ Without Artemis installed, SOMA behaves exactly as before. Artemis is an autonom
 
 | Platform | Needs |
 |----------|-------|
-| All | [Node.js](https://nodejs.org/) 22.19 or newer within Node 22, or 24 or newer (`^22.19.0 \|\| >=24.0.0`, required by `appium-mcp` and its dependencies; Node 23 is not supported). SOMA checks this before it installs `appium-mcp` |
+| All | [Node.js](https://nodejs.org/) 22.23.4 or newer within Node 22, 24.22.1 or newer within Node 24, or 26.12.1 or newer (`^22.23.4 \|\| ^24.22.1 \|\| >=26.12.1`, required by `appium-mcp` and its dependencies; Node 23 and 25 are not supported). SOMA checks this before it installs `appium-mcp` |
 | 🤖 Android | Android SDK, `adb`, an emulator or physical device |
 | 🍎 iOS | macOS with Xcode and a simulator *(iOS isn't available locally on Windows/Linux)* |
 
@@ -161,7 +161,7 @@ Once SOMA is installed, try:
 - 🧪 Lightly tested on devices: every skill has completed at least one run on an Android 13 emulator through Appium (headless, 2026-11-07), and `explore-app` has run once through Artemis. On iOS, `start-device`, `run-manual-test`, `triage-failure` and `bug-report` have run on an iOS 18.6 simulator on an Apple silicon Mac (headless, 2026-11-12); `generate-test` and `explore-app` haven't run on iOS yet. A clean install from the marketplace has been checked on Windows and macOS, followed by `/soma:setup` and one `/soma:run-test`. Physical devices and app maps haven't been run yet.
 - 🌐 Remote mode is untested: no run has gone through a remote Appium server or device cloud yet. The allowlist that blocks every other host is covered by CI.
 - 🛡️ Protection against prompt injection from app or device content (e.g. on-screen text telling Claude to run a command) relies on skill instructions, not tool restrictions. Tool-level limits are tracked in issue #8.
-- 📌 `appium-mcp` is pinned to an exact version (`1.97.1`), and its whole dependency tree is locked with integrity hashes in `runtime/package-lock.json`. Bump them together, deliberately, after testing. SOMA holds 1.97.1 on purpose: newer releases fail the first WebDriverAgent install on iOS 18.2 simulators ([appium/appium-mcp#608](https://github.com/appium/appium-mcp/issues/608)), and iOS on Intel Macs is untested with them. Install scripts are skipped, so packages that need one (e.g. browser driver downloads) are not set up.
+- 📌 `appium-mcp` is pinned to an exact version (`1.99.5`), and its whole dependency tree is locked with integrity hashes in `runtime/package-lock.json`. Bump them together, deliberately, after testing. Releases after 1.97.1, 1.99.5 included, can fail the first WebDriverAgent install on iOS 18.2 simulators ([appium/appium-mcp#608](https://github.com/appium/appium-mcp/issues/608)); a second prepare works. iOS on Intel Macs is untested with them. Install scripts are skipped, so packages that need one (e.g. browser driver downloads) are not set up.
 - 🌐 The remote URL policy covers the URL you configure only. Redirects and direct-connect endpoints chosen by the server aren't re-checked, so only point SOMA at servers you trust.
 - 🔓 SOMA can't add authentication to a self-hosted Appium server. Put it behind an authenticating reverse proxy or VPN; never expose it unauthenticated on a shared network.
 

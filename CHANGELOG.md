@@ -4,8 +4,13 @@ Notable changes to SOMA, newest first. The format follows [Keep a Changelog](htt
 
 ## [Unreleased]
 
+### Fixed
+
+- **Real-device iOS: WebDriverAgent downloads again.** `appium-mcp` is bumped from 1.97.1 to 1.99.5, which fetches WDA through the XCUITest driver instead of the archived repo that returned 404. (#97)
+
 ### Changed
 
+- **Node.js requirement raised** to 22.23.4+ within Node 22, 24.22.1+ within Node 24, or 26.12.1+ (`appium-mcp` 1.99.5 needs it); Node 23 and 25 are not supported. (#97)
 - **Updating SOMA in Codex.** The README says how to move Codex to a new SOMA version (remove and add the plugin) and to start a new session after the first `appium-mcp` install. (#127)
 
 ## [0.5.0] - 2026-11-25
