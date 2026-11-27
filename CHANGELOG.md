@@ -4,6 +4,10 @@ Notable changes to SOMA, newest first. The format follows [Keep a Changelog](htt
 
 ## [Unreleased]
 
+### Added
+
+- **`bug-report` Regression and Workaround fields** (optional): last working and first broken build, and a workaround, filled only from what the tester observed and otherwise left out, never guessed. (#122)
+
 ### Changed
 
 - **Updating SOMA in Codex.** The README says how to move Codex to a new SOMA version (remove and add the plugin) and to start a new session after the first `appium-mcp` install. (#127)
