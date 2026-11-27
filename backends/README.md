@@ -7,6 +7,8 @@ SOMA's skills describe *what* to do on a device. The files here describe *how* e
 | Appium (default) | [appium.md](appium.md) | Android, iOS | Yes, via `.mcp.json` |
 | Google Artemis | [artemis.md](artemis.md) | Android | No, install separately |
 
+Reference files: [app-map.md](app-map.md) (saved locators per app) and [appium-errors.md](appium-errors.md) (common Appium failure signatures and the category each one usually points to, for `triage-failure`).
+
 ## Choosing the engine
 1. Use Appium unless the tester asks for another engine, or the skill says otherwise.
 2. Use Artemis only if its `mobile_*` tools are available. If the tester asks for it and they are not, say so and point to `check-setup`.

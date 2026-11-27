@@ -4,6 +4,10 @@ Notable changes to SOMA, newest first. The format follows [Keep a Changelog](htt
 
 ## [Unreleased]
 
+### Added
+
+- **Known Appium errors in triage.** `triage-failure` looks up errors such as `no such element`, `session not created` or a WebDriverAgent `ECONNREFUSED` in a new signatures table, names the row that matched and runs its check before classifying.
+
 ### Changed
 
 - **Updating SOMA in Codex.** The README says how to move Codex to a new SOMA version (remove and add the plugin) and to start a new session after the first `appium-mcp` install. (#127)

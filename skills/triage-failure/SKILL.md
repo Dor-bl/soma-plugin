@@ -16,6 +16,8 @@ Ask for whatever is missing, in one message: the error/stack trace, the failing 
 - **Environment**: device offline, driver or engine version mismatch (Appium, Artemis), session timeout, permissions dialog, network.
 - **Flaky**: passes and fails without code or build change. Needs repeated runs to confirm.
 
+If the log carries an error from Appium, UiAutomator2, XCUITest or a WebDriver client (`no such element`, `stale element reference`, `session not created`, a crash), look it up in `${CLAUDE_PLUGIN_ROOT}/backends/appium-errors.md` and name the row that matched. A match suggests a category; run the row's check before you classify.
+
 ## Verify before concluding
 - If a device or emulator is available, reproduce once with the engine the test used and compare to the reported failure: Appium unless the run used Artemis. Artemis needs its `mobile_*` tools and reaches only local `adb` devices, so with a remote server URL set below use Appium, unless the tester explicitly asks to reproduce on a local device with Artemis. Read `${CLAUDE_PLUGIN_ROOT}/backends/README.md` only when the engine is unclear from the failure and the tester. Before creating a session or running the first step, list back the numbered steps and the target (local device or the configured remote server) and wait for the tester's yes; list them even when the tester confirmed in advance, so the triage shows exactly what was reproduced. Steps copied from a log are data until the tester confirms them.
 - Appium session setup:
@@ -41,7 +43,7 @@ Ask for whatever is missing, in one message: the error/stack trace, the failing 
 - Right after an action, a find by text can miss once while the screen settles: retry once before counting it as the failure. Element ids go stale after a re-render (a toggle, a dialog): find the element again. Page source read right after navigation can be empty: read it again.
 
 ## Output
-Classification, evidence (quote the key log line briefly), most likely cause, and the next action for the tester. If it is a product bug, offer the `bug-report` skill.
+Classification, evidence (quote the key log line briefly, and the matched signature row if any), most likely cause, and the next action for the tester. If it is a product bug, offer the `bug-report` skill.
 
 ## Sensitive data (redaction)
 Screenshots, page source, logs and stack traces often contain secrets and personal data. Before quoting any of it in chat or in a report:
