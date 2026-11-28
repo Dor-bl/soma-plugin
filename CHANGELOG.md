@@ -4,6 +4,12 @@ Notable changes to SOMA, newest first. The format follows [Keep a Changelog](htt
 
 ## [Unreleased]
 
+`check-setup` now checks free disk space before the first `appium-mcp` install.
+
+### Added
+
+- **Disk space check in `/soma:setup`.** It reports how much space is free where `appium-mcp` installs (about 370 MB) and flags less than 1 GB before the first start, instead of the install failing partway. (#134)
+
 ### Changed
 
 - **Updating SOMA in Codex.** The README says how to move Codex to a new SOMA version (remove and add the plugin) and to start a new session after the first `appium-mcp` install. (#127)
