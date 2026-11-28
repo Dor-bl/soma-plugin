@@ -8,7 +8,7 @@ Notable changes to SOMA, newest first. The format follows [Keep a Changelog](htt
 
 ### Added
 
-- **Disk space check in `/soma:setup`.** It reports how much space is free where `appium-mcp` installs (about 370 MB) and flags less than 1 GB before the first start, instead of the install failing partway.
+- **Disk space check in `/soma:setup`.** It reports how much space is free where `appium-mcp` installs (about 370 MB) and flags less than 1 GB before the first start, instead of the install failing partway. (#134)
 
 ### Changed
 
