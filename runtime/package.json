@@ -4,7 +4,7 @@
   "description": "Pins appium-mcp and, through package-lock.json, its whole dependency tree. Installed by scripts/start-appium-mcp.mjs with npm ci --ignore-scripts. supportedNode is the Node.js range the whole tree supports; the launcher refuses other versions (scripts/node-range.mjs) and CI checks it against every package (scripts/check-node-range.mjs).",
   "supportedNode": "^22.19.0 || >=24.0.0",
   "dependencies": {
-    "appium-mcp": "1.97.1"
+    "appium-mcp": "2.0.0"
   },
   "overrides": {
     "basic-ftp": "^6.2.4",
