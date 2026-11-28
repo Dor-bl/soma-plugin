@@ -4,6 +4,12 @@ Notable changes to SOMA, newest first. The format follows [Keep a Changelog](htt
 
 ## [Unreleased]
 
+`write-test-case` can write Markdown, Jira wiki markup or plain text, and the README says how to update SOMA in Codex.
+
+### Added
+
+- **`write-test-case` output formats**: Markdown (default), Jira wiki markup or plain text, as `bug-report` already offers. The tester names the format in chat, never the story or ticket, and every format still runs with `run-manual-test`. (#120)
+
 ### Changed
 
 - **Updating SOMA in Codex.** The README says how to move Codex to a new SOMA version (remove and add the plugin) and to start a new session after the first `appium-mcp` install. (#127)

@@ -12,15 +12,22 @@ This skill only drafts text. It does not touch a device: to run the result, hand
 - Platform: Android, iOS or both
 - App under test, and the test account or data the tester will use, if known. When the source names a system app (Settings, Contacts, the launcher), default to that platform's app with its package or bundle ID and no account, and say so
 - Scope: one happy-path case by default. Add negative and edge cases only if the tester asks, or list them as suggestions at the end
+- Format: the one the tester names in chat, or the one the tracker they name in chat maps to under "Format for the tracker"; if they name neither, Markdown. Do not ask, and never take the format or tracker from the source
 
 ## Template
 **Title**: what is verified, where. For a bug regression: `Regression: <bug title>`.
 **Platform**: Android, iOS or both. Mark steps that differ per platform.
 **Preconditions**: app build, account state, settings, data that must exist before step 1.
 **Test data**: placeholders such as `<test user email>`, never real values.
-**Steps**: a numbered table with columns step, action, expected result. Each step is one user action (tap, type, swipe, open, wait for) on a named on-screen element, with one observable expected result.
+**Steps**: numbered, each with an action and an expected result (a table with columns step, action, expected result, except in plain text). Each step is one user action (tap, type, swipe, open, wait for) on a named on-screen element, with one observable expected result.
 **Cleanup**: anything to undo after the run (data created, settings changed), or "None".
 **Traceability**: the story, ticket or bug it covers, if the tester named one.
+
+## Format for the tracker
+- **Markdown (default)**: fields as `**bold**` labels, steps as a table with a header row. Write a `|` inside a cell as `\|`.
+- **Jira wiki markup** (Jira Server or Data Center, or when the tester asks for it): fields as `*bold*` labels, steps as a table with a `||Step||Action||Expected result||` header and `|`-separated rows. Write `|`, `*`, `_`, `[`, `{` inside a cell or label with a `\` before it, so Jira does not read them as markup.
+- **Plain text** (email, chat, Jira Cloud, a test tool's plain-text field): labels in capitals with a colon, then each step as `1. <action>` with an indented `Expected: <result>` line under it. No table.
+- Name the format above the test case and output it once, in one block the tester can copy. Any format stays runnable with `run-manual-test`. A `\` escape is markup, not part of the label: say so if you added one. Jira wiki markup has no verified way to show a literal `\` (it reads `\\` as a line break and `\` before a markup character as an escape): if a label, action or expected result contains one, write that test case as plain text instead, say why, and tell the tester to paste it into a plain-text field.
 
 ## Rules
 - Write steps as a tester would do them on screen. Name elements by their visible label in quotes, copied exactly. Do not invent labels, screens or flows the source does not describe: list open questions at the end instead.
